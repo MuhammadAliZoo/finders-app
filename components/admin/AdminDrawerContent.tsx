@@ -3,12 +3,17 @@
 import { View, Text, StyleSheet, Image, TouchableOpacity } from "react-native"
 import { DrawerContentScrollView, DrawerItemList } from "@react-navigation/drawer"
 import { Ionicons } from "@expo/vector-icons"
-import { useTheme } from "../../context/ThemeContext"
+import { useTheme } from "../../theme/ThemeContext"
 import { useAuth } from "../../context/AuthContext"
+import type { DrawerContentComponentProps } from '@react-navigation/drawer'
 
-const AdminDrawerContent = (props) => {
-  const { colors } = useTheme()
+const AdminDrawerContent = (props: DrawerContentComponentProps) => {
+  const { colors, isInitialized } = useTheme()
   const { user, logout } = useAuth()
+
+  if (!isInitialized) {
+    return null
+  }
 
   const handleLogout = async () => {
     try {

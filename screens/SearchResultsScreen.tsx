@@ -1,13 +1,32 @@
 "use client"
 
-import { useState } from "react"
-import { View, Text, StyleSheet, FlatList, TouchableOpacity, Image, ScrollView } from "react-native"
-import { useRoute, useNavigation } from "@react-navigation/native"
+import React, { useState, useCallback, useEffect } from "react"
+import { View, Text, StyleSheet, FlatList, TouchableOpacity, Image, ScrollView, Alert } from "react-native"
+import { useRoute, useNavigation, RouteProp } from "@react-navigation/native"
 import { Ionicons } from "@expo/vector-icons"
-import { useTheme } from "../context/ThemeContext"
+import { useTheme } from "../theme/ThemeContext"
+import type { NativeStackNavigationProp } from "@react-navigation/native-stack"
+import { MainStackParamList } from "../navigation/types"
 
-// Mock data
-const searchResults = [
+interface SearchResult {
+  id: string
+  title: string
+  description: string
+  location: string
+  date: string
+  image: string
+  confidence: number
+  finder: {
+    name: string
+    rating: number
+  }
+}
+
+type SearchResultsScreenNavigationProp = NativeStackNavigationProp<MainStackParamList, 'ItemDetails'>;
+type SearchResultsRouteProp = RouteProp<MainStackParamList, 'ItemDetails'>;
+
+// Mock data (in a real app, this would come from an API)
+const searchResults: SearchResult[] = [
   {
     id: "1",
     title: "Gold Watch",
@@ -37,25 +56,92 @@ const searchResults = [
 ]
 
 const SearchResultsScreen = () => {
-  const route = useRoute()
-  const navigation = useNavigation()
-  const { colors } = useTheme()
-  const [activeFilters, setActiveFilters] = useState(["High Confidence"])
+  const route = useRoute<SearchResultsRouteProp>()
+  const navigation = useNavigation<SearchResultsScreenNavigationProp>()
+  const { theme, colors } = useTheme()
+  const [activeFilters, setActiveFilters] = useState<string[]>(["High Confidence"])
+  const [filteredResults, setFilteredResults] = useState<SearchResult[]>([])
+  const [isLoading, setIsLoading] = useState(true)
 
   const filters = ["High Confidence", "Recent", "Nearby", "All"]
 
-  const toggleFilter = (filter) => {
-    if (activeFilters.includes(filter)) {
-      setActiveFilters(activeFilters.filter((f) => f !== filter))
-    } else {
-      setActiveFilters([...activeFilters, filter])
+  // Filter results based on active filters
+  const applyFilters = useCallback(() => {
+    let results = [...searchResults]
+    
+    if (activeFilters.includes("High Confidence")) {
+      results = results.filter(item => item.confidence >= 85)
     }
+    if (activeFilters.includes("Recent")) {
+      results = results.sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime())
+    }
+    if (activeFilters.includes("Nearby")) {
+      // In a real app, this would use geolocation to sort by distance
+      results = results.sort((a, b) => a.location.localeCompare(b.location))
+    }
+    
+    setFilteredResults(results)
+  }, [activeFilters])
+
+  // Initialize filtered results
+  useEffect(() => {
+    // In a real app, this would fetch results based on route.params.searchQuery
+    setFilteredResults(searchResults)
+    setIsLoading(false)
+  }, [])
+
+  // Apply filters whenever activeFilters change
+  useEffect(() => {
+    applyFilters()
+  }, [activeFilters, applyFilters])
+
+  // Update filters when toggled
+  const toggleFilter = (filter: string) => {
+    let newFilters: string[]
+    if (filter === "All") {
+      newFilters = activeFilters.includes("All") ? [] : ["All"]
+    } else {
+      if (activeFilters.includes(filter)) {
+        newFilters = activeFilters.filter(f => f !== filter && f !== "All")
+      } else {
+        newFilters = [...activeFilters.filter(f => f !== "All"), filter]
+      }
+    }
+    setActiveFilters(newFilters)
   }
 
-  const renderResultItem = ({ item }) => (
+  // Handle item details navigation
+  const handleItemPress = (itemId: string) => {
+    navigation.navigate("ItemDetails", { itemId })
+  }
+
+  // Handle claim button press
+  const handleClaimPress = (itemId: string) => {
+    navigation.navigate("ItemDetails", { itemId })
+  }
+
+  // Handle contact finder button press
+  const handleContactPress = (finder: { name: string; rating: number }) => {
+    Alert.alert(
+      "Contact Finder",
+      `Would you like to contact ${finder.name}?`,
+      [
+        { text: "Cancel", style: "cancel" },
+        { 
+          text: "Contact", 
+          onPress: () => {
+            // In a real app, this would open a chat or messaging interface
+            Alert.alert("Feature Coming Soon", "The messaging feature will be available in the next update.")
+          }
+        }
+      ]
+    )
+  }
+
+  const renderResultItem = ({ item }: { item: SearchResult }) => (
     <TouchableOpacity
       style={[styles.resultCard, { backgroundColor: colors.card }]}
-      onPress={() => navigation.navigate("ItemDetails", { itemId: item.id })}
+      onPress={() => handleItemPress(item.id)}
     >
       <View style={styles.resultHeader}>
         <View style={styles.confidenceContainer}>
@@ -67,8 +153,8 @@ const SearchResultsScreen = () => {
                 style={[
                   styles.confidenceFill,
                   {
-                    width: `${item.confidence}%`,
-                    backgroundColor: item.confidence > 85 ? colors.success : colors.warning,
+                    width: (item.confidence / 100) * 100,
+                    backgroundColor: item.confidence > 85 ? colors.primary : colors.warning,
                   },
                 ]}
               />
@@ -78,7 +164,11 @@ const SearchResultsScreen = () => {
       </View>
 
       <View style={styles.resultContent}>
-        <Image source={{ uri: item.image }} style={styles.resultImage} />
+        <Image 
+          source={item.image ? { uri: item.image } : { uri: 'https://via.placeholder.com/120x120?text=No+Image' }}
+          style={styles.resultImage}
+          onError={(error) => console.log('Image loading error:', error)}
+        />
 
         <View style={styles.resultDetails}>
           <Text style={[styles.resultTitle, { color: colors.text }]}>{item.title}</Text>
@@ -108,15 +198,16 @@ const SearchResultsScreen = () => {
         </View>
       </View>
 
-      <View style={styles.resultActions}>
+      <View style={[styles.resultActions, { borderTopColor: colors.border }]}>
         <TouchableOpacity
           style={[styles.actionButton, { backgroundColor: colors.primary }]}
-          onPress={() => navigation.navigate("ClaimTracking", { itemId: item.id })}
+          onPress={() => handleClaimPress(item.id)}
         >
           <Text style={styles.actionButtonText}>Claim This Item</Text>
         </TouchableOpacity>
         <TouchableOpacity
           style={[styles.actionButton, { backgroundColor: colors.card, borderColor: colors.border, borderWidth: 1 }]}
+          onPress={() => handleContactPress(item.finder)}
         >
           <Text style={[styles.actionButtonText, { color: colors.text }]}>Contact Finder</Text>
         </TouchableOpacity>
@@ -126,46 +217,51 @@ const SearchResultsScreen = () => {
 
   return (
     <View style={[styles.container, { backgroundColor: colors.background }]}>
-      {/* Header */}
       <View style={styles.header}>
         <Text style={[styles.headerTitle, { color: colors.text }]}>Potential Matches</Text>
         <Text style={[styles.headerSubtitle, { color: colors.secondary }]}>
-          We found {searchResults.length} items that might match your lost item.
+          {isLoading 
+            ? "Loading results..." 
+            : `We found ${filteredResults.length} items that might match your lost item.`
+          }
         </Text>
       </View>
 
-      {/* Filters */}
-      <ScrollView
-        horizontal
-        showsHorizontalScrollIndicator={false}
-        style={styles.filtersContainer}
-        contentContainerStyle={styles.filtersContent}
-      >
-        {filters.map((filter) => (
-          <TouchableOpacity
-            key={filter}
-            style={[
-              styles.filterButton,
-              activeFilters.includes(filter)
-                ? { backgroundColor: colors.primary }
-                : { backgroundColor: "transparent", borderColor: colors.border, borderWidth: 1 },
-            ]}
-            onPress={() => toggleFilter(filter)}
+      {!isLoading && (
+        <>
+          <ScrollView
+            horizontal
+            showsHorizontalScrollIndicator={false}
+            style={styles.filtersContainer}
+            contentContainerStyle={styles.filtersContent}
           >
-            <Text style={[styles.filterText, { color: activeFilters.includes(filter) ? "#FFFFFF" : colors.text }]}>
-              {filter}
-            </Text>
-          </TouchableOpacity>
-        ))}
-      </ScrollView>
+            {filters.map((filter) => (
+              <TouchableOpacity
+                key={filter}
+                style={[
+                  styles.filterButton,
+                  activeFilters.includes(filter)
+                    ? { backgroundColor: colors.primary }
+                    : { backgroundColor: "transparent", borderColor: colors.border, borderWidth: 1 },
+                ]}
+                onPress={() => toggleFilter(filter)}
+              >
+                <Text style={[styles.filterText, { color: activeFilters.includes(filter) ? "#FFFFFF" : colors.text }]}>
+                  {filter}
+                </Text>
+              </TouchableOpacity>
+            ))}
+          </ScrollView>
 
-      {/* Results */}
-      <FlatList
-        data={searchResults}
-        renderItem={renderResultItem}
-        keyExtractor={(item) => item.id}
-        contentContainerStyle={styles.resultsContainer}
-      />
+          <FlatList
+            data={filteredResults}
+            renderItem={renderResultItem}
+            keyExtractor={(item) => item.id}
+            contentContainerStyle={styles.resultsContainer}
+            showsVerticalScrollIndicator={false}
+          />
+        </>
+      )}
     </View>
   )
 }
@@ -235,9 +331,10 @@ const styles = StyleSheet.create({
     width: 100,
     height: 6,
     borderRadius: 3,
+    backgroundColor: '#E0E0E0',
   },
   confidenceFill: {
-    height: 6,
+    height: '100%',
     borderRadius: 3,
   },
   resultContent: {

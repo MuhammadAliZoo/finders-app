@@ -3,10 +3,14 @@
 import { useEffect } from "react"
 import { View, Image, StyleSheet, Animated } from "react-native"
 import { useNavigation } from "@react-navigation/native"
-import { useTheme } from "../context/ThemeContext"
+import { useTheme } from "../theme/ThemeContext"
+import type { RootStackParamList } from '../navigation/types'
+import type { NativeStackNavigationProp } from '@react-navigation/native-stack'
+
+type SplashScreenNavigationProp = NativeStackNavigationProp<RootStackParamList, 'Main'>
 
 const SplashScreen = () => {
-  const navigation = useNavigation()
+  const navigation = useNavigation<SplashScreenNavigationProp>()
   const { colors } = useTheme()
   const fadeAnim = new Animated.Value(0)
 

@@ -1,9 +1,16 @@
 "use client"
 
 import { TouchableOpacity, Text, StyleSheet, View } from "react-native"
-import { useTheme } from "../../context/ThemeContext"
+import { useTheme } from "../../theme/ThemeContext"
 
-const FilterChip = ({ label, isSelected, onPress, count }) => {
+interface FilterChipProps {
+  label: string;
+  isSelected: boolean;
+  onPress: () => void;
+  count?: number;
+}
+
+const FilterChip: React.FC<FilterChipProps> = ({ label, isSelected, onPress, count }) => {
   const { colors } = useTheme()
 
   return (

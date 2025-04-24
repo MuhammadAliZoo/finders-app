@@ -1,10 +1,22 @@
 "use client"
 
-import { useState } from "react"
-import { View, Text, StyleSheet, ScrollView, TouchableOpacity, TextInput, Image } from "react-native"
-import { useRoute } from "@react-navigation/native"
+import React, { useState, useEffect } from "react"
+import { View, Text, StyleSheet, ScrollView, TouchableOpacity, TextInput, Image, Animated } from "react-native"
+import { useNavigation, useRoute } from "@react-navigation/native"
 import { Ionicons } from "@expo/vector-icons"
-import { useTheme } from "../context/ThemeContext"
+import { useTheme } from "../theme/ThemeContext"
+import { NativeStackNavigationProp } from "@react-navigation/native-stack"
+import { MainStackParamList } from "../navigation/types"
+import { GestureHandlerRootView } from 'react-native-gesture-handler'
+
+type TimelineEvent = {
+  id: string;
+  event: string;
+  date: string;
+  time: string;
+  completed: boolean;
+  current?: boolean;
+};
 
 // Mock data
 const claimDetails = {
@@ -55,19 +67,126 @@ const claimDetails = {
       time: "",
       completed: false,
     },
-  ],
+  ] as TimelineEvent[],
 }
 
+type TimelineItemProps = {
+  event: TimelineEvent;
+  index: number;
+  total: number;
+  colors: {
+    primary: string;
+    border: string;
+    text: string;
+    secondary: string;
+  };
+}
+
+const TimelineItem = React.memo(({ event, index, total, colors }: TimelineItemProps) => (
+  <View style={styles.timelineItem} testID={`timeline-item-${event.id}`}>
+    <View
+      style={[
+        styles.timelineDot,
+        {
+          backgroundColor: event.completed ? colors.primary : colors.border,
+          borderColor: event.current ? colors.primary : "transparent",
+          borderWidth: event.current ? 2 : 0,
+        },
+      ]}
+    />
+    {index < total - 1 && (
+      <View
+        style={[styles.timelineLine, { backgroundColor: event.completed ? colors.primary : colors.border }]}
+      />
+    )}
+    <View style={styles.timelineContent}>
+      <Text
+        style={[
+          styles.timelineEvent,
+          {
+            color: event.completed ? colors.text : colors.secondary,
+            fontWeight: event.current ? "bold" : "normal",
+          },
+        ]}
+        numberOfLines={1}
+      >
+        {event.event}
+      </Text>
+      <Text style={[styles.timelineDate, { color: colors.secondary }]} numberOfLines={1}>
+        {event.date} {event.time && `at ${event.time}`}
+      </Text>
+    </View>
+  </View>
+));
+
+type ProofImageItemProps = {
+  image: { uri: string };
+  index: number;
+  onRemove: () => void;
+  colors: {
+    error: string;
+  };
+}
+
+const ProofImageItem = React.memo(({ image, index, onRemove, colors }: ProofImageItemProps) => (
+  <View style={styles.imageWrapper} testID={`proof-image-${index}`}>
+    <Image source={image} style={styles.proofImage} />
+    <TouchableOpacity
+      style={[styles.removeImageButton, { backgroundColor: colors.error }]}
+      onPress={onRemove}
+    >
+      <Ionicons name="close" size={16} color="#FFFFFF" />
+    </TouchableOpacity>
+  </View>
+));
+
+const TimelineItemWrapper = ({ event, index, total, colors }: TimelineItemProps & { key: string }) => (
+  <TimelineItem event={event} index={index} total={total} colors={colors} />
+);
+
+const ProofImageItemWrapper = ({ image, index, onRemove, colors }: ProofImageItemProps & { key: number }) => (
+  <ProofImageItem image={image} index={index} onRemove={onRemove} colors={colors} />
+);
+
+type ClaimTrackingScreenNavigationProp = NativeStackNavigationProp<MainStackParamList, 'ClaimTracking'>
+
 const ClaimTrackingScreen = () => {
+  const navigation = useNavigation<ClaimTrackingScreenNavigationProp>()
   const route = useRoute()
   const { colors } = useTheme()
   const [message, setMessage] = useState("")
   const [proofDescription, setProofDescription] = useState("")
-  const [proofImages, setProofImages] = useState([])
+  const [proofImages, setProofImages] = useState<Array<{ uri: string }>>([])
+  const [fadeAnim] = useState(new Animated.Value(0))
+
+  useEffect(() => {
+    navigation.setOptions({
+      headerShown: true,
+      gestureEnabled: true,
+      gestureDirection: 'horizontal',
+      animation: 'slide_from_right',
+      headerLeft: () => (
+        <TouchableOpacity
+          onPress={() => navigation.goBack()}
+          style={{ marginLeft: 8 }}
+        >
+          <Ionicons name="chevron-back" size={24} color={colors.text} />
+        </TouchableOpacity>
+      ),
+    })
+  }, [navigation, colors])
+
+  React.useEffect(() => {
+    Animated.timing(fadeAnim, {
+      toValue: 1,
+      duration: 500,
+      useNativeDriver: true,
+    }).start()
+  }, [])
 
   const handleAddProofImage = () => {
     // In a real app, this would open the camera or image picker
-    setProofImages([...proofImages, "https://via.placeholder.com/300"])
+    setProofImages([...proofImages, { uri: "https://via.placeholder.com/300" }])
   }
 
   const handleSendMessage = () => {
@@ -83,198 +202,227 @@ const ClaimTrackingScreen = () => {
   }
 
   return (
-    <ScrollView style={[styles.container, { backgroundColor: colors.background }]}>
-      {/* Header */}
-      <View style={styles.header}>
-        <Text style={[styles.headerTitle, { color: colors.text }]}>Claim Tracking</Text>
-        <Text style={[styles.headerSubtitle, { color: colors.secondary }]}>
-          Track the status of your claim for {claimDetails.itemTitle}
-        </Text>
-      </View>
-
-      {/* Item Card */}
-      <View style={[styles.itemCard, { backgroundColor: colors.card }]}>
-        <Image source={{ uri: claimDetails.itemImage }} style={styles.itemImage} />
-        <View style={styles.itemDetails}>
-          <Text style={[styles.itemTitle, { color: colors.text }]}>{claimDetails.itemTitle}</Text>
-          <View style={styles.statusContainer}>
-            <Text style={[styles.statusLabel, { color: colors.secondary }]}>Status:</Text>
-            <View style={[styles.statusBadge, { backgroundColor: colors.primary }]}>
-              <Text style={styles.statusText}>{claimDetails.status}</Text>
+    <View style={[styles.container, { backgroundColor: colors.background }]}>
+      <Animated.View style={[{ flex: 1 }, { opacity: fadeAnim }]}>
+        <ScrollView style={styles.scrollView} showsVerticalScrollIndicator={false}>
+          {/* Header */}
+          <View style={styles.header}>
+            <Text style={[styles.headerTitle, { color: colors.text }]} numberOfLines={1}>
+              Claim Tracking
+            </Text>
+            <View style={styles.headerSubtitleContainer}>
+              <Text 
+                style={[styles.headerSubtitle, { color: colors.primary }]} 
+                numberOfLines={2}
+              >
+                Track the status of your claim for{' '}
+                <Text style={{ fontWeight: '600' }}>
+                  {claimDetails.itemTitle}
+                </Text>
+              </Text>
             </View>
           </View>
-        </View>
-      </View>
 
-      {/* Progress Tracker */}
-      <View style={[styles.progressSection, { backgroundColor: colors.card }]}>
-        <View style={styles.progressHeader}>
-          <Text style={[styles.progressTitle, { color: colors.text }]}>Claim Progress</Text>
-          <Text style={[styles.progressPercentage, { color: colors.primary }]}>{claimDetails.progress}%</Text>
-        </View>
-        <View style={[styles.progressBarContainer, { backgroundColor: colors.border }]}>
-          <View style={[styles.progressBar, { width: `${claimDetails.progress}%`, backgroundColor: colors.primary }]} />
-        </View>
-        <Text style={[styles.progressEstimate, { color: colors.secondary }]}>Estimated completion: 2-3 days</Text>
-      </View>
-
-      {/* Timeline */}
-      <View style={styles.timelineSection}>
-        <Text style={[styles.sectionTitle, { color: colors.text }]}>Timeline</Text>
-        <View style={styles.timeline}>
-          {claimDetails.timeline.map((event, index) => (
-            <View key={event.id} style={styles.timelineItem}>
-              <View
-                style={[
-                  styles.timelineDot,
-                  {
-                    backgroundColor: event.completed ? colors.success : colors.border,
-                    borderColor: event.current ? colors.primary : "transparent",
-                    borderWidth: event.current ? 2 : 0,
-                  },
-                ]}
-              />
-              {index < claimDetails.timeline.length - 1 && (
-                <View
-                  style={[styles.timelineLine, { backgroundColor: event.completed ? colors.success : colors.border }]}
-                />
-              )}
-              <View style={styles.timelineContent}>
-                <Text
-                  style={[
-                    styles.timelineEvent,
-                    {
-                      color: event.completed ? colors.text : colors.secondary,
-                      fontWeight: event.current ? "bold" : "normal",
-                    },
-                  ]}
-                >
-                  {event.event}
-                </Text>
-                <Text style={[styles.timelineDate, { color: colors.secondary }]}>
-                  {event.date} {event.time && `at ${event.time}`}
-                </Text>
+          {/* Item Card */}
+          <View style={[styles.itemCard, { backgroundColor: colors.card }]}>
+            <Image source={{ uri: claimDetails.itemImage }} style={styles.itemImage} />
+            <View style={styles.itemDetails}>
+              <Text style={[styles.itemTitle, { color: colors.text }]} numberOfLines={1}>
+                {claimDetails.itemTitle}
+              </Text>
+              <View style={styles.statusContainer}>
+                <Text style={[styles.statusLabel, { color: colors.secondary }]}>Status:</Text>
+                <View style={[styles.statusBadge, { backgroundColor: colors.primary }]}>
+                  <Text style={styles.statusText} numberOfLines={1}>{claimDetails.status}</Text>
+                </View>
               </View>
             </View>
-          ))}
-        </View>
-      </View>
+          </View>
 
-      {/* Proof Submission */}
-      <View style={[styles.proofSection, { backgroundColor: colors.card }]}>
-        <Text style={[styles.sectionTitle, { color: colors.text }]}>Submit Proof of Ownership</Text>
-        <Text style={[styles.proofDescription, { color: colors.secondary }]}>
-          Please provide evidence that you are the rightful owner of this item.
-        </Text>
+          {/* Progress Tracker */}
+          <View style={[styles.progressSection, { backgroundColor: colors.card }]}>
+            <View style={styles.progressHeader}>
+              <Text style={[styles.progressTitle, { color: colors.text }]} numberOfLines={1}>
+                Claim Progress
+              </Text>
+              <Text style={[styles.progressPercentage, { color: colors.primary }]}>
+                {claimDetails.progress}%
+              </Text>
+            </View>
+            <View style={[styles.progressBarContainer, { backgroundColor: colors.border }]}>
+              <View 
+                style={[
+                  styles.progressBar, 
+                  { 
+                    width: `${claimDetails.progress}%`, 
+                    backgroundColor: colors.primary 
+                  }
+                ]} 
+              />
+            </View>
+            <Text style={[styles.progressEstimate, { color: colors.secondary }]} numberOfLines={1}>
+              Estimated completion: 2-3 days
+            </Text>
+          </View>
 
-        <View style={styles.inputGroup}>
-          <Text style={[styles.inputLabel, { color: colors.text }]}>Description</Text>
-          <TextInput
-            style={[styles.input, styles.textArea, { backgroundColor: colors.background, color: colors.text }]}
-            placeholder="Describe unique features or provide details only the owner would know..."
-            placeholderTextColor="#888888"
-            multiline
-            numberOfLines={4}
-            textAlignVertical="top"
-            value={proofDescription}
-            onChangeText={setProofDescription}
-          />
-        </View>
+          {/* Timeline */}
+          <View style={styles.timelineSection}>
+            <Text style={[styles.sectionTitle, { color: colors.text }]} numberOfLines={1}>
+              Timeline
+            </Text>
+            <View style={styles.timeline}>
+              {claimDetails.timeline.map((event, index) => (
+                <TimelineItem
+                  key={event.id}
+                  event={event}
+                  index={index}
+                  total={claimDetails.timeline.length}
+                  colors={colors}
+                />
+              ))}
+            </View>
+          </View>
 
-        <View style={styles.inputGroup}>
-          <Text style={[styles.inputLabel, { color: colors.text }]}>Upload Images</Text>
-          <Text style={[styles.inputSubLabel, { color: colors.secondary }]}>
-            Upload receipts, photos with the item, or other proof of ownership.
-          </Text>
+          {/* Proof Submission */}
+          <View style={[styles.proofSection, { backgroundColor: colors.card }]}>
+            <Text style={[styles.sectionTitle, { color: colors.text }]} numberOfLines={1}>
+              Submit Proof of Ownership
+            </Text>
+            <Text style={[styles.proofDescription, { color: colors.secondary }]} numberOfLines={2}>
+              Please provide evidence that you are the rightful owner of this item.
+            </Text>
 
-          <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.imagesContainer}>
-            {proofImages.map((image, index) => (
-              <View key={index} style={styles.imageWrapper}>
-                <Image source={{ uri: image }} style={styles.proofImage} />
+            <View style={styles.inputGroup}>
+              <Text style={[styles.inputLabel, { color: colors.text }]} numberOfLines={1}>
+                Description
+              </Text>
+              <TextInput
+                style={[styles.input, styles.textArea, { backgroundColor: colors.background, color: colors.text }]}
+                placeholder="Describe unique features or provide details only the owner would know..."
+                placeholderTextColor="#888888"
+                multiline
+                numberOfLines={4}
+                textAlignVertical="top"
+                value={proofDescription}
+                onChangeText={setProofDescription}
+              />
+            </View>
+
+            <View style={styles.inputGroup}>
+              <Text style={[styles.inputLabel, { color: colors.text }]} numberOfLines={1}>
+                Upload Images
+              </Text>
+              <Text style={[styles.inputSubLabel, { color: colors.secondary }]} numberOfLines={2}>
+                Upload receipts, photos with the item, or other proof of ownership.
+              </Text>
+
+              <ScrollView 
+                horizontal 
+                showsHorizontalScrollIndicator={false} 
+                style={styles.imagesContainer}
+                contentContainerStyle={styles.imagesContent}
+              >
+                {proofImages.map((image, index) => (
+                  <ProofImageItem
+                    key={index}
+                    image={image}
+                    index={index}
+                    onRemove={() => setProofImages(proofImages.filter((_, i) => i !== index))}
+                    colors={colors}
+                  />
+                ))}
+
                 <TouchableOpacity
-                  style={[styles.removeImageButton, { backgroundColor: colors.error }]}
-                  onPress={() => setProofImages(proofImages.filter((_, i) => i !== index))}
+                  style={[styles.addImageButton, { borderColor: colors.primary }]}
+                  onPress={handleAddProofImage}
                 >
-                  <Ionicons name="close" size={16} color="#FFFFFF" />
+                  <Ionicons name="camera-outline" size={32} color={colors.primary} />
+                  <Text style={[styles.addImageText, { color: colors.primary }]} numberOfLines={1}>
+                    Add Photo
+                  </Text>
+                </TouchableOpacity>
+              </ScrollView>
+            </View>
+
+            <TouchableOpacity
+              style={[styles.submitButton, { backgroundColor: colors.primary }]}
+              onPress={handleSubmitProof}
+            >
+              <Text style={styles.submitButtonText} numberOfLines={1}>Submit Proof</Text>
+            </TouchableOpacity>
+          </View>
+
+          {/* Chat with Finder */}
+          <View style={styles.chatSection}>
+            <Text style={[styles.sectionTitle, { color: colors.text }]} numberOfLines={1}>
+              Chat with Finder
+            </Text>
+
+            <View style={[styles.finderCard, { backgroundColor: colors.card }]}>
+              <Image source={{ uri: claimDetails.finder.image }} style={styles.finderImage} />
+              <View style={styles.finderInfo}>
+                <Text style={[styles.finderName, { color: colors.text }]} numberOfLines={1}>
+                  {claimDetails.finder.name}
+                </Text>
+                <View style={styles.ratingContainer}>
+                  <Ionicons name="star" size={16} color={colors.warning} />
+                  <Text style={[styles.ratingText, { color: colors.secondary }]} numberOfLines={1}>
+                    {claimDetails.finder.rating}
+                  </Text>
+                </View>
+              </View>
+            </View>
+
+            <View style={[styles.chatContainer, { backgroundColor: colors.card }]}>
+              <View style={styles.messages}>
+                <View style={[styles.messageReceived, { backgroundColor: colors.background }]}>
+                  <Text style={[styles.messageText, { color: colors.text }]} numberOfLines={3}>
+                    Hello! I found a gold watch that might be yours. Can you describe any unique features?
+                  </Text>
+                  <Text style={[styles.messageTime, { color: colors.secondary }]} numberOfLines={1}>
+                    10:30 AM
+                  </Text>
+                </View>
+
+                <View style={[styles.messageSent, { backgroundColor: colors.primary }]}>
+                  <Text style={styles.messageText} numberOfLines={3}>
+                    Hi! Yes, my watch has my initials "JD" engraved on the back and has a small scratch on the face.
+                  </Text>
+                  <Text style={[styles.messageTime, { color: "rgba(255,255,255,0.7)" }]} numberOfLines={1}>
+                    10:35 AM
+                  </Text>
+                </View>
+
+                <View style={[styles.messageReceived, { backgroundColor: colors.background }]}>
+                  <Text style={[styles.messageText, { color: colors.text }]} numberOfLines={3}>
+                    That matches the watch I found! I'll check for the initials and confirm.
+                  </Text>
+                  <Text style={[styles.messageTime, { color: colors.secondary }]} numberOfLines={1}>
+                    10:38 AM
+                  </Text>
+                </View>
+              </View>
+
+              <View style={styles.chatInputContainer}>
+                <TextInput
+                  style={[styles.chatInput, { backgroundColor: colors.background, color: colors.text }]}
+                  placeholder="Type a message..."
+                  placeholderTextColor="#888888"
+                  value={message}
+                  onChangeText={setMessage}
+                />
+                <TouchableOpacity
+                  style={[styles.sendButton, { backgroundColor: colors.primary }]}
+                  onPress={handleSendMessage}
+                >
+                  <Ionicons name="send" size={20} color="#FFFFFF" />
                 </TouchableOpacity>
               </View>
-            ))}
-
-            <TouchableOpacity
-              style={[styles.addImageButton, { borderColor: colors.primary }]}
-              onPress={handleAddProofImage}
-            >
-              <Ionicons name="camera-outline" size={32} color={colors.primary} />
-              <Text style={[styles.addImageText, { color: colors.primary }]}>Add Photo</Text>
-            </TouchableOpacity>
-          </ScrollView>
-        </View>
-
-        <TouchableOpacity
-          style={[styles.submitButton, { backgroundColor: colors.primary }]}
-          onPress={handleSubmitProof}
-        >
-          <Text style={styles.submitButtonText}>Submit Proof</Text>
-        </TouchableOpacity>
-      </View>
-
-      {/* Chat with Finder */}
-      <View style={styles.chatSection}>
-        <Text style={[styles.sectionTitle, { color: colors.text }]}>Chat with Finder</Text>
-
-        <View style={[styles.finderCard, { backgroundColor: colors.card }]}>
-          <Image source={{ uri: claimDetails.finder.image }} style={styles.finderImage} />
-          <View style={styles.finderInfo}>
-            <Text style={[styles.finderName, { color: colors.text }]}>{claimDetails.finder.name}</Text>
-            <View style={styles.ratingContainer}>
-              <Ionicons name="star" size={16} color={colors.warning} />
-              <Text style={[styles.ratingText, { color: colors.secondary }]}>{claimDetails.finder.rating}</Text>
             </View>
           </View>
-        </View>
-
-        <View style={[styles.chatContainer, { backgroundColor: colors.card }]}>
-          <View style={styles.messages}>
-            <View style={[styles.messageReceived, { backgroundColor: colors.background }]}>
-              <Text style={[styles.messageText, { color: colors.text }]}>
-                Hello! I found a gold watch that might be yours. Can you describe any unique features?
-              </Text>
-              <Text style={[styles.messageTime, { color: colors.secondary }]}>10:30 AM</Text>
-            </View>
-
-            <View style={[styles.messageSent, { backgroundColor: colors.primary }]}>
-              <Text style={styles.messageText}>
-                Hi! Yes, my watch has my initials "JD" engraved on the back and has a small scratch on the face.
-              </Text>
-              <Text style={[styles.messageTime, { color: "rgba(255,255,255,0.7)" }]}>10:35 AM</Text>
-            </View>
-
-            <View style={[styles.messageReceived, { backgroundColor: colors.background }]}>
-              <Text style={[styles.messageText, { color: colors.text }]}>
-                That matches the watch I found! I'll check for the initials and confirm.
-              </Text>
-              <Text style={[styles.messageTime, { color: colors.secondary }]}>10:38 AM</Text>
-            </View>
-          </View>
-
-          <View style={styles.chatInputContainer}>
-            <TextInput
-              style={[styles.chatInput, { backgroundColor: colors.background, color: colors.text }]}
-              placeholder="Type a message..."
-              placeholderTextColor="#888888"
-              value={message}
-              onChangeText={setMessage}
-            />
-            <TouchableOpacity
-              style={[styles.sendButton, { backgroundColor: colors.primary }]}
-              onPress={handleSendMessage}
-            >
-              <Ionicons name="send" size={20} color="#FFFFFF" />
-            </TouchableOpacity>
-          </View>
-        </View>
-      </View>
-    </ScrollView>
+        </ScrollView>
+      </Animated.View>
+    </View>
   )
 }
 
@@ -282,22 +430,45 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
   },
+  scrollView: {
+    flex: 1,
+  },
   header: {
     padding: 16,
+    paddingTop: 8,
+    width: '100%',
   },
   headerTitle: {
-    fontSize: 24,
-    fontWeight: "bold",
+    fontSize: 28,
+    fontWeight: "700",
     marginBottom: 8,
   },
+  headerSubtitleContainer: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    paddingRight: 16,
+    width: '100%',
+  },
   headerSubtitle: {
-    fontSize: 14,
+    fontSize: 16,
+    lineHeight: 22,
+    flexShrink: 1,
+    flexWrap: 'wrap',
+    width: '100%',
   },
   itemCard: {
     flexDirection: "row",
     margin: 16,
-    borderRadius: 12,
+    borderRadius: 16,
     overflow: "hidden",
+    shadowColor: "#000",
+    shadowOffset: {
+      width: 0,
+      height: 2,
+    },
+    shadowOpacity: 0.1,
+    shadowRadius: 4,
+    elevation: 3,
   },
   itemImage: {
     width: 100,
@@ -334,7 +505,15 @@ const styles = StyleSheet.create({
   progressSection: {
     margin: 16,
     padding: 16,
-    borderRadius: 12,
+    borderRadius: 16,
+    shadowColor: "#000",
+    shadowOffset: {
+      width: 0,
+      height: 2,
+    },
+    shadowOpacity: 0.1,
+    shadowRadius: 4,
+    elevation: 3,
   },
   progressHeader: {
     flexDirection: "row",
@@ -405,7 +584,15 @@ const styles = StyleSheet.create({
   proofSection: {
     margin: 16,
     padding: 16,
-    borderRadius: 12,
+    borderRadius: 16,
+    shadowColor: "#000",
+    shadowOffset: {
+      width: 0,
+      height: 2,
+    },
+    shadowOpacity: 0.1,
+    shadowRadius: 4,
+    elevation: 3,
   },
   proofDescription: {
     fontSize: 14,
@@ -424,7 +611,7 @@ const styles = StyleSheet.create({
     marginBottom: 8,
   },
   input: {
-    borderRadius: 8,
+    borderRadius: 12,
     padding: 12,
     fontSize: 16,
   },
@@ -435,6 +622,9 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     marginTop: 8,
   },
+  imagesContent: {
+    paddingRight: 16,
+  },
   imageWrapper: {
     position: "relative",
     marginRight: 12,
@@ -442,7 +632,7 @@ const styles = StyleSheet.create({
   proofImage: {
     width: 100,
     height: 100,
-    borderRadius: 8,
+    borderRadius: 12,
   },
   removeImageButton: {
     position: "absolute",
@@ -457,7 +647,7 @@ const styles = StyleSheet.create({
   addImageButton: {
     width: 100,
     height: 100,
-    borderRadius: 8,
+    borderRadius: 12,
     borderWidth: 1,
     borderStyle: "dashed",
     justifyContent: "center",
@@ -468,7 +658,7 @@ const styles = StyleSheet.create({
     fontSize: 12,
   },
   submitButton: {
-    borderRadius: 8,
+    borderRadius: 12,
     padding: 16,
     alignItems: "center",
     marginTop: 8,
@@ -511,8 +701,16 @@ const styles = StyleSheet.create({
     fontSize: 14,
   },
   chatContainer: {
-    borderRadius: 12,
+    borderRadius: 16,
     overflow: "hidden",
+    shadowColor: "#000",
+    shadowOffset: {
+      width: 0,
+      height: 2,
+    },
+    shadowOpacity: 0.1,
+    shadowRadius: 4,
+    elevation: 3,
   },
   messages: {
     padding: 16,

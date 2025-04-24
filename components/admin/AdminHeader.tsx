@@ -1,10 +1,17 @@
 "use client"
+import React from 'react';
 import { View, Text, StyleSheet, TouchableOpacity, Image } from "react-native"
 import { Ionicons } from "@expo/vector-icons"
-import { useTheme } from "../../context/ThemeContext"
+import { useTheme } from "../../theme/ThemeContext"
 import { useAuth } from "../../context/AuthContext"
 
-const AdminHeader = ({ title, navigation, showBackButton = false }) => {
+type AdminHeaderProps = {
+  title: string;
+  navigation: any;
+  showBackButton?: boolean;
+};
+
+const AdminHeader: React.FC<AdminHeaderProps> = ({ title, navigation, showBackButton = false }) => {
   const { colors } = useTheme()
   const { user } = useAuth()
 
@@ -17,14 +24,14 @@ const AdminHeader = ({ title, navigation, showBackButton = false }) => {
   }
 
   return (
-    <View style={[styles.header, { backgroundColor: colors.card }]}>
+    <View style={[styles.container, { backgroundColor: colors.card }]}>
       {showBackButton ? (
         <TouchableOpacity style={styles.backButton} onPress={goBack}>
           <Ionicons name="arrow-back" size={24} color={colors.text} />
         </TouchableOpacity>
       ) : (
         <TouchableOpacity style={styles.menuButton} onPress={openDrawer}>
-          <Ionicons name="menu" size={24} color={colors.text} />
+          <Ionicons name="menu-outline" size={24} color={colors.text} />
         </TouchableOpacity>
       )}
 
@@ -55,20 +62,18 @@ const AdminHeader = ({ title, navigation, showBackButton = false }) => {
 }
 
 const styles = StyleSheet.create({
-  header: {
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "space-between",
+  container: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
     paddingHorizontal: 16,
-    paddingVertical: 12,
-    elevation: 2,
-    shadowColor: "#000",
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.1,
-    shadowRadius: 3,
+    paddingTop: 60,
+    paddingBottom: 16,
+    borderBottomLeftRadius: 20,
+    borderBottomRightRadius: 20,
   },
   menuButton: {
-    padding: 4,
+    padding: 8,
   },
   backButton: {
     padding: 4,
@@ -82,23 +87,21 @@ const styles = StyleSheet.create({
     alignItems: "center",
   },
   notificationButton: {
-    padding: 4,
-    marginRight: 12,
-    position: "relative",
+    padding: 8,
   },
   badge: {
     position: "absolute",
-    top: 0,
-    right: 0,
-    minWidth: 16,
-    height: 16,
-    borderRadius: 8,
+    top: 4,
+    right: 4,
+    minWidth: 18,
+    height: 18,
+    borderRadius: 9,
     justifyContent: "center",
     alignItems: "center",
   },
   badgeText: {
     color: "#FFFFFF",
-    fontSize: 10,
+    fontSize: 12,
     fontWeight: "bold",
   },
   profileButton: {

@@ -1,6 +1,6 @@
 {
   "expo": {
-    "name": "Finders App",
+    "name": "finders-app",
     "slug": "finders-app",
     "version": "1.0.0",
     "orientation": "portrait",
@@ -14,11 +14,45 @@
     "assetBundlePatterns": [
       "**/*"
     ],
+    "jsEngine": "hermes",
     "ios": {
       "supportsTablet": true,
-      "bundleIdentifier": "com.findersapp"
+      "bundleIdentifier": "com.findersapp",
+      "config": {
+        "googleMapsApiKey": "AIzaSyAt8lR5GgTa3pKEMSJCxMggfJLhimvSwbg"
+      },
+      "infoPlist": {
+        "NSCameraUsageDescription": "This app uses the camera to search for similar lost items using AI image recognition.",
+        "NSPhotoLibraryUsageDescription": "This app accesses your photos to search for similar lost items using AI image recognition.",
+        "NSLocationWhenInUseUsageDescription": "This app needs access to location to show heatmap data.",
+        "NSLocationAlwaysUsageDescription": "This app needs access to location to show heatmap data.",
+        "NSMicrophoneUsageDescription": "This app needs access to your microphone for voice search.",
+        "UIBackgroundModes": ["location", "fetch"],
+        "NSAppTransportSecurity": {
+          "NSAllowsArbitraryLoads": true,
+          "NSExceptionDomains": {
+            "localhost": {
+              "NSExceptionAllowsInsecureHTTPLoads": true
+            }
+          }
+        }
+      }
     },
     "android": {
+      "package": "com.findersapp",
+      "config": {
+        "googleMaps": {
+          "apiKey": "AIzaSyAt8lR5GgTa3pKEMSJCxMggfJLhimvSwbg"
+        }
+      },
+      "permissions": [
+        "CAMERA",
+        "READ_EXTERNAL_STORAGE",
+        "WRITE_EXTERNAL_STORAGE",
+        "ACCESS_FINE_LOCATION",
+        "ACCESS_COARSE_LOCATION",
+        "RECORD_AUDIO"
+      ],
       "adaptiveIcon": {
         "foregroundImage": "./assets/adaptive-icon.png",
         "backgroundColor": "#ffffff"
@@ -26,7 +60,32 @@
     },
     "web": {
       "favicon": "./assets/favicon.png"
+    },
+    "plugins": [
+      "expo-location",
+      "expo-camera",
+      "expo-image-picker",
+      "@react-native-voice/voice",
+      [
+        "expo-build-properties",
+        {
+          "ios": {
+            "useFrameworks": "static"
+          }
+        }
+      ]
+    ],
+    "extra": {
+      "eas": {
+        "projectId": "finders-app"
+      }
+    },
+    "owner": "muhammadali",
+    "runtimeVersion": {
+      "policy": "appVersion"
+    },
+    "updates": {
+      "url": "https://u.expo.dev/finders-app"
     }
   }
 }
-

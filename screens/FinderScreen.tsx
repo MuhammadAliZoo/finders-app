@@ -1,89 +1,130 @@
 "use client"
 
-import { useState } from "react"
-import { View, Text, StyleSheet, TouchableOpacity, FlatList, Image, TextInput } from "react-native"
-import { useNavigation } from "@react-navigation/native"
-import { Ionicons } from "@expo/vector-icons"
-import { useTheme } from "../context/ThemeContext"
+import React, { useState, useCallback } from 'react';
+import { View, Text, StyleSheet, TouchableOpacity, FlatList, Image, TextInput } from 'react-native';
+import { useNavigation } from '@react-navigation/native';
+import { Ionicons } from '@expo/vector-icons';
+import { useTheme } from '../theme/ThemeContext';
+import { NativeStackNavigationProp } from '@react-navigation/native-stack';
+import { MainStackParamList } from '../navigation/types';
+import { Item } from '../types/item';
+
+type FoundItem = Item & {
+  status: "Pending" | "Claimed";
+};
 
 // Mock data
-const foundItems = [
+const foundItems: FoundItem[] = [
   {
     id: "1",
     title: "Black Wallet",
     description: "Found near Central Park entrance",
-    location: "Central Park, NY",
-    date: "June 15, 2023",
+    location: {
+      latitude: 40.7829,
+      longitude: -73.9654
+    },
     image: "https://via.placeholder.com/150",
     status: "Pending",
+    price: 0,
+    timestamp: "2024-03-20T10:30:00Z",
+    priority: "high",
+    category: "accessories",
+    rarity: "Common"
   },
   {
     id: "2",
     title: "iPhone 13",
     description: "Found at Coffee Shop on Main St",
-    location: "Downtown, NY",
-    date: "June 14, 2023",
+    location: {
+      latitude: 40.7831,
+      longitude: -73.9652
+    },
     image: "https://via.placeholder.com/150",
     status: "Claimed",
+    price: 0,
+    timestamp: "2024-03-19T15:45:00Z",
+    priority: "medium",
+    category: "electronics",
+    rarity: "Common"
   },
   {
     id: "3",
     title: "House Keys",
     description: "Set of keys with red keychain",
-    location: "Library, NY",
-    date: "June 13, 2023",
+    location: {
+      latitude: 40.7833,
+      longitude: -73.9650
+    },
     image: "https://via.placeholder.com/150",
     status: "Pending",
-  },
-]
+    price: 0,
+    timestamp: "2024-03-18T09:15:00Z",
+    priority: "low",
+    category: "accessories",
+    rarity: "Common"
+  }
+];
 
 const FinderScreen = () => {
-  const navigation = useNavigation()
-  const { colors } = useTheme()
-  const [searchQuery, setSearchQuery] = useState("")
-  const [activeTab, setActiveTab] = useState("found")
+  const navigation = useNavigation<NativeStackNavigationProp<MainStackParamList>>();
+  const { colors } = useTheme();
+  const [searchQuery, setSearchQuery] = useState("");
+  const [activeTab, setActiveTab] = useState("found");
 
-  const renderFoundItem = ({ item }) => (
+  // Memoized navigation handlers
+  const handleItemPress = useCallback((item: FoundItem) => {
+    if (!item.id) {
+      console.warn('Invalid item ID for navigation');
+      return;
+    }
+    navigation.navigate("ItemDetails", { itemId: item.id });
+  }, [navigation]);
+
+  const handleAddNewItem = useCallback(() => {
+    navigation.navigate("Submission");
+  }, [navigation]);
+
+  const renderItem = ({ item }: { item: FoundItem }) => (
     <TouchableOpacity
       style={[styles.itemCard, { backgroundColor: colors.card }]}
-      onPress={() => navigation.navigate("ItemDetails", { itemId: item.id })}
+      onPress={() => handleItemPress(item)}
     >
       <Image source={{ uri: item.image }} style={styles.itemImage} />
       <View style={styles.itemContent}>
-        <View style={styles.itemHeader}>
-          <Text style={[styles.itemTitle, { color: colors.text }]}>{item.title}</Text>
-          <View
-            style={[
-              styles.statusBadge,
-              {
-                backgroundColor: item.status === "Pending" ? colors.warning : colors.success,
-              },
-            ]}
-          >
-            <Text style={styles.statusText}>{item.status}</Text>
-          </View>
-        </View>
-        <Text style={[styles.itemDescription, { color: colors.secondary }]} numberOfLines={2}>
-          {item.description}
-        </Text>
-        <View style={styles.itemMeta}>
+        <Text style={[styles.itemTitle, { color: colors.text }]}>{item.title}</Text>
+        <Text style={[styles.itemDescription, { color: colors.secondary }]}>{item.description}</Text>
+        <View style={styles.metaContainer}>
           <View style={styles.metaItem}>
             <Ionicons name="location-outline" size={14} color={colors.secondary} />
-            <Text style={[styles.metaText, { color: colors.secondary }]}>{item.location}</Text>
+            <Text style={[styles.metaText, { color: colors.secondary }]}>
+              {item.location ? `${item.location.latitude}, ${item.location.longitude}` : 'Location not specified'}
+            </Text>
           </View>
           <View style={styles.metaItem}>
-            <Ionicons name="calendar-outline" size={14} color={colors.secondary} />
-            <Text style={[styles.metaText, { color: colors.secondary }]}>{item.date}</Text>
+            <Ionicons name="time-outline" size={14} color={colors.secondary} />
+            <Text style={[styles.metaText, { color: colors.secondary }]}>
+              {item.timestamp ? new Date(item.timestamp).toLocaleDateString() : 'Date not specified'}
+            </Text>
           </View>
         </View>
       </View>
     </TouchableOpacity>
-  )
+  );
+
+  // Filter items based on search query
+  const filteredItems = useCallback(() => {
+    if (!searchQuery.trim()) return foundItems;
+    return foundItems.filter(
+      item =>
+        item.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
+        item.description.toLowerCase().includes(searchQuery.toLowerCase())
+    );
+  }, [searchQuery]);
 
   return (
     <View style={[styles.container, { backgroundColor: colors.background }]}>
       {/* Header */}
-      <View style={styles.header}>
+      <View style={[styles.header, { backgroundColor: colors.background }]}>
         <Text style={[styles.headerTitle, { color: colors.text }]}>Finder</Text>
       </View>
 
@@ -118,10 +159,11 @@ const FinderScreen = () => {
       {/* Content */}
       {activeTab === "found" ? (
         <FlatList
-          data={foundItems}
-          renderItem={renderFoundItem}
+          data={filteredItems()}
+          renderItem={renderItem}
           keyExtractor={(item) => item.id}
           contentContainerStyle={styles.listContent}
+          testID="found-items-list"
         />
       ) : (
         <View style={styles.historyContainer}>
@@ -134,7 +176,8 @@ const FinderScreen = () => {
       {/* Add Button */}
       <TouchableOpacity
         style={[styles.addButton, { backgroundColor: colors.primary }]}
-        onPress={() => navigation.navigate("Submission", { type: "found" })}
+        onPress={handleAddNewItem}
+        testID="add-found-item-button"
       >
         <Ionicons name="add" size={24} color="#FFFFFF" />
       </TouchableOpacity>
@@ -147,12 +190,17 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   header: {
-    padding: 16,
-    paddingBottom: 8,
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
+    paddingHorizontal: 16,
+    paddingTop: 60,
+    paddingBottom: 16,
   },
   headerTitle: {
-    fontSize: 24,
+    fontSize: 34,
     fontWeight: "bold",
+    flex: 1,
   },
   searchContainer: {
     flexDirection: "row",
@@ -200,32 +248,16 @@ const styles = StyleSheet.create({
     flex: 1,
     padding: 12,
   },
-  itemHeader: {
-    flexDirection: "row",
-    justifyContent: "space-between",
-    alignItems: "flex-start",
-    marginBottom: 4,
-  },
   itemTitle: {
     fontSize: 16,
     fontWeight: "bold",
     flex: 1,
   },
-  statusBadge: {
-    paddingHorizontal: 8,
-    paddingVertical: 4,
-    borderRadius: 12,
-  },
-  statusText: {
-    fontSize: 10,
-    fontWeight: "bold",
-    color: "#FFFFFF",
-  },
   itemDescription: {
     fontSize: 14,
     marginBottom: 8,
   },
-  itemMeta: {
+  metaContainer: {
     flexDirection: "row",
     flexWrap: "wrap",
   },

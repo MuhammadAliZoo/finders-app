@@ -2,7 +2,10 @@
 import { createDrawerNavigator } from "@react-navigation/drawer"
 import { createNativeStackNavigator } from "@react-navigation/native-stack"
 import { Ionicons } from "@expo/vector-icons"
-import { useTheme } from "../context/ThemeContext"
+import { useTheme } from "../theme/ThemeContext"
+import type { DrawerNavigationOptions, DrawerContentComponentProps } from '@react-navigation/drawer'
+import type { NativeStackNavigationOptions } from '@react-navigation/native-stack'
+import { ReactNode } from 'react'
 
 import AdminDashboardScreen from "../screens/admin/AdminDashboardScreen"
 import ContentModerationScreen from "../screens/admin/ContentModerationScreen"
@@ -15,90 +18,112 @@ import CollaborativeWorkspaceScreen from "../screens/admin/CollaborativeWorkspac
 import WidgetSettingsScreen from "../screens/admin/WidgetSettingsScreen"
 import AdminDrawerContent from "../components/admin/AdminDrawerContent"
 
-const Drawer = createDrawerNavigator()
-const Stack = createNativeStackNavigator()
+type RootStackParamList = {
+  DashboardHome: undefined;
+  AdminHome: undefined;
+  GenerateReport: undefined;
+  CollaborativeWorkspace: undefined;
+  WidgetSettings: undefined;
+  ContentModeration: undefined;
+  ItemModeration: undefined;
+  DisputeResolution: undefined;
+  DisputeDetails: undefined;
+  AdminProfile: undefined;
+};
+
+const Drawer = createDrawerNavigator<RootStackParamList>()
+const Stack = createNativeStackNavigator<RootStackParamList>()
+
+const stackScreenOptions: NativeStackNavigationOptions = {
+  headerShown: false,
+};
 
 const DashboardStack = () => {
   return (
-    <Stack.Navigator screenOptions={{ headerShown: false }}>
-      <Stack.Screen name="AdminDashboard" component={AdminDashboardScreen} />
-      <Stack.Screen name="GenerateReport" component={GenerateReportScreen} />
-      <Stack.Screen name="CollaborativeWorkspace" component={CollaborativeWorkspaceScreen} />
-      <Stack.Screen name="WidgetSettings" component={WidgetSettingsScreen} />
+    <Stack.Navigator>
+      <Stack.Screen name="DashboardHome" component={AdminDashboardScreen} options={stackScreenOptions} />
+      <Stack.Screen name="GenerateReport" component={GenerateReportScreen} options={stackScreenOptions} />
+      <Stack.Screen name="CollaborativeWorkspace" component={CollaborativeWorkspaceScreen} options={stackScreenOptions} />
+      <Stack.Screen name="WidgetSettings" component={WidgetSettingsScreen} options={stackScreenOptions} />
     </Stack.Navigator>
   )
 }
 
 const ModerationStack = () => {
   return (
-    <Stack.Navigator screenOptions={{ headerShown: false }}>
-      <Stack.Screen name="ContentModeration" component={ContentModerationScreen} />
-      <Stack.Screen name="ItemModeration" component={ItemModerationScreen} />
+    <Stack.Navigator>
+      <Stack.Screen name="ContentModeration" component={ContentModerationScreen} options={stackScreenOptions} />
+      <Stack.Screen name="ItemModeration" component={ItemModerationScreen} options={stackScreenOptions} />
     </Stack.Navigator>
   )
 }
 
 const DisputeStack = () => {
   return (
-    <Stack.Navigator screenOptions={{ headerShown: false }}>
-      <Stack.Screen name="DisputeResolution" component={DisputeResolutionScreen} />
-      <Stack.Screen name="DisputeDetails" component={DisputeDetailsScreen} />
+    <Stack.Navigator>
+      <Stack.Screen name="DisputeResolution" component={DisputeResolutionScreen} options={stackScreenOptions} />
+      <Stack.Screen name="DisputeDetails" component={DisputeDetailsScreen} options={stackScreenOptions} />
     </Stack.Navigator>
   )
 }
 
 const AdminNavigator = () => {
-  const { colors } = useTheme()
+  const { colors, isInitialized } = useTheme();
+
+  if (!isInitialized) {
+    return null;
+  }
+
+  const drawerScreenOptions: DrawerNavigationOptions = {
+    headerStyle: {
+      backgroundColor: colors.background,
+    },
+    headerTintColor: colors.text,
+    drawerStyle: {
+      backgroundColor: colors.background,
+    },
+    drawerActiveTintColor: colors.primary,
+    drawerInactiveTintColor: colors.text,
+  };
 
   return (
-    <Drawer.Navigator
-      drawerContent={(props) => <AdminDrawerContent {...props} />}
-      screenOptions={{
-        headerShown: false,
-        drawerActiveTintColor: colors.primary,
-        drawerInactiveTintColor: colors.secondary,
-        drawerLabelStyle: {
-          marginLeft: -20,
-          fontSize: 15,
-        },
-        drawerStyle: {
-          backgroundColor: colors.card,
-          width: 280,
-        },
-      }}
-    >
+    <Drawer.Navigator drawerContent={(props) => <AdminDrawerContent {...props} />}>
       <Drawer.Screen
-        name="Dashboard"
+        name="AdminHome"
         component={DashboardStack}
         options={{
-          drawerIcon: ({ color }) => <Ionicons name="grid-outline" size={22} color={color} />,
+          ...drawerScreenOptions,
+          headerShown: false,
+          drawerIcon: ({ color }) => <Ionicons name="home" size={24} color={color} />,
         }}
       />
       <Drawer.Screen
-        name="Moderation"
+        name="ContentModeration"
         component={ModerationStack}
         options={{
-          drawerIcon: ({ color }) => <Ionicons name="shield-checkmark-outline" size={22} color={color} />,
+          ...drawerScreenOptions,
+          drawerIcon: ({ color }) => <Ionicons name="shield-checkmark" size={24} color={color} />,
         }}
       />
       <Drawer.Screen
-        name="Disputes"
+        name="DisputeResolution"
         component={DisputeStack}
         options={{
-          drawerIcon: ({ color }) => <Ionicons name="alert-circle-outline" size={22} color={color} />,
+          ...drawerScreenOptions,
+          drawerIcon: ({ color }) => <Ionicons name="alert-circle" size={24} color={color} />,
         }}
       />
       <Drawer.Screen
         name="AdminProfile"
         component={AdminProfileScreen}
         options={{
-          drawerIcon: ({ color }) => <Ionicons name="person-outline" size={22} color={color} />,
-          title: "Profile",
+          ...drawerScreenOptions,
+          drawerIcon: ({ color }) => <Ionicons name="person" size={24} color={color} />,
         }}
       />
     </Drawer.Navigator>
-  )
-}
+  );
+};
 
-export default AdminNavigator
+export default AdminNavigator;
 

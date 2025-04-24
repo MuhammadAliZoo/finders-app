@@ -12,16 +12,22 @@ import {
   Platform,
   ScrollView,
   ActivityIndicator,
+  Alert,
 } from "react-native"
+import type { NativeStackNavigationProp } from "@react-navigation/native-stack"
 import { useNavigation } from "@react-navigation/native"
 import { Ionicons } from "@expo/vector-icons"
-import { useTheme } from "../../context/ThemeContext"
-import { useAuth } from "../../context/AuthContext"
+import { useTheme } from "../../theme/ThemeContext"
+import { RootStackParamList } from "../../navigation/types"
+import auth from '@react-native-firebase/auth'
+import firestore from '@react-native-firebase/firestore'
+import { User } from "../../types/user"
+
+type SignupScreenNavigationProp = NativeStackNavigationProp<RootStackParamList, 'Signup'>;
 
 const SignupScreen = () => {
-  const navigation = useNavigation()
+  const navigation = useNavigation<SignupScreenNavigationProp>()
   const { colors } = useTheme()
-  const { signup } = useAuth()
 
   const [name, setName] = useState("")
   const [email, setEmail] = useState("")
@@ -47,17 +53,48 @@ const SignupScreen = () => {
     setLoading(true)
 
     try {
-      await signup(name, email, password, phone)
-      // Navigation will be handled by the AuthContext
-    } catch (err) {
-      setError(err.message || "Failed to sign up. Please try again.")
+      // Create user account
+      const userCredential = await auth().createUserWithEmailAndPassword(email, password)
+      const user = userCredential.user
+
+      // Update user profile
+      await user.updateProfile({
+        displayName: name
+      })
+
+      // Create user document in Firestore
+      const userData: User = {
+        id: user.uid,
+        email,
+        displayName: name,
+        phoneNumber: phone || null,
+        photoURL: null,
+        createdAt: new Date(),
+        lastSeen: new Date(),
+        status: 'online',
+      }
+
+      await firestore().collection('users').doc(user.uid).set(userData)
+
+      Alert.alert('Success', 'Account created successfully!')
+      navigation.navigate('Home')
+    } catch (err: any) {
+      if (err.code === 'auth/email-already-in-use') {
+        setError('Email address is already in use')
+      } else if (err.code === 'auth/invalid-email') {
+        setError('Invalid email address')
+      } else if (err.code === 'auth/weak-password') {
+        setError('Password is too weak')
+      } else {
+        setError(err.message || "Failed to sign up. Please try again.")
+      }
     } finally {
       setLoading(false)
     }
   }
 
   const navigateToLogin = () => {
-    navigation.navigate("Login")
+    navigation.navigate("Auth")
   }
 
   return (
@@ -68,7 +105,6 @@ const SignupScreen = () => {
       >
         <View style={styles.logoContainer}>
           <Image source={require("../../assets/logo.png")} style={styles.logo} resizeMode="contain" />
-          <Text style={[styles.appName, { color: colors.text }]}>FindersAttachment</Text>
         </View>
 
         <View style={styles.formContainer}>
@@ -212,32 +248,28 @@ const styles = StyleSheet.create({
   container: {
     flexGrow: 1,
     padding: 24,
+    justifyContent: "center",
   },
   logoContainer: {
     alignItems: "center",
-    marginTop: 20,
-    marginBottom: 30,
+    marginBottom: 48,
   },
   logo: {
-    width: 80,
-    height: 80,
-    marginBottom: 12,
-  },
-  appName: {
-    fontSize: 22,
-    fontWeight: "bold",
+    width: 100,
+    height: 100,
+    marginBottom: 16,
   },
   formContainer: {
     width: "100%",
   },
   title: {
-    fontSize: 28,
+    fontSize: 32,
     fontWeight: "bold",
     marginBottom: 8,
   },
   subtitle: {
     fontSize: 16,
-    marginBottom: 24,
+    marginBottom: 32,
   },
   errorContainer: {
     padding: 12,
@@ -248,11 +280,10 @@ const styles = StyleSheet.create({
     fontSize: 14,
   },
   inputGroup: {
-    marginBottom: 16,
+    marginBottom: 24,
   },
   inputLabel: {
     fontSize: 16,
-    fontWeight: "500",
     marginBottom: 8,
   },
   inputContainer: {
@@ -270,17 +301,16 @@ const styles = StyleSheet.create({
     fontSize: 16,
   },
   signupButton: {
-    height: 56,
     borderRadius: 12,
+    height: 56,
     justifyContent: "center",
     alignItems: "center",
-    marginTop: 8,
     marginBottom: 24,
   },
   signupButtonText: {
     color: "#FFFFFF",
     fontSize: 16,
-    fontWeight: "bold",
+    fontWeight: "600",
   },
   dividerContainer: {
     flexDirection: "row",
@@ -298,7 +328,8 @@ const styles = StyleSheet.create({
   socialButtonsContainer: {
     flexDirection: "row",
     justifyContent: "center",
-    marginBottom: 24,
+    gap: 16,
+    marginBottom: 32,
   },
   socialButton: {
     width: 56,
@@ -306,11 +337,11 @@ const styles = StyleSheet.create({
     borderRadius: 28,
     justifyContent: "center",
     alignItems: "center",
-    marginHorizontal: 8,
   },
   loginContainer: {
     flexDirection: "row",
     justifyContent: "center",
+    alignItems: "center",
     marginBottom: 24,
   },
   loginText: {
@@ -319,7 +350,7 @@ const styles = StyleSheet.create({
   },
   loginLink: {
     fontSize: 14,
-    fontWeight: "bold",
+    fontWeight: "600",
   },
   termsText: {
     fontSize: 12,

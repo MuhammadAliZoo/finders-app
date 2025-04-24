@@ -5,7 +5,7 @@ import asyncHandler from "express-async-handler"
 // @route   POST /api/auth/register
 // @access  Public
 export const register = asyncHandler(async (req, res) => {
-  const { name, email, password } = req.body
+  const { name, email, password, phone } = req.body
 
   // Check if user already exists
   const userExists = await User.findOne({ email })
@@ -20,15 +20,22 @@ export const register = asyncHandler(async (req, res) => {
     name,
     email,
     password,
+    phone,
   })
 
   if (user) {
+    const token = user.getSignedJwtToken()
+
     res.status(201).json({
-      _id: user._id,
-      name: user.name,
-      email: user.email,
-      isAdmin: user.isAdmin,
-      token: user.getSignedJwtToken(),
+      token,
+      user: {
+        _id: user._id,
+        name: user.name,
+        email: user.email,
+        phone: user.phone,
+        profileImage: user.profileImage,
+        isAdmin: user.isAdmin,
+      },
     })
   } else {
     res.status(400)
@@ -58,20 +65,32 @@ export const login = asyncHandler(async (req, res) => {
     throw new Error("Invalid credentials")
   }
 
+  const token = user.getSignedJwtToken()
+
   res.json({
-    _id: user._id,
-    name: user.name,
-    email: user.email,
-    isAdmin: user.isAdmin,
-    token: user.getSignedJwtToken(),
+    token,
+    user: {
+      _id: user._id,
+      name: user.name,
+      email: user.email,
+      phone: user.phone,
+      profileImage: user.profileImage,
+      isAdmin: user.isAdmin,
+    },
   })
 })
 
 // @desc    Login admin
-// @route   POST /api/auth/admin/login
+// @route   POST /api/auth/admin-login
 // @access  Public
 export const adminLogin = asyncHandler(async (req, res) => {
-  const { email, password } = req.body
+  const { email, password, adminCode } = req.body
+
+  // Validate admin code
+  if (adminCode !== process.env.ADMIN_ACCESS_CODE) {
+    res.status(401)
+    throw new Error("Invalid admin access code")
+  }
 
   // Check for user
   const user = await User.findOne({ email, isAdmin: true }).select("+password")
@@ -89,12 +108,18 @@ export const adminLogin = asyncHandler(async (req, res) => {
     throw new Error("Invalid admin credentials")
   }
 
+  const token = user.getSignedJwtToken()
+
   res.json({
-    _id: user._id,
-    name: user.name,
-    email: user.email,
-    isAdmin: user.isAdmin,
-    token: user.getSignedJwtToken(),
+    token,
+    user: {
+      _id: user._id,
+      name: user.name,
+      email: user.email,
+      phone: user.phone,
+      profileImage: user.profileImage,
+      isAdmin: user.isAdmin,
+    },
   })
 })
 
@@ -145,5 +170,53 @@ export const updateProfile = asyncHandler(async (req, res) => {
     res.status(404)
     throw new Error("User not found")
   }
+})
+
+// @desc    Create test user
+// @route   POST /api/auth/create-test-user
+// @access  Public
+export const createTestUser = asyncHandler(async (req, res) => {
+  // Check if test user already exists
+  const userExists = await User.findOne({ email: "test@example.com" })
+
+  if (userExists) {
+    const token = userExists.getSignedJwtToken()
+    return res.status(200).json({
+      message: "Test user already exists",
+      token,
+      user: {
+        _id: userExists._id,
+        name: userExists.name,
+        email: userExists.email,
+        phone: userExists.phone,
+        profileImage: userExists.profileImage,
+        isAdmin: userExists.isAdmin,
+      },
+    })
+  }
+
+  // Create test user
+  const user = await User.create({
+    name: "Test User",
+    email: "test@example.com",
+    password: "password123",
+    phone: "+1234567890",
+    isVerified: true,
+  })
+
+  const token = user.getSignedJwtToken()
+
+  res.status(201).json({
+    message: "Test user created successfully",
+    token,
+    user: {
+      _id: user._id,
+      name: user.name,
+      email: user.email,
+      phone: user.phone,
+      profileImage: user.profileImage,
+      isAdmin: user.isAdmin,
+    },
+  })
 })
 

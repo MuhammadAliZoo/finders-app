@@ -10,29 +10,54 @@ import {
   TextInput,
   ActivityIndicator,
   Modal,
-  ScrollView, // Added ScrollView import
+  ScrollView,
 } from "react-native"
 import { Ionicons } from "@expo/vector-icons"
-import { useTheme } from "../../context/ThemeContext"
+import { useTheme } from "../../theme/ThemeContext"
 import { adminApi } from "../../api/admin"
-import AdminHeader from "../../components/admin/AdminHeader"
 import DisputeCard from "../../components/admin/DisputeCard"
 import FilterChip from "../../components/admin/FilterChip"
 import DisputeTimeline from "../../components/admin/DisputeTimeline"
 import AIRecommendation from "../../components/admin/AIRecommendation"
+import { NativeStackNavigationProp } from "@react-navigation/native-stack"
+import { RootStackParamList } from "../../navigation/types"
 
-const DisputeResolutionScreen = ({ navigation }) => {
+type DisputeStatus = "all" | "open" | "in_progress" | "escalated" | "resolved"
+type SortBy = "date" | "priority" | "response_time"
+
+export interface Dispute {
+  id: string
+  status: string
+  createdAt: string
+  itemTitle: string
+  requesterName: string
+  finderName: string
+  timeline: any[]
+}
+
+interface AIRecommendationData {
+  title: string;
+  description: string;
+  confidence: number;
+  action: string;
+}
+
+type DisputeResolutionScreenProps = {
+  navigation: NativeStackNavigationProp<RootStackParamList, 'DisputeResolution'>
+}
+
+const DisputeResolutionScreen = ({ navigation }: DisputeResolutionScreenProps) => {
   const { colors } = useTheme()
-  const [disputes, setDisputes] = useState([])
+  const [disputes, setDisputes] = useState<Dispute[]>([])
   const [loading, setLoading] = useState(true)
   const [refreshing, setRefreshing] = useState(false)
-  const [filterStatus, setFilterStatus] = useState("all")
+  const [filterStatus, setFilterStatus] = useState<DisputeStatus>("all")
   const [searchQuery, setSearchQuery] = useState("")
-  const [sortBy, setSortBy] = useState("date")
+  const [sortBy, setSortBy] = useState<SortBy>("date")
   const [showFilterModal, setShowFilterModal] = useState(false)
-  const [selectedDispute, setSelectedDispute] = useState(null)
+  const [selectedDispute, setSelectedDispute] = useState<Dispute | null>(null)
   const [showDisputeModal, setShowDisputeModal] = useState(false)
-  const [aiRecommendation, setAiRecommendation] = useState(null)
+  const [aiRecommendation, setAiRecommendation] = useState<AIRecommendationData | null>(null)
   const [loadingRecommendation, setLoadingRecommendation] = useState(false)
 
   useEffect(() => {
@@ -57,23 +82,28 @@ const DisputeResolutionScreen = ({ navigation }) => {
     fetchDisputes()
   }
 
-  const handleSearch = (text) => {
+  const handleSearch = (text: string) => {
     setSearchQuery(text)
     // Implement search functionality here
   }
 
-  const openDisputeDetails = (dispute) => {
+  const openDisputeDetails = (dispute: Dispute) => {
     navigation.navigate("DisputeDetails", { dispute })
   }
 
-  const openQuickView = async (dispute) => {
+  const openQuickView = async (dispute: Dispute) => {
     setSelectedDispute(dispute)
     setShowDisputeModal(true)
 
     try {
       setLoadingRecommendation(true)
       const recommendation = await adminApi.getAIRecommendation(dispute.id)
-      setAiRecommendation(recommendation)
+      setAiRecommendation({
+        title: "AI Analysis",
+        description: recommendation.recommendation,
+        confidence: 0.85,
+        action: "Review and take action"
+      })
     } catch (error) {
       console.error("Failed to get AI recommendation", error)
       setAiRecommendation(null)
@@ -82,12 +112,12 @@ const DisputeResolutionScreen = ({ navigation }) => {
     }
   }
 
-  const initiateCall = (dispute) => {
+  const initiateCall = (dispute: Dispute) => {
     // Implement call functionality
     console.log("Initiating call for dispute:", dispute.id)
   }
 
-  const renderItem = ({ item }) => (
+  const renderItem = ({ item }: { item: Dispute }) => (
     <DisputeCard
       dispute={item}
       onPress={() => openDisputeDetails(item)}
@@ -109,33 +139,37 @@ const DisputeResolutionScreen = ({ navigation }) => {
 
           <Text style={[styles.filterSectionTitle, { color: colors.text }]}>Status</Text>
           <View style={styles.filterChips}>
-            <FilterChip label="All" isSelected={filterStatus === "all"} onPress={() => setFilterStatus("all")} />
-            <FilterChip label="Open" isSelected={filterStatus === "open"} onPress={() => setFilterStatus("open")} />
+            <FilterChip label="All" isSelected={filterStatus === "all"} onPress={() => setFilterStatus("all")} count={0} />
+            <FilterChip label="Open" isSelected={filterStatus === "open"} onPress={() => setFilterStatus("open")} count={0} />
             <FilterChip
               label="In Progress"
               isSelected={filterStatus === "in_progress"}
               onPress={() => setFilterStatus("in_progress")}
+              count={0}
             />
             <FilterChip
               label="Escalated"
               isSelected={filterStatus === "escalated"}
               onPress={() => setFilterStatus("escalated")}
+              count={0}
             />
             <FilterChip
               label="Resolved"
               isSelected={filterStatus === "resolved"}
               onPress={() => setFilterStatus("resolved")}
+              count={0}
             />
           </View>
 
           <Text style={[styles.filterSectionTitle, { color: colors.text }]}>Sort By</Text>
           <View style={styles.filterChips}>
-            <FilterChip label="Date (Newest)" isSelected={sortBy === "date"} onPress={() => setSortBy("date")} />
-            <FilterChip label="Priority" isSelected={sortBy === "priority"} onPress={() => setSortBy("priority")} />
+            <FilterChip label="Date (Newest)" isSelected={sortBy === "date"} onPress={() => setSortBy("date")} count={0} />
+            <FilterChip label="Priority" isSelected={sortBy === "priority"} onPress={() => setSortBy("priority")} count={0} />
             <FilterChip
               label="Response Time"
               isSelected={sortBy === "response_time"}
               onPress={() => setSortBy("response_time")}
+              count={0}
             />
           </View>
 
@@ -221,7 +255,15 @@ const DisputeResolutionScreen = ({ navigation }) => {
                     <Text style={[styles.loadingText, { color: colors.secondary }]}>Analyzing dispute data...</Text>
                   </View>
                 ) : aiRecommendation ? (
-                  <AIRecommendation recommendation={aiRecommendation} />
+                  <AIRecommendation 
+                    recommendation={aiRecommendation}
+                    onAccept={() => {
+                      setShowDisputeModal(false);
+                    }}
+                    onReject={() => {
+                      setShowDisputeModal(false);
+                    }}
+                  />
                 ) : (
                   <Text style={[styles.noRecommendation, { color: colors.secondary }]}>
                     No AI recommendation available.
@@ -244,9 +286,9 @@ const DisputeResolutionScreen = ({ navigation }) => {
                 <Text style={[styles.actionButtonText, { color: colors.warning }]}>Group Chat</Text>
               </TouchableOpacity>
 
-              <TouchableOpacity style={[styles.actionButton, { backgroundColor: colors.success + "20" }]}>
-                <Ionicons name="checkmark-circle" size={20} color={colors.success} />
-                <Text style={[styles.actionButtonText, { color: colors.success }]}>Resolve</Text>
+              <TouchableOpacity style={[styles.actionButton, { backgroundColor: colors.primary + "20" }]}>
+                <Ionicons name="checkmark-circle" size={20} color={colors.primary} />
+                <Text style={[styles.actionButtonText, { color: colors.primary }]}>Resolve</Text>
               </TouchableOpacity>
             </View>
           </View>
@@ -255,7 +297,7 @@ const DisputeResolutionScreen = ({ navigation }) => {
     )
   }
 
-  const getStatusColor = (status) => {
+  const getStatusColor = (status: string) => {
     switch (status.toLowerCase()) {
       case "open":
         return colors.warning
@@ -264,7 +306,7 @@ const DisputeResolutionScreen = ({ navigation }) => {
       case "escalated":
         return colors.error
       case "resolved":
-        return colors.success
+        return colors.primary
       default:
         return colors.secondary
     }
@@ -272,8 +314,6 @@ const DisputeResolutionScreen = ({ navigation }) => {
 
   return (
     <View style={[styles.container, { backgroundColor: colors.background }]}>
-      <AdminHeader title="Dispute Resolution" navigation={navigation} />
-
       <View style={styles.actionBar}>
         <View style={[styles.searchContainer, { backgroundColor: colors.card }]}>
           <Ionicons name="search-outline" size={20} color={colors.secondary} />
@@ -301,7 +341,7 @@ const DisputeResolutionScreen = ({ navigation }) => {
 
       <View style={styles.statusFilters}>
         <ScrollView horizontal showsHorizontalScrollIndicator={false}>
-          <FilterChip label="All" isSelected={filterStatus === "all"} onPress={() => setFilterStatus("all")} />
+          <FilterChip label="All" isSelected={filterStatus === "all"} onPress={() => setFilterStatus("all")} count={0} />
           <FilterChip
             label="Open"
             isSelected={filterStatus === "open"}

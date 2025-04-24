@@ -1,451 +1,440 @@
 "use client"
 
-import { useState } from "react"
-import { View, Text, StyleSheet, Image, ScrollView, TouchableOpacity, Dimensions } from "react-native"
-import { useRoute } from "@react-navigation/native"
-import { Ionicons } from "@expo/vector-icons"
-import { useTheme } from "../context/ThemeContext"
+import React, { useEffect, useState } from 'react';
+import { View, Text, StyleSheet, Image, ScrollView, TouchableOpacity, Dimensions, ActivityIndicator, Platform } from 'react-native';
+import { RouteProp } from '@react-navigation/native';
+import { useNavigation, NavigationProp } from '@react-navigation/native';
+import { useTheme } from '../theme/ThemeContext';
+import { MainStackParamList } from '../navigation/types';
+import { Ionicons } from '@expo/vector-icons';
+import { Item } from '../types/item';
+import axios from 'axios';
 
-// Mock data
-const itemDetails = {
-  id: "1",
-  title: "Black Leather Wallet",
-  description:
-    'Found a black leather wallet with initials "JD" near Central Park entrance. Contains ID and credit cards.',
-  location: "Central Park, New York",
-  date: "June 15, 2023",
-  time: "2:30 PM",
-  status: "Found",
-  images: ["https://via.placeholder.com/400", "https://via.placeholder.com/400"],
-  finder: {
-    name: "Michael Rodriguez",
-    rating: 4.8,
-    image: "https://via.placeholder.com/100",
-  },
-  similarItems: [
-    { id: "s1", title: "Brown Wallet", image: "https://via.placeholder.com/150" },
-    { id: "s2", title: "Black Purse", image: "https://via.placeholder.com/150" },
-  ],
-  timeline: [
-    { id: "t1", event: "Item reported found", date: "June 15, 2023", time: "2:30 PM" },
-    { id: "t2", event: "Verification in progress", date: "June 15, 2023", time: "3:45 PM" },
-  ],
-}
+// Get the appropriate API URL based on platform and environment
+const getApiUrl = () => {
+  // Check if we're using a physical device with a specific IP
+  const PHYSICAL_DEVICE_IP = '192.168.1.100'; // Replace with your computer's IP address
+  const USE_PHYSICAL_DEVICE = false; // Set this to true when testing on physical device
 
-const ItemDetailsScreen = () => {
-  const route = useRoute()
-  const { colors } = useTheme()
-  const [activeTab, setActiveTab] = useState("details")
-  const [confidenceScore, setConfidenceScore] = useState(85)
+  if (USE_PHYSICAL_DEVICE) {
+    return `http://${PHYSICAL_DEVICE_IP}:5001/api`;
+  }
+
+  if (Platform.OS === 'ios') {
+    return 'http://localhost:5001/api';
+  } else if (Platform.OS === 'android') {
+    return 'http://10.0.2.2:5001/api';
+  }
+  
+  return 'http://localhost:5001/api'; // fallback
+};
+
+const API_URL = getApiUrl();
+console.log('Using API URL:', API_URL);
+
+type ItemDetailsScreenRouteProp = RouteProp<MainStackParamList, 'ItemDetails'>;
+type ItemDetailsScreenNavigationProp = NavigationProp<MainStackParamList>;
+
+type ItemDetailsScreenProps = {
+  route: RouteProp<MainStackParamList, 'ItemDetails'>;
+  navigation: any;
+};
+
+export default function ItemDetailsScreen({ route, navigation }: ItemDetailsScreenProps) {
+  const { colors } = useTheme();
+  const { itemId, item: initialItem } = route.params;
+  const [item, setItem] = useState<Item | null>(initialItem || null);
+  const [loading, setLoading] = useState(!initialItem);
+  const [error, setError] = useState<string | null>(null);
+
+  // Validate MongoDB ObjectId format
+  const isValidObjectId = (id: string) => /^[0-9a-fA-F]{24}$/.test(id);
+
+  useEffect(() => {
+    if (!initialItem) {
+      if (!isValidObjectId(itemId)) {
+        setError('Invalid item ID format');
+        setLoading(false);
+        return;
+      }
+      fetchItemDetails();
+    }
+  }, [itemId]);
+
+  const fetchItemDetails = async () => {
+    try {
+      setLoading(true);
+      console.log('Fetching item details from:', `${API_URL}/items/${itemId}`);
+      const response = await axios.get(`${API_URL}/items/${itemId}`, {
+        timeout: 10000,
+        headers: {
+          'Accept': 'application/json',
+          'Content-Type': 'application/json',
+        }
+      });
+      
+      if (!response.data) {
+        throw new Error('Item not found');
+      }
+
+      console.log('API Response:', response.data);
+      const fetchedItem = response.data;
+      setItem(fetchedItem);
+      setError(null);
+    } catch (err) {
+      console.error('Error fetching item details:', err);
+      if (axios.isAxiosError(err)) {
+        if (err.code === 'ECONNABORTED') {
+          setError('Request timed out. Please check your network connection.');
+        } else if (!err.response) {
+          setError('Network error. Please check your connection and API server.');
+        } else {
+          // Handle specific error cases
+          switch (err.response?.status) {
+            case 404:
+              setError('Item not found');
+              break;
+            case 500:
+              if (err.response?.data?.message?.includes('Cast to ObjectId failed')) {
+                setError('Invalid item ID format');
+              } else {
+                setError('Server error. Please try again later.');
+              }
+              break;
+            default:
+              const errorMessage = err.response?.data?.message || err.message;
+              setError(`Error: ${errorMessage}`);
+          }
+        }
+      } else {
+        setError('An unexpected error occurred');
+      }
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  // Helper function to determine item type
+  const getItemType = (item: Item) => {
+    if ('priority' in item) return 'lost';
+    if ('rarity' in item) return 'rare';
+    return 'unknown';
+  };
+
+  // Helper function to format date
+  const formatDate = (dateString: string) => {
+    return new Date(dateString).toLocaleDateString('en-US', {
+      year: 'numeric',
+      month: 'long',
+      day: 'numeric',
+      hour: '2-digit',
+      minute: '2-digit'
+    });
+  };
+
+  if (loading) {
+    return (
+      <View style={[styles.loadingContainer, { backgroundColor: colors.background }]}>
+        <ActivityIndicator size="large" color={colors.primary} />
+        <Text style={[styles.loadingText, { color: colors.text }]}>Loading item details...</Text>
+      </View>
+    );
+  }
+
+  if (error || !item) {
+    return (
+      <View style={[styles.errorContainer, { backgroundColor: colors.background }]}>
+        <Ionicons name="alert-circle-outline" size={48} color={colors.error} />
+        <Text style={[styles.errorText, { color: colors.text }]}>
+          {error || 'Item not found'}
+        </Text>
+        {error !== 'Invalid item ID format' && (
+          <TouchableOpacity
+            style={[styles.retryButton, { backgroundColor: colors.primary }]}
+            onPress={fetchItemDetails}
+          >
+            <Text style={styles.buttonText}>Retry</Text>
+          </TouchableOpacity>
+        )}
+        <TouchableOpacity
+          style={[styles.errorBackButton, { backgroundColor: colors.card }]}
+          onPress={() => navigation.goBack()}
+        >
+          <Text style={[styles.backButtonText, { color: colors.text }]}>Go Back</Text>
+        </TouchableOpacity>
+      </View>
+    );
+  }
+
+  const itemType = getItemType(item);
 
   return (
-    <ScrollView style={[styles.container, { backgroundColor: colors.background }]}>
-      {/* Image Gallery */}
-      <ScrollView horizontal pagingEnabled showsHorizontalScrollIndicator={false} style={styles.imageGallery}>
-        {itemDetails.images.map((image, index) => (
-          <Image key={index} source={{ uri: image }} style={styles.itemImage} resizeMode="cover" />
-        ))}
-      </ScrollView>
-
-      {/* Status Badge */}
-      <View
-        style={[
-          styles.statusBadge,
-          { backgroundColor: itemDetails.status === "Found" ? colors.success : colors.primary },
-        ]}
-      >
-        <Text style={styles.statusText}>{itemDetails.status}</Text>
+    <View style={[styles.container, { backgroundColor: colors.background }]}>
+      <View style={[styles.header, { backgroundColor: colors.background }]}>
+        <TouchableOpacity 
+          style={styles.backButton}
+          onPress={() => navigation.goBack()}
+        >
+          <Ionicons name="arrow-back" size={24} color={colors.text} />
+        </TouchableOpacity>
+        <Text style={[styles.headerTitle, { color: colors.text }]} numberOfLines={1}>
+          {itemType === 'lost' ? 'Lost Item Details' : 'Rare Item Details'}
+        </Text>
+        <View style={styles.headerRight} />
       </View>
 
-      {/* Item Info */}
-      <View style={styles.infoSection}>
-        <Text style={[styles.itemTitle, { color: colors.text }]}>{itemDetails.title}</Text>
-
-        <View style={styles.metaInfo}>
-          <View style={styles.metaItem}>
-            <Ionicons name="location-outline" size={16} color={colors.secondary} />
-            <Text style={[styles.metaText, { color: colors.secondary }]}>{itemDetails.location}</Text>
-          </View>
-          <View style={styles.metaItem}>
-            <Ionicons name="calendar-outline" size={16} color={colors.secondary} />
-            <Text style={[styles.metaText, { color: colors.secondary }]}>{itemDetails.date}</Text>
-          </View>
-          <View style={styles.metaItem}>
-            <Ionicons name="time-outline" size={16} color={colors.secondary} />
-            <Text style={[styles.metaText, { color: colors.secondary }]}>{itemDetails.time}</Text>
-          </View>
-        </View>
-
-        {/* AI Confidence Meter */}
-        <View style={[styles.confidenceMeter, { backgroundColor: colors.card }]}>
-          <View style={styles.confidenceHeader}>
-            <Text style={[styles.confidenceTitle, { color: colors.text }]}>AI Confidence Score</Text>
-            <Text style={[styles.confidenceScore, { color: colors.primary }]}>{confidenceScore}%</Text>
-          </View>
-          <View style={styles.progressBarContainer}>
-            <View
-              style={[
-                styles.progressBar,
-                {
-                  width: `${confidenceScore}%`,
-                  backgroundColor: confidenceScore > 70 ? colors.success : colors.warning,
-                },
-              ]}
+      <ScrollView bounces={false} showsVerticalScrollIndicator={false}>
+        {item.image ? (
+          <View style={styles.imageContainer}>
+            <Image 
+              source={{ 
+                uri: item.image.startsWith('http') ? item.image : `https://picsum.photos/400/400`,
+                cache: 'force-cache'
+              }} 
+              style={styles.image}
+              onError={() => {
+                console.log('Fallback to placeholder image');
+              }}
             />
           </View>
-          <Text style={[styles.confidenceDescription, { color: colors.secondary }]}>
-            This item has a high match probability based on visual and descriptive analysis.
-          </Text>
-        </View>
-      </View>
-
-      {/* Tabs */}
-      <View style={styles.tabsContainer}>
-        <TouchableOpacity
-          style={[styles.tab, activeTab === "details" && { borderBottomColor: colors.primary, borderBottomWidth: 2 }]}
-          onPress={() => setActiveTab("details")}
-        >
-          <Text style={[styles.tabText, { color: activeTab === "details" ? colors.primary : colors.secondary }]}>
-            Details
-          </Text>
-        </TouchableOpacity>
-        <TouchableOpacity
-          style={[styles.tab, activeTab === "timeline" && { borderBottomColor: colors.primary, borderBottomWidth: 2 }]}
-          onPress={() => setActiveTab("timeline")}
-        >
-          <Text style={[styles.tabText, { color: activeTab === "timeline" ? colors.primary : colors.secondary }]}>
-            Timeline
-          </Text>
-        </TouchableOpacity>
-        <TouchableOpacity
-          style={[styles.tab, activeTab === "similar" && { borderBottomColor: colors.primary, borderBottomWidth: 2 }]}
-          onPress={() => setActiveTab("similar")}
-        >
-          <Text style={[styles.tabText, { color: activeTab === "similar" ? colors.primary : colors.secondary }]}>
-            Similar Items
-          </Text>
-        </TouchableOpacity>
-      </View>
-
-      {/* Tab Content */}
-      <View style={styles.tabContent}>
-        {activeTab === "details" && (
-          <View>
-            <Text style={[styles.sectionTitle, { color: colors.text }]}>Description</Text>
-            <Text style={[styles.description, { color: colors.text }]}>{itemDetails.description}</Text>
-
-            <Text style={[styles.sectionTitle, { color: colors.text }]}>Finder</Text>
-            <View style={[styles.finderCard, { backgroundColor: colors.card }]}>
-              <Image source={{ uri: itemDetails.finder.image }} style={styles.finderImage} />
-              <View style={styles.finderInfo}>
-                <Text style={[styles.finderName, { color: colors.text }]}>{itemDetails.finder.name}</Text>
-                <View style={styles.ratingContainer}>
-                  <Ionicons name="star" size={16} color={colors.warning} />
-                  <Text style={[styles.ratingText, { color: colors.secondary }]}>{itemDetails.finder.rating}</Text>
-                </View>
-              </View>
-              <TouchableOpacity style={[styles.contactButton, { backgroundColor: colors.primary }]}>
-                <Text style={styles.contactButtonText}>Contact</Text>
-              </TouchableOpacity>
-            </View>
-          </View>
-        )}
-
-        {activeTab === "timeline" && (
-          <View style={styles.timelineContainer}>
-            {itemDetails.timeline.map((event, index) => (
-              <View key={event.id} style={styles.timelineItem}>
-                <View style={[styles.timelineDot, { backgroundColor: colors.primary }]} />
-                {index < itemDetails.timeline.length - 1 && (
-                  <View style={[styles.timelineLine, { backgroundColor: colors.border }]} />
-                )}
-                <View style={styles.timelineContent}>
-                  <Text style={[styles.timelineEvent, { color: colors.text }]}>{event.event}</Text>
-                  <Text style={[styles.timelineDate, { color: colors.secondary }]}>
-                    {event.date} at {event.time}
-                  </Text>
-                </View>
-              </View>
-            ))}
-          </View>
-        )}
-
-        {activeTab === "similar" && (
-          <View style={styles.similarItemsContainer}>
-            <Text style={[styles.similarItemsText, { color: colors.secondary }]}>
-              AI has found these similar items that might match what you're looking for:
+        ) : (
+          <View style={[styles.image, { backgroundColor: colors.card }]}>
+            <Ionicons name="image-outline" size={48} color={colors.text} />
+            <Text style={[styles.noImageText, { color: colors.text }]}>
+              No image available
             </Text>
-            <View style={styles.similarItemsGrid}>
-              {itemDetails.similarItems.map((item) => (
-                <TouchableOpacity key={item.id} style={[styles.similarItemCard, { backgroundColor: colors.card }]}>
-                  <Image source={{ uri: item.image }} style={styles.similarItemImage} />
-                  <Text style={[styles.similarItemTitle, { color: colors.text }]} numberOfLines={1}>
-                    {item.title}
-                  </Text>
-                </TouchableOpacity>
-              ))}
-            </View>
           </View>
         )}
-      </View>
+        
+        <View style={[styles.contentContainer, { backgroundColor: colors.card }]}>
+          <Text style={[styles.title, { color: colors.text }]}>{item.title}</Text>
+          
+          <View style={styles.badgeContainer}>
+            {itemType === 'lost' && (
+              <View style={[styles.badge, { backgroundColor: colors.primary + '20' }]}>
+                <Ionicons name="alert-circle" size={16} color={colors.primary} />
+                <Text style={[styles.badgeText, { color: colors.primary }]}>
+                  {item.priority} Priority
+                </Text>
+              </View>
+            )}
+            {itemType === 'rare' && (
+              <View style={[styles.badge, { backgroundColor: colors.primary + '20' }]}>
+                <Ionicons name="diamond" size={16} color={colors.primary} />
+                <Text style={[styles.badgeText, { color: colors.primary }]}>
+                  {item.rarity}
+                </Text>
+              </View>
+            )}
+            <View style={[styles.badge, { backgroundColor: colors.secondary + '20' }]}>
+              <Ionicons name="pricetag" size={16} color={colors.secondary} />
+              <Text style={[styles.badgeText, { color: colors.secondary }]}>
+                ${item.price.toLocaleString()} {itemType === 'rare' ? 'Value' : 'Reward'}
+              </Text>
+            </View>
+          </View>
 
-      {/* Action Buttons */}
-      <View style={styles.actionButtons}>
-        <TouchableOpacity style={[styles.actionButton, { backgroundColor: colors.card }]}>
-          <Ionicons name="bookmark-outline" size={20} color={colors.primary} />
-          <Text style={[styles.actionButtonText, { color: colors.text }]}>Save</Text>
-        </TouchableOpacity>
-        <TouchableOpacity style={[styles.actionButton, { backgroundColor: colors.card }]}>
-          <Ionicons name="share-social-outline" size={20} color={colors.primary} />
-          <Text style={[styles.actionButtonText, { color: colors.text }]}>Share</Text>
-        </TouchableOpacity>
-        <TouchableOpacity style={[styles.claimButton, { backgroundColor: colors.primary }]}>
-          <Text style={styles.claimButtonText}>Claim This Item</Text>
-        </TouchableOpacity>
-      </View>
-    </ScrollView>
-  )
+          <Text style={[styles.description, { color: colors.text }]}>
+            {item.description}
+          </Text>
+
+          <View style={styles.detailsContainer}>
+            {item.location && (
+              <View style={styles.detailRow}>
+                <Ionicons name="location" size={20} color={colors.primary} />
+                <Text style={[styles.detailText, { color: colors.text }]}>
+                  {`${item.location.latitude.toFixed(4)}, ${item.location.longitude.toFixed(4)}`}
+                </Text>
+              </View>
+            )}
+            
+            <View style={styles.detailRow}>
+              <Ionicons name="time" size={20} color={colors.primary} />
+              <Text style={[styles.detailText, { color: colors.text }]}>
+                {formatDate(item.timestamp)}
+              </Text>
+            </View>
+
+            <View style={styles.detailRow}>
+              <Ionicons name="apps" size={20} color={colors.primary} />
+              <Text style={[styles.detailText, { color: colors.text }]}>
+                Category: {item.category.charAt(0).toUpperCase() + item.category.slice(1)}
+              </Text>
+            </View>
+
+            {itemType === 'lost' && item.lastSeen && (
+              <View style={styles.detailRow}>
+                <Ionicons name="eye-outline" size={20} color={colors.primary} />
+                <Text style={[styles.detailText, { color: colors.text }]}>
+                  Last seen: {formatDate(item.lastSeen)}
+                </Text>
+              </View>
+            )}
+          </View>
+
+          <TouchableOpacity 
+            style={[styles.button, { backgroundColor: colors.primary }]}
+            onPress={() => navigation.navigate('ClaimTracking', { itemId: item.id })}
+          >
+            <Ionicons 
+              name={itemType === 'lost' ? 'search-outline' : 'cart-outline'} 
+              size={20} 
+              color="white" 
+              style={styles.buttonIcon} 
+            />
+            <Text style={styles.buttonText}>
+              {itemType === 'lost' ? 'Track Lost Item' : 'Purchase Rare Item'}
+            </Text>
+          </TouchableOpacity>
+        </View>
+      </ScrollView>
+    </View>
+  );
 }
-
-const { width } = Dimensions.get("window")
 
 const styles = StyleSheet.create({
   container: {
     flex: 1,
   },
-  imageGallery: {
-    height: 300,
+  header: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    paddingHorizontal: 16,
+    paddingTop: 60,
+    paddingBottom: 16,
   },
-  itemImage: {
-    width,
-    height: 300,
+  backButton: {
+    padding: 8,
+    marginRight: 8,
+    borderRadius: 12,
   },
-  statusBadge: {
-    position: "absolute",
-    top: 16,
-    right: 16,
+  headerTitle: {
+    fontSize: 20,
+    fontWeight: '600',
+    flex: 1,
+    textAlign: 'center',
+  },
+  headerRight: {
+    width: 40,
+  },
+  loadingContainer: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  errorContainer: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+    padding: 20,
+  },
+  errorText: {
+    fontSize: 16,
+    textAlign: 'center',
+    marginTop: 12,
+    marginBottom: 20,
+  },
+  retryButton: {
+    paddingHorizontal: 24,
+    paddingVertical: 12,
+    borderRadius: 8,
+  },
+  imageContainer: {
+    width: Dimensions.get('window').width,
+    height: 300,
+    resizeMode: 'cover',
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  image: {
+    width: Dimensions.get('window').width,
+    height: 300,
+    resizeMode: 'cover',
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  contentContainer: {
+    flex: 1,
+    borderTopLeftRadius: 20,
+    borderTopRightRadius: 20,
+    marginTop: -20,
+    padding: 20,
+  },
+  title: {
+    fontSize: 24,
+    fontWeight: 'bold',
+    marginBottom: 16,
+  },
+  badgeContainer: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: 8,
+    marginBottom: 16,
+  },
+  badge: {
+    flexDirection: 'row',
+    alignItems: 'center',
     paddingHorizontal: 12,
     paddingVertical: 6,
     borderRadius: 20,
+    gap: 4,
   },
-  statusText: {
-    color: "#FFFFFF",
-    fontWeight: "bold",
-    fontSize: 12,
-  },
-  infoSection: {
-    padding: 16,
-  },
-  itemTitle: {
-    fontSize: 24,
-    fontWeight: "bold",
-    marginBottom: 8,
-  },
-  metaInfo: {
-    flexDirection: "row",
-    flexWrap: "wrap",
-    marginBottom: 16,
-  },
-  metaItem: {
-    flexDirection: "row",
-    alignItems: "center",
-    marginRight: 16,
-    marginBottom: 8,
-  },
-  metaText: {
-    fontSize: 14,
-    marginLeft: 4,
-  },
-  confidenceMeter: {
-    padding: 16,
-    borderRadius: 12,
-    marginTop: 8,
-  },
-  confidenceHeader: {
-    flexDirection: "row",
-    justifyContent: "space-between",
-    alignItems: "center",
-    marginBottom: 8,
-  },
-  confidenceTitle: {
-    fontSize: 16,
-    fontWeight: "500",
-  },
-  confidenceScore: {
-    fontSize: 18,
-    fontWeight: "bold",
-  },
-  progressBarContainer: {
-    height: 8,
-    backgroundColor: "#333333",
-    borderRadius: 4,
-    marginBottom: 8,
-  },
-  progressBar: {
-    height: 8,
-    borderRadius: 4,
-  },
-  confidenceDescription: {
-    fontSize: 12,
-    lineHeight: 18,
-  },
-  tabsContainer: {
-    flexDirection: "row",
-    borderBottomWidth: 1,
-    borderBottomColor: "#333333",
-  },
-  tab: {
-    flex: 1,
-    paddingVertical: 12,
-    alignItems: "center",
-  },
-  tabText: {
-    fontSize: 14,
-    fontWeight: "500",
-  },
-  tabContent: {
-    padding: 16,
-  },
-  sectionTitle: {
-    fontSize: 18,
-    fontWeight: "bold",
-    marginBottom: 8,
-    marginTop: 16,
+  badgeText: {
+    fontSize: 13,
+    fontWeight: '600',
   },
   description: {
     fontSize: 16,
     lineHeight: 24,
-    marginBottom: 16,
+    marginBottom: 24,
   },
-  finderCard: {
-    flexDirection: "row",
-    alignItems: "center",
-    padding: 12,
-    borderRadius: 12,
-    marginTop: 8,
+  detailsContainer: {
+    gap: 16,
+    marginBottom: 24,
   },
-  finderImage: {
-    width: 50,
-    height: 50,
-    borderRadius: 25,
+  detailRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 12,
   },
-  finderInfo: {
+  detailText: {
     flex: 1,
-    marginLeft: 12,
+    fontSize: 15,
   },
-  finderName: {
-    fontSize: 16,
-    fontWeight: "500",
-    marginBottom: 4,
-  },
-  ratingContainer: {
-    flexDirection: "row",
-    alignItems: "center",
-  },
-  ratingText: {
-    marginLeft: 4,
-    fontSize: 14,
-  },
-  contactButton: {
-    paddingHorizontal: 16,
-    paddingVertical: 8,
-    borderRadius: 20,
-  },
-  contactButtonText: {
-    color: "#FFFFFF",
-    fontWeight: "500",
-  },
-  timelineContainer: {
-    marginTop: 8,
-  },
-  timelineItem: {
-    flexDirection: "row",
-    marginBottom: 16,
-  },
-  timelineDot: {
-    width: 12,
-    height: 12,
-    borderRadius: 6,
-    marginTop: 4,
-  },
-  timelineLine: {
-    width: 2,
-    height: "100%",
-    position: "absolute",
-    left: 5,
-    top: 12,
-  },
-  timelineContent: {
-    marginLeft: 16,
-    flex: 1,
-  },
-  timelineEvent: {
-    fontSize: 16,
-    fontWeight: "500",
-    marginBottom: 4,
-  },
-  timelineDate: {
-    fontSize: 14,
-  },
-  similarItemsContainer: {
-    marginTop: 8,
-  },
-  similarItemsText: {
-    fontSize: 14,
-    lineHeight: 20,
-    marginBottom: 16,
-  },
-  similarItemsGrid: {
-    flexDirection: "row",
-    flexWrap: "wrap",
-    justifyContent: "space-between",
-  },
-  similarItemCard: {
-    width: "48%",
-    borderRadius: 12,
-    overflow: "hidden",
-    marginBottom: 16,
-  },
-  similarItemImage: {
-    width: "100%",
-    height: 120,
-  },
-  similarItemTitle: {
-    padding: 8,
-    fontSize: 14,
-    fontWeight: "500",
-  },
-  actionButtons: {
-    flexDirection: "row",
+  button: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
     padding: 16,
-    borderTopWidth: 1,
-    borderTopColor: "#333333",
+    borderRadius: 12,
+    gap: 8,
   },
-  actionButton: {
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "center",
-    paddingVertical: 10,
-    paddingHorizontal: 16,
-    borderRadius: 8,
-    marginRight: 8,
+  buttonIcon: {
+    marginRight: 4,
   },
-  actionButtonText: {
-    marginLeft: 8,
-    fontWeight: "500",
+  buttonText: {
+    color: 'white',
+    fontSize: 16,
+    fontWeight: '600',
   },
-  claimButton: {
-    flex: 1,
-    alignItems: "center",
-    justifyContent: "center",
+  loadingText: {
+    marginTop: 12,
+    fontSize: 16,
+  },
+  errorBackButton: {
+    marginTop: 12,
+    paddingHorizontal: 24,
     paddingVertical: 12,
     borderRadius: 8,
   },
-  claimButtonText: {
-    color: "#FFFFFF",
-    fontWeight: "bold",
+  backButtonText: {
+    fontSize: 16,
+    fontWeight: '600',
   },
-})
-
-export default ItemDetailsScreen
+  noImageText: {
+    fontSize: 16,
+    fontWeight: '600',
+  },
+});
 

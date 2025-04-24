@@ -6,21 +6,31 @@ const userSchema = new mongoose.Schema(
   {
     name: {
       type: String,
-      required: [true, "Please provide a name"],
+      required: true,
       trim: true,
-      maxlength: [50, "Name cannot be more than 50 characters"],
     },
     email: {
       type: String,
-      required: [true, "Please provide an email"],
+      required: true,
       unique: true,
-      match: [/^\w+([.-]?\w+)*@\w+([.-]?\w+)*(\.\w{2,3})+$/, "Please provide a valid email"],
+      trim: true,
+      lowercase: true,
     },
     password: {
       type: String,
-      required: [true, "Please provide a password"],
-      minlength: [6, "Password must be at least 6 characters"],
-      select: false,
+      required: true,
+    },
+    avatar: {
+      type: String,
+      default: "https://via.placeholder.com/150",
+    },
+    isOnline: {
+      type: Boolean,
+      default: false,
+    },
+    lastSeen: {
+      type: Date,
+      default: Date.now,
     },
     profileImage: {
       type: String,
@@ -72,6 +82,10 @@ userSchema.methods.getSignedJwtToken = function () {
 userSchema.methods.matchPassword = async function (enteredPassword) {
   return await bcrypt.compare(enteredPassword, this.password)
 }
+
+// Index for faster queries
+userSchema.index({ email: 1 })
+userSchema.index({ isOnline: 1, lastSeen: -1 })
 
 const User = mongoose.model("User", userSchema)
 

@@ -1,85 +1,144 @@
-import { StatusBar } from "react-native"
-import { createBottomTabNavigator } from "@react-navigation/bottom-tabs"
-import { createNativeStackNavigator } from "@react-navigation/native-stack"
-import { SafeAreaProvider } from "react-native-safe-area-context"
-import { Ionicons } from "@expo/vector-icons"
-import dynamic from 'next/dynamic'
+import React from 'react';
+import { NavigationContainer } from '@react-navigation/native';
+import { createNativeStackNavigator } from '@react-navigation/native-stack';
+import { FirebaseProvider } from './context/FirebaseContext';
+import { SocketProvider } from './context/SocketContext';
+import { StatusBar } from 'expo-status-bar';
+import { StyleSheet, View, Text } from 'react-native';
+import { SafeAreaProvider } from 'react-native-safe-area-context';
+import { GestureHandlerRootView } from 'react-native-gesture-handler';
+import { Provider as PaperProvider } from 'react-native-paper';
+import * as SplashScreen from 'expo-splash-screen';
+import { useCallback } from 'react';
+import { Platform } from 'react-native';
+import { RootStackParamList } from './navigation/types';
+import {
+  useFonts,
+  Poppins_400Regular as PoppinsRegular,
+  Poppins_500Medium as PoppinsMedium,
+  Poppins_600SemiBold as PoppinsSemiBold,
+  Poppins_700Bold as PoppinsBold,
+} from '@expo-google-fonts/poppins';
+import { useFirebase } from './context/FirebaseContext';
 
-// Lazy load screens
-const HomeScreen = dynamic(() => import("./screens/HomeScreen"), { ssr: false })
-const FinderScreen = dynamic(() => import("./screens/FinderScreen"), { ssr: false })
-const RequesterScreen = dynamic(() => import("./screens/RequesterScreen"), { ssr: false })
-const NotificationScreen = dynamic(() => import("./screens/NotificationScreen"), { ssr: false })
-const ProfileScreen = dynamic(() => import("./screens/ProfileScreen"), { ssr: false })
+// Import screens
+import { HomeScreen } from './screens/HomeScreen';
+import LoginScreen from './screens/auth/LoginScreen';
+import SignupScreen from './screens/auth/SignupScreen';
+import ProfileScreen from './screens/ProfileScreen';
+import SettingsScreen from './screens/SettingsScreen';
+import { ChatScreen } from './screens/ChatScreen';
+import { FirebaseTest } from './screens/FirebaseTest';
 
-// Components
-const LogoTitle = dynamic(() => import("./components/LogoTitle"), { ssr: false })
+const Stack = createNativeStackNavigator<RootStackParamList>();
 
-// Context
-import { ThemeProvider } from "./context/ThemeContext"
-import { AuthProvider } from "./context/AuthContext"
-import AppNavigator from "./navigation/AppNavigator"
+// Keep the splash screen visible while we fetch resources
+SplashScreen.preventAutoHideAsync();
 
-const Tab = createBottomTabNavigator()
-const Stack = createNativeStackNavigator()
+function AppContent() {
+  const [fontsLoaded] = useFonts({
+    'Poppins-Regular': PoppinsRegular,
+    'Poppins-Medium': PoppinsMedium,
+    'Poppins-SemiBold': PoppinsSemiBold,
+    'Poppins-Bold': PoppinsBold,
+  });
 
-type IconName = "home" | "home-outline" | "search" | "search-outline" | "add-circle" | "add-circle-outline" | "notifications" | "notifications-outline" | "person" | "person-outline"
+  const { isInitialized, error } = useFirebase();
 
-function MainTabs() {
+  const onLayoutRootView = useCallback(async () => {
+    if (fontsLoaded && isInitialized) {
+      await SplashScreen.hideAsync();
+    }
+  }, [fontsLoaded, isInitialized]);
+
+  if (!fontsLoaded || !isInitialized) {
+    return (
+      <View style={styles.loadingContainer}>
+        <Text style={styles.loadingText}>Loading...</Text>
+      </View>
+    );
+  }
+
+  if (error) {
+    return (
+      <View style={styles.errorContainer}>
+        <Text style={styles.errorText}>Error initializing app: {error.message}</Text>
+      </View>
+    );
+  }
+
   return (
-    <Tab.Navigator
-      screenOptions={({ route }) => ({
-        tabBarIcon: ({ focused, color, size }) => {
-          let iconName: IconName
-
-          if (route.name === "Home") {
-            iconName = focused ? "home" : "home-outline"
-          } else if (route.name === "Finder") {
-            iconName = focused ? "search" : "search-outline"
-          } else if (route.name === "Requester") {
-            iconName = focused ? "add-circle" : "add-circle-outline"
-          } else if (route.name === "Notifications") {
-            iconName = focused ? "notifications" : "notifications-outline"
-          } else if (route.name === "Profile") {
-            iconName = focused ? "person" : "person-outline"
-          } else {
-            iconName = "home"
-          }
-
-          return <Ionicons name={iconName} size={size} color={color} />
-        },
-        tabBarActiveTintColor: "#00BFFF",
-        tabBarInactiveTintColor: "#888888",
-        tabBarStyle: {
-          backgroundColor: "#121212",
-          borderTopColor: "#262626",
-        },
-        headerStyle: {
-          backgroundColor: "#121212",
-        },
-        headerTintColor: "#FFFFFF",
-        headerTitle: () => <LogoTitle />,
-      })}
-    >
-      <Tab.Screen name="Home" component={HomeScreen} />
-      <Tab.Screen name="Finder" component={FinderScreen} />
-      <Tab.Screen name="Requester" component={RequesterScreen} />
-      <Tab.Screen name="Notifications" component={NotificationScreen} />
-      <Tab.Screen name="Profile" component={ProfileScreen} />
-    </Tab.Navigator>
-  )
+    <GestureHandlerRootView style={{ flex: 1 }} onLayout={onLayoutRootView}>
+      <SafeAreaProvider>
+        <PaperProvider>
+          <NavigationContainer>
+            <Stack.Navigator
+              initialRouteName="Home"
+              screenOptions={{
+                headerShown: false,
+                contentStyle: { backgroundColor: '#FFFFFF' },
+              }}
+            >
+              <Stack.Screen name="Home" component={HomeScreen} />
+              <Stack.Screen name="Auth" component={LoginScreen} />
+              <Stack.Screen name="Signup" component={SignupScreen} />
+              <Stack.Screen name="Profile" component={ProfileScreen} />
+              <Stack.Screen name="Settings" component={SettingsScreen} />
+              <Stack.Screen name="FirebaseTest" component={FirebaseTest} />
+              <Stack.Screen 
+                name="Chat" 
+                component={ChatScreen}
+                initialParams={{
+                  conversationId: '',
+                  otherUser: {
+                    id: '',
+                    displayName: '',
+                    photoURL: null
+                  },
+                  item: undefined
+                }}
+              />
+            </Stack.Navigator>
+            <StatusBar style="auto" />
+          </NavigationContainer>
+        </PaperProvider>
+      </SafeAreaProvider>
+    </GestureHandlerRootView>
+  );
 }
 
 export default function App() {
   return (
-    <ThemeProvider>
-      <AuthProvider>
-        <SafeAreaProvider>
-          <StatusBar barStyle="light-content" backgroundColor="#121212" />
-          <AppNavigator />
-        </SafeAreaProvider>
-      </AuthProvider>
-    </ThemeProvider>
-  )
+    <FirebaseProvider>
+      <SocketProvider>
+        <AppContent />
+      </SocketProvider>
+    </FirebaseProvider>
+  );
 }
+
+const styles = StyleSheet.create({
+  loadingContainer: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+    backgroundColor: '#FFFFFF',
+  },
+  loadingText: {
+    fontSize: 18,
+    color: '#000000',
+  },
+  errorContainer: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+    padding: 20,
+    backgroundColor: '#FFFFFF',
+  },
+  errorText: {
+    textAlign: 'center',
+    color: 'red',
+    fontSize: 16,
+  },
+});
 

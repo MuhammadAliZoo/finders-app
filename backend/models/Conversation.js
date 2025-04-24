@@ -4,13 +4,15 @@ const conversationSchema = new mongoose.Schema(
   {
     participants: [
       {
-        type: mongoose.Schema.ObjectId,
+        type: mongoose.Schema.Types.ObjectId,
         ref: "User",
+        required: true
       },
     ],
     item: {
-      type: mongoose.Schema.ObjectId,
+      type: mongoose.Schema.Types.ObjectId,
       ref: "Item",
+      required: true
     },
     dispute: {
       type: mongoose.Schema.ObjectId,
@@ -25,13 +27,18 @@ const conversationSchema = new mongoose.Schema(
       type: String,
     },
     lastMessage: {
-      type: mongoose.Schema.ObjectId,
-      ref: "Message",
+      type: mongoose.Schema.Types.ObjectId,
+      ref: "Message"
     },
     isActive: {
       type: Boolean,
       default: true,
     },
+    unreadCount: {
+      type: Map,
+      of: Number,
+      default: {}
+    }
   },
   {
     timestamps: true,
@@ -39,7 +46,7 @@ const conversationSchema = new mongoose.Schema(
 )
 
 // Add index for faster queries
-conversationSchema.index({ participants: 1 })
+conversationSchema.index({ participants: 1, updatedAt: -1 })
 conversationSchema.index({ item: 1 })
 conversationSchema.index({ dispute: 1 })
 

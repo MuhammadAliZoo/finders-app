@@ -14,26 +14,53 @@ import {
   Alert,
 } from "react-native"
 import { Ionicons } from "@expo/vector-icons"
-import { useTheme } from "../../context/ThemeContext"
+import { useTheme } from "../../theme/ThemeContext"
 import { adminApi } from "../../api/admin"
-import AdminHeader from "../../components/admin/AdminHeader"
 import ModerateItemCard from "../../components/admin/ModerateItemCard"
 import FilterChip from "../../components/admin/FilterChip"
 import AdminChat from "../../components/admin/AdminChat"
+import type { NativeStackNavigationProp } from "@react-navigation/native-stack"
+import { RootStackParamList, ModerationItem } from "../../navigation/types"
 
-const ContentModerationScreen = ({ navigation }) => {
+interface ModerationRule {
+  id: number;
+  name: string;
+  description: string;
+  active: boolean;
+}
+
+type ContentModerationScreenProps = {
+  navigation: NativeStackNavigationProp<RootStackParamList, 'ContentModeration'>;
+};
+
+interface FilterChipProps {
+  label: string;
+  isSelected: boolean;
+  onPress: () => void;
+  count?: number;
+}
+
+interface ModerateItemCardProps {
+  item: ModerationItem;
+  isSelected: boolean;
+  onSelect: () => void;
+  onPress: () => void;
+  onChatPress: () => void;
+}
+
+const ContentModerationScreen: React.FC<ContentModerationScreenProps> = ({ navigation }) => {
   const { colors } = useTheme()
-  const [items, setItems] = useState([])
+  const [items, setItems] = useState<ModerationItem[]>([])
   const [loading, setLoading] = useState(true)
   const [refreshing, setRefreshing] = useState(false)
-  const [selectedItems, setSelectedItems] = useState([])
+  const [selectedItems, setSelectedItems] = useState<string[]>([])
   const [filterStatus, setFilterStatus] = useState("all")
   const [searchQuery, setSearchQuery] = useState("")
   const [sortBy, setSortBy] = useState("date")
   const [showFilterModal, setShowFilterModal] = useState(false)
   const [showChatModal, setShowChatModal] = useState(false)
-  const [currentItem, setCurrentItem] = useState(null)
-  const [moderationRules, setModerationRules] = useState([])
+  const [currentItem, setCurrentItem] = useState<ModerationItem | null>(null)
+  const [moderationRules, setModerationRules] = useState<ModerationRule[]>([])
   const [showRulesModal, setShowRulesModal] = useState(false)
 
   const chatRef = useRef(null)
@@ -70,28 +97,28 @@ const ContentModerationScreen = ({ navigation }) => {
     fetchItems()
   }
 
-  const handleSearch = (text) => {
+  const handleSearch = (text: string) => {
     setSearchQuery(text)
     // Implement search functionality here
   }
 
-  const toggleItemSelection = (itemId) => {
-    if (selectedItems.includes(itemId)) {
-      setSelectedItems(selectedItems.filter((id) => id !== itemId))
-    } else {
-      setSelectedItems([...selectedItems, itemId])
-    }
+  const toggleItemSelection = (itemId: string) => {
+    setSelectedItems(prev => 
+      prev.includes(itemId) 
+        ? prev.filter(id => id !== itemId)
+        : [...prev, itemId]
+    )
   }
 
   const selectAllItems = () => {
-    if (selectedItems.length === items.length) {
-      setSelectedItems([])
-    } else {
-      setSelectedItems(items.map((item) => item.id))
-    }
+    setSelectedItems(
+      selectedItems.length === items.length 
+        ? [] 
+        : items.map(item => item.id)
+    )
   }
 
-  const handleBatchAction = async (action) => {
+  const handleBatchAction = async (action: 'approve' | 'reject') => {
     if (selectedItems.length === 0) {
       Alert.alert("No Items Selected", "Please select at least one item to perform this action.")
       return
@@ -104,7 +131,7 @@ const ContentModerationScreen = ({ navigation }) => {
       setSelectedItems([])
       Alert.alert(
         "Success",
-        `${selectedItems.length} items have been ${action === "approve" ? "approved" : "rejected"}.`,
+        `${selectedItems.length} items have been ${action === "approve" ? "approved" : "rejected"}.`
       )
     } catch (error) {
       console.error(`Failed to ${action} items`, error)
@@ -114,25 +141,34 @@ const ContentModerationScreen = ({ navigation }) => {
     }
   }
 
-  const openItemDetails = (item) => {
+  const openItemDetails = (item: ModerationItem) => {
     setCurrentItem(item)
-    navigation.navigate("ItemModeration", { item })
+    navigation.navigate('ItemModeration', { item })
   }
 
-  const openChat = (item) => {
+  const openChat = (item: ModerationItem) => {
     setCurrentItem(item)
     setShowChatModal(true)
   }
 
-  const renderItem = ({ item }) => (
+  const renderItem = ({ item }: { item: ModerationItem }) => (
     <ModerateItemCard
-      item={item}
+      moderationItem={item}
       isSelected={selectedItems.includes(item.id)}
       onSelect={() => toggleItemSelection(item.id)}
       onPress={() => openItemDetails(item)}
       onChatPress={() => openChat(item)}
     />
   )
+
+  const renderFilterChip = ({ label, value, count = 0 }: { label: string; value: string; count?: number }) => (
+    <FilterChip
+      label={label}
+      isSelected={filterStatus === value}
+      onPress={() => setFilterStatus(value)}
+      count={count}
+    />
+  );
 
   const renderFilterModal = () => (
     <Modal visible={showFilterModal} transparent animationType="slide" onRequestClose={() => setShowFilterModal(false)}>
@@ -147,29 +183,17 @@ const ContentModerationScreen = ({ navigation }) => {
 
           <Text style={[styles.filterSectionTitle, { color: colors.text }]}>Status</Text>
           <View style={styles.filterChips}>
-            <FilterChip label="All" isSelected={filterStatus === "all"} onPress={() => setFilterStatus("all")} />
-            <FilterChip
-              label="Pending"
-              isSelected={filterStatus === "pending"}
-              onPress={() => setFilterStatus("pending")}
-            />
-            <FilterChip
-              label="Flagged"
-              isSelected={filterStatus === "flagged"}
-              onPress={() => setFilterStatus("flagged")}
-            />
-            <FilterChip
-              label="AI Flagged"
-              isSelected={filterStatus === "ai_flagged"}
-              onPress={() => setFilterStatus("ai_flagged")}
-            />
+            {renderFilterChip({ label: "All", value: "all", count: items.length })}
+            {renderFilterChip({ label: "Pending", value: "pending", count: items.filter(i => i.status === 'pending').length })}
+            {renderFilterChip({ label: "Flagged", value: "flagged", count: items.filter(i => i.status === 'flagged').length })}
+            {renderFilterChip({ label: "AI Flagged", value: "ai_flagged", count: items.filter(i => i.status === 'ai_flagged').length })}
           </View>
 
           <Text style={[styles.filterSectionTitle, { color: colors.text }]}>Sort By</Text>
           <View style={styles.filterChips}>
-            <FilterChip label="Date (Newest)" isSelected={sortBy === "date"} onPress={() => setSortBy("date")} />
-            <FilterChip label="Priority" isSelected={sortBy === "priority"} onPress={() => setSortBy("priority")} />
-            <FilterChip label="User Rating" isSelected={sortBy === "rating"} onPress={() => setSortBy("rating")} />
+            {renderFilterChip({ label: "Date (Newest)", value: "date", count: 0 })}
+            {renderFilterChip({ label: "Priority", value: "priority", count: 0 })}
+            {renderFilterChip({ label: "User Rating", value: "rating", count: 0 })}
           </View>
 
           <TouchableOpacity
@@ -204,10 +228,10 @@ const ContentModerationScreen = ({ navigation }) => {
                   <View
                     style={[
                       styles.ruleStatusBadge,
-                      { backgroundColor: item.active ? colors.success + "20" : colors.error + "20" },
+                      { backgroundColor: item.active ? colors.primary + "20" : colors.error + "20" },
                     ]}
                   >
-                    <Text style={[styles.ruleStatusText, { color: item.active ? colors.success : colors.error }]}>
+                    <Text style={[styles.ruleStatusText, { color: item.active ? colors.primary : colors.error }]}>
                       {item.active ? "Active" : "Inactive"}
                     </Text>
                   </View>
@@ -218,7 +242,7 @@ const ContentModerationScreen = ({ navigation }) => {
                     <Text style={[styles.ruleActionText, { color: colors.primary }]}>Edit</Text>
                   </TouchableOpacity>
                   <TouchableOpacity style={[styles.ruleActionButton, { borderColor: colors.border }]}>
-                    <Text style={[styles.ruleActionText, { color: item.active ? colors.error : colors.success }]}>
+                    <Text style={[styles.ruleActionText, { color: item.active ? colors.error : colors.primary }]}>
                       {item.active ? "Disable" : "Enable"}
                     </Text>
                   </TouchableOpacity>
@@ -271,21 +295,353 @@ const ContentModerationScreen = ({ navigation }) => {
             </View>
           )}
 
-          <AdminChat ref={chatRef} itemId={currentItem?.id} onClose={() => setShowChatModal(false)} />
+          <AdminChat
+            onClose={() => setShowChatModal(false)}
+            onSend={(message) => {
+              // Handle sending message
+              console.log('Sending message:', message);
+            }}
+          />
         </View>
       </View>
     </Modal>
   )
 
-  return (
-    <View style={[styles.container, { backgroundColor: colors.background }]}>
-      <AdminHeader title="Content Moderation" navigation={navigation} />
+  const styles = StyleSheet.create({
+    container: {
+      flex: 1,
+      backgroundColor: colors.background,
+    },
+    actionBar: {
+      flexDirection: 'row',
+      justifyContent: 'space-between',
+      alignItems: 'center',
+      padding: 16,
+      backgroundColor: colors.card,
+      borderBottomWidth: 1,
+      borderBottomColor: colors.border,
+    },
+    searchContainer: {
+      flex: 1,
+      flexDirection: 'row',
+      alignItems: 'center',
+      backgroundColor: colors.background,
+      borderRadius: 8,
+      marginRight: 16,
+      paddingHorizontal: 12,
+    },
+    searchInput: {
+      flex: 1,
+      height: 40,
+      color: colors.text,
+      marginLeft: 8,
+    },
+    filterButton: {
+      backgroundColor: colors.primary,
+      paddingHorizontal: 16,
+      paddingVertical: 8,
+      borderRadius: 8,
+    },
+    filterButtonText: {
+      color: '#FFFFFF',
+      fontWeight: '600',
+    },
+    contentList: {
+      flex: 1,
+      padding: 16,
+    },
+    contentItem: {
+      backgroundColor: colors.card,
+      borderRadius: 12,
+      marginBottom: 16,
+      padding: 16,
+      borderWidth: 1,
+      borderColor: colors.border,
+    },
+    contentHeader: {
+      flexDirection: 'row',
+      justifyContent: 'space-between',
+      marginBottom: 12,
+    },
+    contentTitle: {
+      fontSize: 16,
+      fontWeight: '600',
+      color: colors.text,
+    },
+    contentStatus: {
+      fontSize: 14,
+      color: colors.text,
+    },
+    contentBody: {
+      marginBottom: 12,
+    },
+    contentText: {
+      fontSize: 14,
+      color: colors.text,
+      lineHeight: 20,
+    },
+    contentActions: {
+      flexDirection: 'row',
+      justifyContent: 'flex-end',
+      gap: 8,
+    },
+    approveButton: {
+      backgroundColor: colors.success,
+      paddingHorizontal: 16,
+      paddingVertical: 8,
+      borderRadius: 8,
+    },
+    rejectButton: {
+      backgroundColor: colors.error,
+      paddingHorizontal: 16,
+      paddingVertical: 8,
+      borderRadius: 8,
+    },
+    buttonText: {
+      color: '#FFFFFF',
+      fontWeight: '600',
+    },
+    modalOverlay: {
+      flex: 1,
+      backgroundColor: "rgba(0, 0, 0, 0.5)",
+      justifyContent: "flex-end",
+    },
+    modalContent: {
+      backgroundColor: colors.card,
+      borderTopLeftRadius: 20,
+      borderTopRightRadius: 20,
+      padding: 20,
+      minHeight: "50%",
+    },
+    modalHeader: {
+      flexDirection: "row",
+      justifyContent: "space-between",
+      alignItems: "center",
+      marginBottom: 20,
+    },
+    modalTitle: {
+      fontSize: 20,
+      fontWeight: "bold",
+      color: colors.text,
+    },
+    filterSectionTitle: {
+      fontSize: 16,
+      fontWeight: "600",
+      marginBottom: 10,
+      color: colors.text,
+    },
+    filterChips: {
+      flexDirection: "row",
+      flexWrap: "wrap",
+      padding: 10,
+      gap: 8,
+    },
+    applyFilterButton: {
+      borderRadius: 8,
+      paddingVertical: 12,
+      alignItems: "center",
+      marginTop: 16,
+    },
+    applyFilterText: {
+      color: "#FFFFFF",
+      fontSize: 16,
+      fontWeight: "bold",
+    },
+    ruleItem: {
+      paddingVertical: 12,
+      borderBottomWidth: 1,
+    },
+    ruleHeader: {
+      flexDirection: "row",
+      justifyContent: "space-between",
+      alignItems: "center",
+    },
+    ruleName: {
+      fontSize: 16,
+      fontWeight: "600",
+    },
+    ruleStatusBadge: {
+      paddingHorizontal: 8,
+      paddingVertical: 4,
+      borderRadius: 4,
+    },
+    ruleStatusText: {
+      fontSize: 12,
+      fontWeight: "500",
+    },
+    ruleDescription: {
+      fontSize: 14,
+      marginTop: 4,
+      marginBottom: 8,
+    },
+    ruleActions: {
+      flexDirection: "row",
+    },
+    ruleActionButton: {
+      borderWidth: 1,
+      borderRadius: 6,
+      paddingHorizontal: 12,
+      paddingVertical: 6,
+      marginRight: 8,
+    },
+    ruleActionText: {
+      fontSize: 14,
+      fontWeight: "500",
+    },
+    addRuleButton: {
+      flexDirection: "row",
+      justifyContent: "center",
+      alignItems: "center",
+      borderRadius: 8,
+      paddingVertical: 12,
+      marginTop: 16,
+    },
+    addRuleText: {
+      color: "#FFFFFF",
+      fontSize: 16,
+      fontWeight: "bold",
+      marginLeft: 8,
+    },
+    chatModalOverlay: {
+      flex: 1,
+      backgroundColor: "rgba(0, 0, 0, 0.5)",
+    },
+    chatModalContent: {
+      flex: 1,
+      borderTopLeftRadius: 20,
+      borderTopRightRadius: 20,
+      marginTop: 50,
+    },
+    chatModalHeader: {
+      flexDirection: "row",
+      justifyContent: "space-between",
+      alignItems: "center",
+      padding: 16,
+      borderBottomWidth: 1,
+      borderBottomColor: "rgba(0, 0, 0, 0.1)",
+    },
+    chatModalTitle: {
+      fontSize: 18,
+      fontWeight: "bold",
+    },
+    chatItemPreview: {
+      flexDirection: "row",
+      alignItems: "center",
+      padding: 12,
+      marginHorizontal: 16,
+      marginVertical: 8,
+      borderRadius: 8,
+    },
+    chatItemImage: {
+      width: 40,
+      height: 40,
+      borderRadius: 4,
+    },
+    chatItemInfo: {
+      flex: 1,
+      marginLeft: 12,
+    },
+    chatItemTitle: {
+      fontSize: 14,
+      fontWeight: "500",
+    },
+    chatItemId: {
+      fontSize: 12,
+    },
+    viewItemButton: {
+      paddingHorizontal: 12,
+      paddingVertical: 6,
+      borderRadius: 6,
+    },
+    viewItemText: {
+      fontSize: 12,
+      fontWeight: "500",
+    },
+    rulesButton: {
+      width: 44,
+      height: 44,
+      borderRadius: 8,
+      justifyContent: 'center',
+      alignItems: 'center',
+      marginLeft: 8,
+    },
+    batchActionBar: {
+      flexDirection: 'row',
+      justifyContent: 'space-between',
+      alignItems: 'center',
+      paddingHorizontal: 16,
+      paddingVertical: 12,
+    },
+    selectAllButton: {
+      flexDirection: 'row',
+      alignItems: 'center',
+    },
+    selectAllText: {
+      marginLeft: 8,
+      fontSize: 14,
+      fontWeight: '500',
+    },
+    batchButtons: {
+      flexDirection: 'row',
+    },
+    batchButton: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      paddingHorizontal: 12,
+      paddingVertical: 6,
+      borderRadius: 6,
+      marginLeft: 8,
+    },
+    batchButtonText: {
+      marginLeft: 4,
+      fontSize: 14,
+      fontWeight: '500',
+    },
+    disabledButton: {
+      opacity: 0.5,
+    },
+    loadingContainer: {
+      flex: 1,
+      justifyContent: 'center',
+      alignItems: 'center',
+    },
+    loadingText: {
+      fontSize: 16,
+      fontWeight: '500',
+      marginTop: 16,
+      color: colors.text,
+    },
+    listContent: {
+      flex: 1,
+    },
+    emptyContainer: {
+      flex: 1,
+      justifyContent: 'center',
+      alignItems: 'center',
+      padding: 24,
+    },
+    emptyText: {
+      fontSize: 18,
+      fontWeight: '600',
+      color: colors.text,
+      textAlign: 'center',
+      marginBottom: 8,
+    },
+    emptySubtext: {
+      fontSize: 14,
+      color: colors.text,
+      textAlign: 'center',
+      opacity: 0.7,
+    },
+  });
 
+  return (
+    <View style={styles.container}>
       <View style={styles.actionBar}>
-        <View style={[styles.searchContainer, { backgroundColor: colors.card }]}>
+        <View style={styles.searchContainer}>
           <Ionicons name="search-outline" size={20} color={colors.secondary} />
           <TextInput
-            style={[styles.searchInput, { color: colors.text }]}
+            style={styles.searchInput}
             placeholder="Search items..."
             placeholderTextColor={colors.secondary}
             value={searchQuery}
@@ -299,10 +655,10 @@ const ContentModerationScreen = ({ navigation }) => {
         </View>
 
         <TouchableOpacity
-          style={[styles.filterButton, { backgroundColor: colors.card }]}
+          style={styles.filterButton}
           onPress={() => setShowFilterModal(true)}
         >
-          <Ionicons name="options-outline" size={20} color={colors.secondary} />
+          <Text style={styles.filterButtonText}>Filter</Text>
         </TouchableOpacity>
 
         <TouchableOpacity
@@ -329,14 +685,14 @@ const ContentModerationScreen = ({ navigation }) => {
           <TouchableOpacity
             style={[
               styles.batchButton,
-              { backgroundColor: colors.success + "20" },
+              { backgroundColor: colors.primary + "20" },
               selectedItems.length === 0 && styles.disabledButton,
             ]}
             onPress={() => handleBatchAction("approve")}
             disabled={selectedItems.length === 0}
           >
-            <Ionicons name="checkmark" size={20} color={colors.success} />
-            <Text style={[styles.batchButtonText, { color: colors.success }]}>Approve ({selectedItems.length})</Text>
+            <Ionicons name="checkmark" size={20} color={colors.primary} />
+            <Text style={[styles.batchButtonText, { color: colors.primary }]}>Approve ({selectedItems.length})</Text>
           </TouchableOpacity>
 
           <TouchableOpacity
@@ -385,263 +741,6 @@ const ContentModerationScreen = ({ navigation }) => {
     </View>
   )
 }
-
-const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-  },
-  actionBar: {
-    flexDirection: "row",
-    padding: 16,
-    alignItems: "center",
-  },
-  searchContainer: {
-    flex: 1,
-    flexDirection: "row",
-    alignItems: "center",
-    borderRadius: 8,
-    paddingHorizontal: 12,
-    height: 44,
-  },
-  searchInput: {
-    flex: 1,
-    marginLeft: 8,
-    fontSize: 16,
-  },
-  filterButton: {
-    width: 44,
-    height: 44,
-    borderRadius: 8,
-    justifyContent: "center",
-    alignItems: "center",
-    marginLeft: 8,
-  },
-  rulesButton: {
-    width: 44,
-    height: 44,
-    borderRadius: 8,
-    justifyContent: "center",
-    alignItems: "center",
-    marginLeft: 8,
-  },
-  batchActionBar: {
-    flexDirection: "row",
-    justifyContent: "space-between",
-    alignItems: "center",
-    paddingHorizontal: 16,
-    paddingBottom: 12,
-  },
-  selectAllButton: {
-    flexDirection: "row",
-    alignItems: "center",
-  },
-  selectAllText: {
-    marginLeft: 8,
-    fontSize: 14,
-    fontWeight: "500",
-  },
-  batchButtons: {
-    flexDirection: "row",
-  },
-  batchButton: {
-    flexDirection: "row",
-    alignItems: "center",
-    paddingHorizontal: 12,
-    paddingVertical: 6,
-    borderRadius: 6,
-    marginLeft: 8,
-  },
-  batchButtonText: {
-    marginLeft: 4,
-    fontSize: 14,
-    fontWeight: "500",
-  },
-  disabledButton: {
-    opacity: 0.5,
-  },
-  listContent: {
-    padding: 16,
-    paddingTop: 0,
-  },
-  loadingContainer: {
-    flex: 1,
-    justifyContent: "center",
-    alignItems: "center",
-  },
-  loadingText: {
-    marginTop: 12,
-    fontSize: 16,
-  },
-  emptyContainer: {
-    flex: 1,
-    justifyContent: "center",
-    alignItems: "center",
-    padding: 32,
-  },
-  emptyText: {
-    fontSize: 18,
-    fontWeight: "bold",
-    marginTop: 16,
-  },
-  emptySubtext: {
-    fontSize: 14,
-    textAlign: "center",
-    marginTop: 8,
-  },
-  modalOverlay: {
-    flex: 1,
-    backgroundColor: "rgba(0, 0, 0, 0.5)",
-    justifyContent: "flex-end",
-  },
-  modalContent: {
-    borderTopLeftRadius: 20,
-    borderTopRightRadius: 20,
-    padding: 20,
-    maxHeight: "80%",
-  },
-  modalHeader: {
-    flexDirection: "row",
-    justifyContent: "space-between",
-    alignItems: "center",
-    marginBottom: 20,
-  },
-  modalTitle: {
-    fontSize: 20,
-    fontWeight: "bold",
-  },
-  filterSectionTitle: {
-    fontSize: 16,
-    fontWeight: "600",
-    marginBottom: 12,
-    marginTop: 8,
-  },
-  filterChips: {
-    flexDirection: "row",
-    flexWrap: "wrap",
-    marginBottom: 16,
-  },
-  applyFilterButton: {
-    borderRadius: 8,
-    paddingVertical: 12,
-    alignItems: "center",
-    marginTop: 16,
-  },
-  applyFilterText: {
-    color: "#FFFFFF",
-    fontSize: 16,
-    fontWeight: "bold",
-  },
-  ruleItem: {
-    paddingVertical: 12,
-    borderBottomWidth: 1,
-  },
-  ruleHeader: {
-    flexDirection: "row",
-    justifyContent: "space-between",
-    alignItems: "center",
-  },
-  ruleName: {
-    fontSize: 16,
-    fontWeight: "600",
-  },
-  ruleStatusBadge: {
-    paddingHorizontal: 8,
-    paddingVertical: 4,
-    borderRadius: 4,
-  },
-  ruleStatusText: {
-    fontSize: 12,
-    fontWeight: "500",
-  },
-  ruleDescription: {
-    fontSize: 14,
-    marginTop: 4,
-    marginBottom: 8,
-  },
-  ruleActions: {
-    flexDirection: "row",
-  },
-  ruleActionButton: {
-    borderWidth: 1,
-    borderRadius: 6,
-    paddingHorizontal: 12,
-    paddingVertical: 6,
-    marginRight: 8,
-  },
-  ruleActionText: {
-    fontSize: 14,
-    fontWeight: "500",
-  },
-  addRuleButton: {
-    flexDirection: "row",
-    justifyContent: "center",
-    alignItems: "center",
-    borderRadius: 8,
-    paddingVertical: 12,
-    marginTop: 16,
-  },
-  addRuleText: {
-    color: "#FFFFFF",
-    fontSize: 16,
-    fontWeight: "bold",
-    marginLeft: 8,
-  },
-  chatModalOverlay: {
-    flex: 1,
-    backgroundColor: "rgba(0, 0, 0, 0.5)",
-  },
-  chatModalContent: {
-    flex: 1,
-    borderTopLeftRadius: 20,
-    borderTopRightRadius: 20,
-    marginTop: 50,
-  },
-  chatModalHeader: {
-    flexDirection: "row",
-    justifyContent: "space-between",
-    alignItems: "center",
-    padding: 16,
-    borderBottomWidth: 1,
-    borderBottomColor: "rgba(0, 0, 0, 0.1)",
-  },
-  chatModalTitle: {
-    fontSize: 18,
-    fontWeight: "bold",
-  },
-  chatItemPreview: {
-    flexDirection: "row",
-    alignItems: "center",
-    padding: 12,
-    marginHorizontal: 16,
-    marginVertical: 8,
-    borderRadius: 8,
-  },
-  chatItemImage: {
-    width: 40,
-    height: 40,
-    borderRadius: 4,
-  },
-  chatItemInfo: {
-    flex: 1,
-    marginLeft: 12,
-  },
-  chatItemTitle: {
-    fontSize: 14,
-    fontWeight: "500",
-  },
-  chatItemId: {
-    fontSize: 12,
-  },
-  viewItemButton: {
-    paddingHorizontal: 12,
-    paddingVertical: 6,
-    borderRadius: 6,
-  },
-  viewItemText: {
-    fontSize: 12,
-    fontWeight: "500",
-  },
-})
 
 export default ContentModerationScreen
 

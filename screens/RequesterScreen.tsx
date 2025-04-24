@@ -1,13 +1,26 @@
 "use client"
 
-import { useState } from "react"
+import { useState, useCallback } from "react"
 import { View, Text, StyleSheet, TouchableOpacity, FlatList, Image, TextInput } from "react-native"
 import { useNavigation } from "@react-navigation/native"
 import { Ionicons } from "@expo/vector-icons"
-import { useTheme } from "../context/ThemeContext"
+import { useTheme } from "../theme/ThemeContext"
+import { NativeStackNavigationProp } from "@react-navigation/native-stack"
+import { MainStackParamList } from "../navigation/types"
+
+type LostItem = {
+  id: string;
+  title: string;
+  description: string;
+  location: string;
+  date: string;
+  image: string;
+  status: "Searching" | "Found";
+  matches: number;
+};
 
 // Mock data
-const lostItems = [
+const lostItems: LostItem[] = [
   {
     id: "1",
     title: "Gold Watch",
@@ -41,21 +54,47 @@ const lostItems = [
 ]
 
 const RequesterScreen = () => {
-  const navigation = useNavigation()
+  const navigation = useNavigation<NativeStackNavigationProp<MainStackParamList>>()
   const { colors } = useTheme()
   const [searchQuery, setSearchQuery] = useState("")
   const [activeTab, setActiveTab] = useState("active")
 
-  const renderLostItem = ({ item }) => (
+  // Memoized navigation handlers
+  const handleItemPress = useCallback((item: LostItem) => {
+    if (!item.id) {
+      console.warn('Invalid item ID for navigation');
+      return;
+    }
+    if (item.matches > 0) {
+      // For items with matches, navigate to the Finder tab with search query
+      navigation.navigate('Tabs', {
+        screen: 'Finder',
+        params: { searchQuery: item.title }
+      } as const);
+    } else {
+      navigation.navigate('ItemDetails', { itemId: item.id });
+    }
+  }, [navigation]);
+
+  const handleAddNewRequest = useCallback(() => {
+    navigation.navigate('Submission');
+  }, [navigation]);
+
+  // Filter items based on search query
+  const filteredItems = useCallback(() => {
+    if (!searchQuery.trim()) return lostItems;
+    return lostItems.filter(
+      item =>
+        item.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
+        item.description.toLowerCase().includes(searchQuery.toLowerCase())
+    );
+  }, [searchQuery]);
+
+  const renderLostItem = useCallback(({ item }: { item: LostItem }) => (
     <TouchableOpacity
       style={[styles.itemCard, { backgroundColor: colors.card }]}
-      onPress={() => {
-        if (item.matches > 0) {
-          navigation.navigate("SearchResults", { itemId: item.id })
-        } else {
-          navigation.navigate("ItemDetails", { itemId: item.id })
-        }
-      }}
+      onPress={() => handleItemPress(item)}
+      testID={`lost-item-${item.id}`}
     >
       <Image source={{ uri: item.image }} style={styles.itemImage} />
       <View style={styles.itemContent}>
@@ -65,7 +104,7 @@ const RequesterScreen = () => {
             style={[
               styles.statusBadge,
               {
-                backgroundColor: item.status === "Searching" ? colors.warning : colors.success,
+                backgroundColor: item.status === "Searching" ? colors.warning : colors.primary,
               },
             ]}
           >
@@ -95,138 +134,160 @@ const RequesterScreen = () => {
         )}
       </View>
     </TouchableOpacity>
-  )
+  ), [colors, handleItemPress]);
 
   return (
     <View style={[styles.container, { backgroundColor: colors.background }]}>
-      {/* Header */}
-      <View style={styles.header}>
-        <Text style={[styles.headerTitle, { color: colors.text }]}>Requester</Text>
+      <View style={[styles.header, { backgroundColor: colors.background }]}>
+        <Text style={[styles.headerTitle, { color: colors.text }]} numberOfLines={1}>Requester</Text>
       </View>
 
-      {/* Search Bar */}
-      <View style={[styles.searchContainer, { backgroundColor: colors.card }]}>
-        <Ionicons name="search" size={20} color={colors.text} style={styles.searchIcon} />
-        <TextInput
-          style={[styles.searchInput, { color: colors.text }]}
-          placeholder="Search lost items..."
-          placeholderTextColor="#888888"
-          value={searchQuery}
-          onChangeText={setSearchQuery}
-        />
-      </View>
+      <View style={styles.content}>
+        {/* Search Bar */}
+        <View style={[styles.searchContainer, { backgroundColor: colors.card }]}>
+          <Ionicons name="search" size={20} color={colors.secondary} style={styles.searchIcon} />
+          <TextInput
+            style={[styles.searchInput, { color: colors.text }]}
+            placeholder="Search lost items..."
+            placeholderTextColor={colors.secondary}
+            value={searchQuery}
+            onChangeText={setSearchQuery}
+          />
+        </View>
 
-      {/* Tabs */}
-      <View style={styles.tabsContainer}>
-        <TouchableOpacity 
-          style={[
-            styles.tab, 
-            activeTab === 'active' && { backgroundColor: colors.primary }
-          ]}
-          onPress={() => setActiveTab('active')}
-        >
-          <Text 
+        {/* Tabs */}
+        <View style={styles.tabsContainer}>
+          <TouchableOpacity 
             style={[
-              styles.tabText, 
-              { color: activeTab === 'active' ? '#FFFFFF' : colors.text }
+              styles.tab, 
+              activeTab === 'active' && { backgroundColor: colors.primary }
             ]}
+            onPress={() => setActiveTab('active')}
           >
-            Active Requests
-          </Text>
-        </TouchableOpacity>
-        <TouchableOpacity 
-          style={[
-            styles.tab, 
-            activeTab === 'resolved' && { backgroundColor: colors.primary }
-          ]}
-          onPress={() => setActiveTab('resolved')}
-        >
-          <Text 
+            <Text 
+              style={[
+                styles.tabText, 
+                { color: activeTab === 'active' ? '#FFFFFF' : colors.text }
+              ]}
+            >
+              Active Requests
+            </Text>
+          </TouchableOpacity>
+          <TouchableOpacity 
             style={[
-              styles.tabText, 
-              { color: activeTab === 'resolved' ? '#FFFFFF' : colors.text }
+              styles.tab, 
+              activeTab === 'resolved' && { backgroundColor: colors.primary }
             ]}
+            onPress={() => setActiveTab('resolved')}
           >
-            Resolved
-          </Text>
-        </Touchable  : colors.text }
-            ]}
-          >
-            Resolved
-          </Text>
+            <Text 
+              style={[
+                styles.tabText, 
+                { color: activeTab === 'resolved' ? '#FFFFFF' : colors.text }
+              ]}
+            >
+              Resolved
+            </Text>
+          </TouchableOpacity>
+        </View>
+
+        {activeTab === "active" ? (
+          <FlatList
+            data={filteredItems()}
+            renderItem={renderLostItem}
+            keyExtractor={(item) => item.id}
+            contentContainerStyle={styles.listContent}
+            showsVerticalScrollIndicator={false}
+            testID="lost-items-list"
+          />
+        ) : (
+          <View style={styles.resolvedContainer}>
+            <Text style={[styles.resolvedText, { color: colors.secondary }]}>
+              Your resolved requests will appear here.
+            </Text>
+          </View>
+        )}
+
+        <TouchableOpacity
+          style={[styles.addButton, { backgroundColor: colors.primary }]}
+          onPress={handleAddNewRequest}
+          testID="add-lost-item-button"
+        >
+          <Ionicons name="add" size={24} color="#FFFFFF" />
         </TouchableOpacity>
-  </View>
-  activeTab === "active" ? (
-    <FlatList
-      data={lostItems}
-      renderItem={renderLostItem}
-      keyExtractor={(item) => item.id}
-      contentContainerStyle={styles.listContent}
-    />
-  ) : (
-    <View style={styles.resolvedContainer}>
-      <Text style={[styles.resolvedText, { color: colors.secondary }]}>Your resolved requests will appear here.</Text>
+      </View>
     </View>
-  )
-  ;<TouchableOpacity
-    style={[styles.addButton, { backgroundColor: colors.primary }]}
-    onPress={() => navigation.navigate("Submission", { type: "lost" })}
-  >
-    <Ionicons name="add" size={24} color="#FFFFFF" />
-  </TouchableOpacity>
-  </View>
-  )
-}
+  );
+};
 
 const styles = StyleSheet.create({
   container: {
     flex: 1,
   },
+  content: {
+    flex: 1,
+    paddingHorizontal: 20,
+  },
   header: {
-    padding: 16,
-    paddingBottom: 8,
+    paddingHorizontal: 20,
+    paddingTop: 60,
+    paddingBottom: 20,
+    marginBottom: 16,
   },
   headerTitle: {
-    fontSize: 24,
-    fontWeight: "bold",
+    fontSize: 34,
+    fontWeight: "800",
+    letterSpacing: -0.5,
   },
   searchContainer: {
     flexDirection: "row",
     alignItems: "center",
-    margin: 16,
-    padding: 10,
-    borderRadius: 12,
+    padding: 16,
+    borderRadius: 16,
+    marginBottom: 20,
   },
   searchIcon: {
-    marginRight: 10,
+    marginRight: 12,
   },
   searchInput: {
     flex: 1,
     fontSize: 16,
+    paddingVertical: 4,
   },
   tabsContainer: {
     flexDirection: "row",
-    paddingHorizontal: 16,
-    marginBottom: 16,
+    marginBottom: 20,
+    gap: 12,
   },
   tab: {
     flex: 1,
-    paddingVertical: 10,
+    paddingVertical: 12,
     alignItems: "center",
-    borderRadius: 8,
-    marginHorizontal: 4,
+    borderRadius: 12,
+    borderWidth: 1,
+    borderColor: 'rgba(0,0,0,0.1)',
   },
   tabText: {
-    fontWeight: "500",
+    fontSize: 15,
+    fontWeight: "600",
   },
   listContent: {
-    padding: 16,
+    paddingTop: 8,
+    paddingBottom: 100,
   },
   itemCard: {
     flexDirection: "row",
-    borderRadius: 12,
+    borderRadius: 16,
     overflow: "hidden",
     marginBottom: 16,
+    shadowColor: "#000",
+    shadowOffset: {
+      width: 0,
+      height: 2,
+    },
+    shadowOpacity: 0.1,
+    shadowRadius: 3,
+    elevation: 3,
   },
   itemImage: {
     width: 100,
@@ -234,84 +295,93 @@ const styles = StyleSheet.create({
   },
   itemContent: {
     flex: 1,
-    padding: 12,
+    padding: 16,
   },
   itemHeader: {
     flexDirection: "row",
     justifyContent: "space-between",
     alignItems: "flex-start",
-    marginBottom: 4,
+    marginBottom: 8,
   },
   itemTitle: {
     fontSize: 16,
-    fontWeight: "bold",
+    fontWeight: "700",
     flex: 1,
+    marginRight: 8,
+    letterSpacing: -0.3,
   },
   statusBadge: {
-    paddingHorizontal: 8,
-    paddingVertical: 4,
+    paddingHorizontal: 10,
+    paddingVertical: 5,
     borderRadius: 12,
   },
   statusText: {
-    fontSize: 10,
-    fontWeight: "bold",
+    fontSize: 12,
+    fontWeight: "600",
     color: "#FFFFFF",
   },
   itemDescription: {
     fontSize: 14,
-    marginBottom: 8,
+    marginBottom: 12,
+    lineHeight: 20,
+    opacity: 0.8,
   },
   itemMeta: {
     flexDirection: "row",
     flexWrap: "wrap",
-    marginBottom: 8,
+    gap: 12,
   },
   metaItem: {
     flexDirection: "row",
     alignItems: "center",
-    marginRight: 12,
+    gap: 4,
   },
   metaText: {
-    fontSize: 12,
-    marginLeft: 4,
+    fontSize: 13,
   },
   matchesBadge: {
     flexDirection: "row",
     alignItems: "center",
-    paddingHorizontal: 8,
-    paddingVertical: 4,
+    paddingHorizontal: 10,
+    paddingVertical: 5,
     borderRadius: 12,
     alignSelf: "flex-start",
+    marginTop: 8,
   },
   matchesText: {
-    fontSize: 12,
-    fontWeight: "500",
+    fontSize: 13,
+    fontWeight: "600",
     marginLeft: 4,
   },
   resolvedContainer: {
     flex: 1,
     justifyContent: "center",
     alignItems: "center",
-    padding: 16,
+    padding: 20,
   },
   resolvedText: {
     textAlign: "center",
     fontSize: 16,
+    lineHeight: 24,
+    opacity: 0.8,
   },
   addButton: {
     position: "absolute",
-    bottom: 24,
-    right: 24,
+    bottom: 32,
+    right: 20,
     width: 56,
     height: 56,
     borderRadius: 28,
     justifyContent: "center",
     alignItems: "center",
-    elevation: 5,
     shadowColor: "#000",
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.25,
-    shadowRadius: 3.84,
+    shadowOffset: {
+      width: 0,
+      height: 4,
+    },
+    shadowOpacity: 0.3,
+    shadowRadius: 4.65,
+    elevation: 8,
   },
 })
 

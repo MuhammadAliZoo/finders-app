@@ -1,120 +1,102 @@
 "use client"
-import { View, Text, StyleSheet, Dimensions, Image } from "react-native"
-import { useTheme } from "../../context/ThemeContext"
+import React, { useEffect, useState } from 'react';
+import { View, StyleSheet, Dimensions } from "react-native"
+import MapView, { Heatmap, PROVIDER_GOOGLE } from 'react-native-maps';
+import { useTheme } from "../../theme/ThemeContext"
 
 const { width } = Dimensions.get("window")
 
-const HeatmapView = ({ data }) => {
-  const { colors } = useTheme()
+type HeatmapViewProps = {
+  data?: {
+    latitude: number;
+    longitude: number;
+    weight?: number;
+  }[];
+};
 
-  // This is a placeholder component
-  // In a real app, you would use a mapping library like react-native-maps
-  // with heatmap overlay capabilities
+// Default center coordinates (you can set this to your app's default location)
+const DEFAULT_CENTER = {
+  latitude: 37.7749, // San Francisco coordinates as default
+  longitude: -122.4194,
+  latitudeDelta: 0.0922,
+  longitudeDelta: 0.0421,
+};
+
+const HeatmapView: React.FC<HeatmapViewProps> = ({ data = [] }) => {
+  const { colors } = useTheme();
+  const [initialRegion, setInitialRegion] = useState(DEFAULT_CENTER);
+
+  useEffect(() => {
+    if (data && data.length > 0) {
+      // Calculate center point of all locations
+      const validPoints = data.filter(point => 
+        typeof point.latitude === 'number' && 
+        !isNaN(point.latitude) && 
+        typeof point.longitude === 'number' && 
+        !isNaN(point.longitude)
+      );
+
+      if (validPoints.length > 0) {
+        const center = validPoints.reduce((acc, point) => ({
+          latitude: acc.latitude + point.latitude,
+          longitude: acc.longitude + point.longitude,
+        }), { latitude: 0, longitude: 0 });
+
+        setInitialRegion({
+          latitude: center.latitude / validPoints.length,
+          longitude: center.longitude / validPoints.length,
+          latitudeDelta: 0.0922,
+          longitudeDelta: 0.0421,
+        });
+      }
+    }
+  }, [data]);
+
+  const validPoints = data?.filter(point => 
+    typeof point.latitude === 'number' && 
+    !isNaN(point.latitude) && 
+    typeof point.longitude === 'number' && 
+    !isNaN(point.longitude)
+  ) || [];
 
   return (
-    <View style={styles.container}>
-      <View style={[styles.mapContainer, { backgroundColor: colors.background }]}>
-        <Image source={require("../../assets/heatmap-placeholder.png")} style={styles.mapImage} resizeMode="cover" />
-
-        <View style={styles.legendContainer}>
-          <Text style={[styles.legendTitle, { color: colors.text }]}>Density</Text>
-          <View style={styles.legendGradient}>
-            <View style={[styles.legendColor, { backgroundColor: "#00FF00" }]} />
-            <View style={[styles.legendColor, { backgroundColor: "#FFFF00" }]} />
-            <View style={[styles.legendColor, { backgroundColor: "#FF0000" }]} />
-          </View>
-          <View style={styles.legendLabels}>
-            <Text style={[styles.legendLabel, { color: colors.secondary }]}>Low</Text>
-            <Text style={[styles.legendLabel, { color: colors.secondary }]}>High</Text>
-          </View>
-        </View>
-      </View>
-
-      <View style={styles.statsContainer}>
-        <View style={[styles.statItem, { backgroundColor: colors.background }]}>
-          <Text style={[styles.statValue, { color: colors.text }]}>Downtown</Text>
-          <Text style={[styles.statLabel, { color: colors.secondary }]}>Hotspot</Text>
-        </View>
-
-        <View style={[styles.statItem, { backgroundColor: colors.background }]}>
-          <Text style={[styles.statValue, { color: colors.text }]}>+35%</Text>
-          <Text style={[styles.statLabel, { color: colors.secondary }]}>Increase</Text>
-        </View>
-
-        <View style={[styles.statItem, { backgroundColor: colors.background }]}>
-          <Text style={[styles.statValue, { color: colors.text }]}>127</Text>
-          <Text style={[styles.statLabel, { color: colors.secondary }]}>Items</Text>
-        </View>
-      </View>
+    <View style={[styles.container, { backgroundColor: colors.card }]}>
+      <MapView
+        provider={PROVIDER_GOOGLE}
+        style={styles.map}
+        initialRegion={initialRegion}
+        showsUserLocation={true}
+        showsMyLocationButton={true}
+      >
+        {validPoints.length > 0 && (
+          <Heatmap
+            points={validPoints.map(point => ({
+              latitude: point.latitude,
+              longitude: point.longitude,
+              weight: point.weight || 1,
+            }))}
+            radius={20}
+            opacity={0.7}
+            gradient={{
+              colors: ['#00ff00', '#ff0000'],
+              startPoints: [0.1, 1],
+              colorMapSize: 256
+            }}
+          />
+        )}
+      </MapView>
     </View>
   )
 }
 
 const styles = StyleSheet.create({
   container: {
-    width: "100%",
-  },
-  mapContainer: {
-    width: "100%",
     height: 200,
     borderRadius: 12,
-    overflow: "hidden",
-    position: "relative",
+    overflow: 'hidden',
   },
-  mapImage: {
-    width: "100%",
-    height: "100%",
-  },
-  legendContainer: {
-    position: "absolute",
-    bottom: 10,
-    right: 10,
-    backgroundColor: "rgba(0, 0, 0, 0.7)",
-    borderRadius: 6,
-    padding: 6,
-  },
-  legendTitle: {
-    fontSize: 10,
-    marginBottom: 4,
-    textAlign: "center",
-  },
-  legendGradient: {
-    flexDirection: "row",
-    height: 8,
-    width: 60,
-    borderRadius: 4,
-    overflow: "hidden",
-  },
-  legendColor: {
-    flex: 1,
-  },
-  legendLabels: {
-    flexDirection: "row",
-    justifyContent: "space-between",
-    marginTop: 2,
-  },
-  legendLabel: {
-    fontSize: 8,
-  },
-  statsContainer: {
-    flexDirection: "row",
-    justifyContent: "space-between",
-    marginTop: 12,
-  },
-  statItem: {
-    flex: 1,
-    alignItems: "center",
-    padding: 8,
-    borderRadius: 8,
-    marginHorizontal: 4,
-  },
-  statValue: {
-    fontSize: 14,
-    fontWeight: "bold",
-  },
-  statLabel: {
-    fontSize: 12,
-    marginTop: 2,
+  map: {
+    ...StyleSheet.absoluteFillObject,
   },
 })
 

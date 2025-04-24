@@ -3,12 +3,12 @@ import mongoose from "mongoose"
 const messageSchema = new mongoose.Schema(
   {
     conversation: {
-      type: mongoose.Schema.ObjectId,
+      type: mongoose.Schema.Types.ObjectId,
       ref: "Conversation",
       required: true,
     },
     sender: {
-      type: mongoose.Schema.ObjectId,
+      type: mongoose.Schema.Types.ObjectId,
       ref: "User",
       required: true,
     },
@@ -19,13 +19,17 @@ const messageSchema = new mongoose.Schema(
     },
     attachments: [
       {
-        type: String,
+        type: {
+          type: String,
+          enum: ['image', 'video', 'file']
+        },
+        url: String
       },
     ],
     readBy: [
       {
         user: {
-          type: mongoose.Schema.ObjectId,
+          type: mongoose.Schema.Types.ObjectId,
           ref: "User",
         },
         readAt: {
@@ -43,6 +47,10 @@ const messageSchema = new mongoose.Schema(
     timestamps: true,
   },
 )
+
+// Indexes for faster queries
+messageSchema.index({ conversation: 1, createdAt: -1 })
+messageSchema.index({ sender: 1 })
 
 const Message = mongoose.model("Message", messageSchema)
 

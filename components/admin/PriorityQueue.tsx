@@ -1,17 +1,34 @@
 "use client"
 import { View, Text, StyleSheet, TouchableOpacity, FlatList } from "react-native"
 import { Ionicons } from "@expo/vector-icons"
-import { useTheme } from "../../context/ThemeContext"
+import { useTheme } from "../../theme/ThemeContext"
 import { useNavigation } from "@react-navigation/native"
+import type { NativeStackNavigationProp } from "@react-navigation/native-stack"
+import type { RootStackParamList } from "../../navigation/types"
 
-const PriorityQueue = ({ cases }) => {
+type PriorityCase = {
+  id: string;
+  title: string;
+  type: 'dispute' | 'moderation' | 'support';
+  priority: 'high' | 'medium' | 'low';
+  timeAgo: string;
+  aiReason: string;
+};
+
+type PriorityQueueProps = {
+  cases?: PriorityCase[];
+};
+
+type NavigationProp = NativeStackNavigationProp<RootStackParamList>;
+
+const PriorityQueue: React.FC<PriorityQueueProps> = ({ cases }) => {
   const { colors } = useTheme()
-  const navigation = useNavigation()
+  const navigation = useNavigation<NavigationProp>()
 
   // Default data if none provided
   const queueData = cases || [
     {
-      id: 1,
+      id: "1",
       title: "Disputed iPhone 13 claim",
       type: "dispute",
       priority: "high",
@@ -19,7 +36,7 @@ const PriorityQueue = ({ cases }) => {
       aiReason: "High-value item with conflicting evidence",
     },
     {
-      id: 2,
+      id: "2",
       title: "Potentially fraudulent submission",
       type: "moderation",
       priority: "high",
@@ -27,7 +44,7 @@ const PriorityQueue = ({ cases }) => {
       aiReason: "Multiple red flags in user history",
     },
     {
-      id: 3,
+      id: "3",
       title: "Escalated customer complaint",
       type: "support",
       priority: "medium",
@@ -36,7 +53,7 @@ const PriorityQueue = ({ cases }) => {
     },
   ]
 
-  const getIconName = (type) => {
+  const getIconName = (type: PriorityCase['type']) => {
     switch (type) {
       case "dispute":
         return "alert-circle"
@@ -49,36 +66,36 @@ const PriorityQueue = ({ cases }) => {
     }
   }
 
-  const getPriorityColor = (priority) => {
+  const getPriorityColor = (priority: PriorityCase['priority']) => {
     switch (priority) {
       case "high":
         return colors.error
       case "medium":
         return colors.warning
       case "low":
-        return colors.success
+        return colors.primary
       default:
         return colors.secondary
     }
   }
 
-  const handleCasePress = (item) => {
+  const handleCasePress = (item: PriorityCase) => {
     switch (item.type) {
       case "dispute":
-        navigation.navigate("DisputeDetails", { disputeId: item.id })
+        navigation.navigate("DisputeResolution")
         break
       case "moderation":
-        navigation.navigate("ItemModeration", { itemId: item.id })
+        navigation.navigate("ContentModeration")
         break
       case "support":
-        navigation.navigate("SupportTicket", { ticketId: item.id })
+        navigation.navigate("AdminDashboard")
         break
       default:
         break
     }
   }
 
-  const renderItem = ({ item }) => (
+  const renderItem = ({ item }: { item: PriorityCase }) => (
     <TouchableOpacity
       style={[styles.caseItem, { backgroundColor: colors.background }]}
       onPress={() => handleCasePress(item)}
@@ -110,13 +127,13 @@ const PriorityQueue = ({ cases }) => {
       <FlatList
         data={queueData}
         renderItem={renderItem}
-        keyExtractor={(item) => item.id.toString()}
+        keyExtractor={(item) => item.id}
         scrollEnabled={false}
       />
 
       <TouchableOpacity
         style={[styles.viewAllButton, { borderColor: colors.border }]}
-        onPress={() => navigation.navigate("PriorityQueue")}
+        onPress={() => navigation.navigate("ContentModeration")}
       >
         <Text style={[styles.viewAllText, { color: colors.primary }]}>View All Priority Cases</Text>
         <Ionicons name="arrow-forward" size={16} color={colors.primary} />

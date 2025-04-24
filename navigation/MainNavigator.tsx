@@ -3,8 +3,9 @@
 import { createNativeStackNavigator } from "@react-navigation/native-stack"
 import { createBottomTabNavigator } from "@react-navigation/bottom-tabs"
 import { Ionicons } from "@expo/vector-icons"
+import { View, TouchableOpacity } from "react-native"
 
-import HomeScreen from "../screens/HomeScreen"
+import { HomeScreen } from "../screens/HomeScreen"
 import FinderScreen from "../screens/FinderScreen"
 import RequesterScreen from "../screens/RequesterScreen"
 import NotificationScreen from "../screens/NotificationScreen"
@@ -13,32 +14,41 @@ import ItemDetailsScreen from "../screens/ItemDetailsScreen"
 import SubmissionScreen from "../screens/SubmissionScreen"
 import SearchResultsScreen from "../screens/SearchResultsScreen"
 import ClaimTrackingScreen from "../screens/ClaimTrackingScreen"
+import { AIAssistantScreen } from "../screens/AIAssistantScreen"
+import { AllTrendingItemsScreen } from "../screens/AllTrendingItemsScreen"
 
 import LogoTitle from "../components/LogoTitle"
-import { useTheme } from "../context/ThemeContext"
+import { useTheme } from "../theme/ThemeContext"
+import { MainStackParamList, TabParamList } from "./types"
 
-const Stack = createNativeStackNavigator()
-const Tab = createBottomTabNavigator()
+const Stack = createNativeStackNavigator<MainStackParamList>()
+const Tab = createBottomTabNavigator<TabParamList>()
 
-const MainTabs = () => {
+const TabNavigator = () => {
   const { colors } = useTheme()
 
   return (
     <Tab.Navigator
       screenOptions={({ route }) => ({
         tabBarIcon: ({ focused, color, size }) => {
-          let iconName
+          let iconName: keyof typeof Ionicons.glyphMap = "home"
 
-          if (route.name === "Home") {
-            iconName = focused ? "home" : "home-outline"
-          } else if (route.name === "Finder") {
-            iconName = focused ? "search" : "search-outline"
-          } else if (route.name === "Requester") {
-            iconName = focused ? "add-circle" : "add-circle-outline"
-          } else if (route.name === "Notifications") {
-            iconName = focused ? "notifications" : "notifications-outline"
-          } else if (route.name === "Profile") {
-            iconName = focused ? "person" : "person-outline"
+          switch (route.name) {
+            case "HomeTab":
+              iconName = focused ? "home" : "home-outline"
+              break
+            case "FinderTab":
+              iconName = focused ? "search" : "search-outline"
+              break
+            case "RequesterTab":
+              iconName = focused ? "add-circle" : "add-circle-outline"
+              break
+            case "NotificationsTab":
+              iconName = focused ? "notifications" : "notifications-outline"
+              break
+            case "ProfileTab":
+              iconName = focused ? "person" : "person-outline"
+              break
           }
 
           return <Ionicons name={iconName} size={size} color={color} />
@@ -53,14 +63,18 @@ const MainTabs = () => {
           backgroundColor: colors.card,
         },
         headerTintColor: colors.text,
-        headerTitle: (props) => <LogoTitle {...props} />,
+        headerTitle: () => (
+          <View style={{ flex: 1, alignItems: 'center' }}>
+            <LogoTitle />
+          </View>
+        ),
       })}
     >
-      <Tab.Screen name="Home" component={HomeScreen} />
-      <Tab.Screen name="Finder" component={FinderScreen} />
-      <Tab.Screen name="Requester" component={RequesterScreen} />
-      <Tab.Screen name="Notifications" component={NotificationScreen} />
-      <Tab.Screen name="Profile" component={ProfileScreen} />
+      <Tab.Screen name="HomeTab" component={HomeScreen} options={{ title: "Home" }} />
+      <Tab.Screen name="FinderTab" component={FinderScreen} options={{ title: "Finder" }} />
+      <Tab.Screen name="RequesterTab" component={RequesterScreen} options={{ title: "Submit" }} />
+      <Tab.Screen name="NotificationsTab" component={NotificationScreen} options={{ title: "Notifications" }} />
+      <Tab.Screen name="ProfileTab" component={ProfileScreen} options={{ title: "Profile" }} />
     </Tab.Navigator>
   )
 }
@@ -78,13 +92,43 @@ const MainNavigator = () => {
         contentStyle: {
           backgroundColor: colors.background,
         },
+        gestureEnabled: true,
+        gestureDirection: 'horizontal',
+        animation: 'slide_from_right',
+        presentation: 'card',
       }}
     >
-      <Stack.Screen name="Main" component={MainTabs} options={{ headerShown: false }} />
+      <Stack.Screen name="Tabs" component={TabNavigator} options={{ headerShown: false }} />
       <Stack.Screen name="ItemDetails" component={ItemDetailsScreen} options={{ title: "Item Details" }} />
       <Stack.Screen name="Submission" component={SubmissionScreen} options={{ title: "Submit Item" }} />
       <Stack.Screen name="SearchResults" component={SearchResultsScreen} options={{ title: "Search Results" }} />
-      <Stack.Screen name="ClaimTracking" component={ClaimTrackingScreen} options={{ title: "Claim Tracking" }} />
+      <Stack.Screen 
+        name="ClaimTracking" 
+        component={ClaimTrackingScreen} 
+        options={({ navigation }) => ({ 
+          title: "Claim Tracking",
+          gestureEnabled: true,
+          gestureDirection: 'horizontal',
+          animation: 'slide_from_right',
+          presentation: 'card',
+          headerShown: true,
+          headerBackTitle: "Back",
+          headerLeft: () => (
+            <TouchableOpacity
+              onPress={() => navigation.goBack()}
+              style={{ marginLeft: 8 }}
+            >
+              <Ionicons name="chevron-back" size={24} color={colors.text} />
+            </TouchableOpacity>
+          ),
+        })} 
+      />
+      <Stack.Screen name="AIAssistant" component={AIAssistantScreen} options={{ title: "AI Assistant" }} />
+      <Stack.Screen 
+        name="AllTrendingItems" 
+        component={AllTrendingItemsScreen as React.ComponentType<any>} 
+        options={{ title: "All Trending Items" }} 
+      />
     </Stack.Navigator>
   )
 }

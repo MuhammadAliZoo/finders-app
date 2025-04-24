@@ -1,129 +1,78 @@
 "use client"
 
-import { createContext, useState, useContext, useEffect, type ReactNode } from "react"
-import AsyncStorage from "@react-native-async-storage/async-storage"
-import { authApi } from "../api/auth"
-
-interface User {
-  id: string
-  name: string
-  email: string
-  phone?: string
-  profileImage?: string
-  isAdmin: boolean
-}
+import React, { createContext, useContext, useState, useEffect } from 'react';
+import { API_URL } from '../config';
+import { auth, db } from '../config/firebase';
+import { doc, getDoc, updateDoc } from 'firebase/firestore';
+import { signInWithEmailAndPassword } from 'firebase/auth';
+import { User } from '../types/user';
 
 interface AuthContextType {
-  user: User | null
-  isLoading: boolean
-  isAdmin: boolean
-  login: (email: string, password: string) => Promise<void>
-  signup: (name: string, email: string, password: string, phone?: string) => Promise<void>
-  adminLogin: (email: string, password: string, adminCode: string) => Promise<void>
-  logout: () => Promise<void>
+  user: User | null;
+  loading: boolean;
+  login: (email: string, password: string) => Promise<void>;
+  updateUserProfile: (data: Partial<User>) => Promise<void>;
 }
 
-const AuthContext = createContext<AuthContextType | undefined>(undefined)
+const AuthContext = createContext<AuthContextType>({
+  user: null,
+  loading: true,
+  login: async () => {},
+  updateUserProfile: async () => {},
+});
 
-export const AuthProvider = ({ children }: { children: ReactNode }) => {
-  const [user, setUser] = useState<User | null>(null)
-  const [isLoading, setIsLoading] = useState(true)
+export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
+  const [user, setUser] = useState<User | null>(null);
+  const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    // Check if user is logged in
-    const loadUser = async () => {
-      try {
-        const userJson = await AsyncStorage.getItem("user")
-        const token = await AsyncStorage.getItem("token")
-
-        if (userJson && token) {
-          setUser(JSON.parse(userJson))
+    const unsubscribe = auth.onAuthStateChanged(async (firebaseUser) => {
+      if (firebaseUser) {
+        const userDoc = await getDoc(doc(db, 'users', firebaseUser.uid));
+        if (userDoc.exists()) {
+          setUser(userDoc.data() as User);
         }
-      } catch (error) {
-        console.error("Failed to load user from storage", error)
-      } finally {
-        setIsLoading(false)
+      } else {
+        setUser(null);
       }
-    }
+      setLoading(false);
+    });
 
-    loadUser()
-  }, [])
+    return unsubscribe;
+  }, []);
 
   const login = async (email: string, password: string) => {
     try {
-      const response = await authApi.login(email, password)
-
-      await AsyncStorage.setItem("token", response.token)
-      await AsyncStorage.setItem("user", JSON.stringify(response.user))
-
-      setUser(response.user)
+      const userCredential = await signInWithEmailAndPassword(auth, email, password);
+      const userDoc = await getDoc(doc(db, 'users', userCredential.user.uid));
+      if (userDoc.exists()) {
+        setUser(userDoc.data() as User);
+      }
     } catch (error) {
-      console.error("Login failed", error)
-      throw error
+      console.error('Error logging in:', error);
+      throw error;
     }
-  }
+  };
 
-  const signup = async (name: string, email: string, password: string, phone?: string) => {
+  const updateUserProfile = async (data: Partial<User>) => {
+    if (!user) return;
+    
     try {
-      const response = await authApi.signup(name, email, password, phone)
-
-      await AsyncStorage.setItem("token", response.token)
-      await AsyncStorage.setItem("user", JSON.stringify(response.user))
-
-      setUser(response.user)
+      const userRef = doc(db, 'users', user.id);
+      await updateDoc(userRef, data);
+      setUser({ ...user, ...data });
     } catch (error) {
-      console.error("Signup failed", error)
-      throw error
+      console.error('Error updating user profile:', error);
+      throw error;
     }
-  }
-
-  const adminLogin = async (email: string, password: string, adminCode: string) => {
-    try {
-      const response = await authApi.adminLogin(email, password, adminCode)
-
-      await AsyncStorage.setItem("token", response.token)
-      await AsyncStorage.setItem("user", JSON.stringify(response.user))
-
-      setUser(response.user)
-    } catch (error) {
-      console.error("Admin login failed", error)
-      throw error
-    }
-  }
-
-  const logout = async () => {
-    try {
-      await AsyncStorage.removeItem("token")
-      await AsyncStorage.removeItem("user")
-      setUser(null)
-    } catch (error) {
-      console.error("Logout failed", error)
-      throw error
-    }
-  }
+  };
 
   return (
-    <AuthContext.Provider
-      value={{
-        user,
-        isLoading,
-        isAdmin: user?.isAdmin || false,
-        login,
-        signup,
-        adminLogin,
-        logout,
-      }}
-    >
+    <AuthContext.Provider value={{ user, loading, login, updateUserProfile }}>
       {children}
     </AuthContext.Provider>
-  )
-}
+  );
+};
 
-export const useAuth = (): AuthContextType => {
-  const context = useContext(AuthContext)
-  if (context === undefined) {
-    throw new Error("useAuth must be used within an AuthProvider")
-  }
-  return context
-}
+export const useAuth = () => useContext(AuthContext);
 

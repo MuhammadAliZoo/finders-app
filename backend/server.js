@@ -20,7 +20,23 @@ connectDB()
 const app = express()
 
 // Middleware
-app.use(cors())
+app.use(cors({
+  origin: [
+    'http://localhost:3000',
+    'http://localhost:5000',
+    'http://localhost:19006',
+    'http://localhost:19000',
+    'http://localhost:19001',
+    'http://localhost:19002',
+    'exp://localhost:19000',
+    'exp://localhost:19001',
+    'exp://localhost:19002',
+    'exp://192.168.1.2:19000',
+    'exp://192.168.1.2:19001',
+    'exp://192.168.1.2:19002',
+  ],
+  credentials: true
+}))
 app.use(express.json())
 
 // Routes
@@ -41,8 +57,9 @@ const server = http.createServer(app)
 // Set up Socket.io
 const io = new Server(server, {
   cors: {
-    origin: process.env.CLIENT_URL || "http://localhost:3000",
+    origin: ['http://localhost:3000', 'http://localhost:5000', 'http://localhost:19006', 'exp://localhost:19000'],
     methods: ["GET", "POST"],
+    credentials: true
   },
 })
 
