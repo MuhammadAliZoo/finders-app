@@ -11,7 +11,7 @@ const api = axios.create({
 
 // Add request interceptor for authentication
 api.interceptors.request.use(
-  async (config) => {
+  async config => {
     try {
       const token = await AsyncStorage.getItem('token');
       if (token) {
@@ -23,16 +23,16 @@ api.interceptors.request.use(
       return config;
     }
   },
-  (error) => {
+  error => {
     console.error('Request interceptor error:', error);
     return Promise.reject(error);
-  }
+  },
 );
 
 // Add response interceptor for error handling
 api.interceptors.response.use(
-  (response) => response,
-  (error) => {
+  response => response,
+  error => {
     if (error.response) {
       // The request was made and the server responded with a status code
       // that falls out of the range of 2xx
@@ -47,7 +47,7 @@ api.interceptors.response.use(
       console.error('Request setup error:', error.message);
       throw new Error('Failed to make request. Please try again.');
     }
-  }
+  },
 );
 
-export default api; 
+export default api;

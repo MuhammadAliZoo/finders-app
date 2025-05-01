@@ -27,7 +27,7 @@ const createAdminUser = async () => {
       email: 'admin@finders.com',
       password: 'Admin@123', // This will be hashed automatically by the User model
       isAdmin: true,
-      isVerified: true
+      isVerified: true,
     });
 
     console.log('Admin user created successfully:');
@@ -45,4 +45,4 @@ const createAdminUser = async () => {
 };
 
 // Run the script
-createAdminUser(); 
+createAdminUser();

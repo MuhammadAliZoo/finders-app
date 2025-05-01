@@ -1,4 +1,4 @@
-"use client"
+'use client';
 import React from 'react';
 import { View, Text, StyleSheet, Dimensions } from 'react-native';
 import { useTheme } from '../../theme/ThemeContext';
@@ -21,7 +21,8 @@ const PerformanceChart: React.FC<PerformanceChartProps> = ({ data }) => {
         Performance Chart Component
       </Text>
       <Text style={[styles.note, { color: colors.secondary }]}>
-        Note: This is a placeholder. Implement actual chart using a library like react-native-chart-kit
+        Note: This is a placeholder. Implement actual chart using a library like
+        react-native-chart-kit
       </Text>
     </View>
   );
@@ -29,22 +30,21 @@ const PerformanceChart: React.FC<PerformanceChartProps> = ({ data }) => {
 
 const styles = StyleSheet.create({
   container: {
-    padding: 16,
-    borderRadius: 12,
     alignItems: 'center',
-    justifyContent: 'center',
+    borderRadius: 12,
     height: 200,
+    justifyContent: 'center',
+    padding: 16,
+  },
+  note: {
+    fontSize: 12,
+    opacity: 0.7,
+    textAlign: 'center',
   },
   placeholder: {
     fontSize: 16,
     marginBottom: 8,
   },
-  note: {
-    fontSize: 12,
-    textAlign: 'center',
-    opacity: 0.7,
-  },
 });
 
 export default PerformanceChart;
-

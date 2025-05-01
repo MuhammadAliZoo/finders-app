@@ -1,4 +1,4 @@
-import mongoose from "mongoose"
+import mongoose from 'mongoose';
 
 const adminMetricsSchema = new mongoose.Schema(
   {
@@ -44,12 +44,12 @@ const adminMetricsSchema = new mongoose.Schema(
         location: {
           type: {
             type: String,
-            enum: ["Point"],
-            default: "Point",
+            enum: ['Point'],
+            default: 'Point',
           },
           coordinates: {
             type: [Number],
-            index: "2dsphere",
+            index: '2dsphere',
           },
           address: String,
         },
@@ -59,7 +59,7 @@ const adminMetricsSchema = new mongoose.Schema(
         },
         itemType: {
           type: String,
-          enum: ["lost", "found"],
+          enum: ['lost', 'found'],
         },
       },
     ],
@@ -76,12 +76,11 @@ const adminMetricsSchema = new mongoose.Schema(
   {
     timestamps: true,
   },
-)
+);
 
 // Add index for faster queries
-adminMetricsSchema.index({ date: 1 })
+adminMetricsSchema.index({ date: 1 });
 
-const AdminMetrics = mongoose.model("AdminMetrics", adminMetricsSchema)
+const AdminMetrics = mongoose.model('AdminMetrics', adminMetricsSchema);
 
-export default AdminMetrics
-
+export default AdminMetrics;

@@ -16,17 +16,6 @@ prepare_react_native_project!
 target 'findersapp' do
   use_expo_modules!
   
-  # Add Firebase pods with specific versions
-  pod 'Firebase', '~> 10.18.0'
-  pod 'Firebase/Core', '~> 10.18.0'
-  pod 'Firebase/Auth', '~> 10.18.0'
-  pod 'Firebase/Firestore', '~> 10.18.0'
-  pod 'Firebase/Storage', '~> 10.18.0'
-
-  # @generated begin react-native-maps - expo prebuild (DO NOT MODIFY) sync-e9cc66c360abe50bc66d89fffb3c55b034d7d369
-  pod 'react-native-google-maps', path: File.dirname(`node --print "require.resolve('react-native-maps/package.json')"`)
-  # @generated end react-native-maps
-
   use_native_modules!
   use_frameworks! :linkage => podfile_properties['ios.useFrameworks'].to_sym if podfile_properties['ios.useFrameworks']
   use_frameworks! :linkage => ENV['USE_FRAMEWORKS'].to_sym if ENV['USE_FRAMEWORKS']

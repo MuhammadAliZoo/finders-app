@@ -1,6 +1,6 @@
-"use client"
+'use client';
 
-import { useState, useEffect, useRef } from "react"
+import { useState, useEffect, useRef } from 'react';
 import {
   View,
   Text,
@@ -12,15 +12,15 @@ import {
   Image,
   Modal,
   Alert,
-} from "react-native"
-import { Ionicons } from "@expo/vector-icons"
-import { useTheme } from "../../theme/ThemeContext"
-import { adminApi } from "../../api/admin"
-import ModerateItemCard from "../../components/admin/ModerateItemCard"
-import FilterChip from "../../components/admin/FilterChip"
-import AdminChat from "../../components/admin/AdminChat"
-import type { NativeStackNavigationProp } from "@react-navigation/native-stack"
-import { RootStackParamList, ModerationItem } from "../../navigation/types"
+} from 'react-native';
+import { Ionicons } from '@expo/vector-icons';
+import { useTheme } from '../../theme/ThemeContext';
+import { adminApi } from '../../api/admin';
+import ModerateItemCard from '../../components/admin/ModerateItemCard';
+import FilterChip from '../../components/admin/FilterChip';
+import AdminChat from '../../components/admin/AdminChat';
+import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
+import { RootStackParamList, ModerationItem } from '../../navigation/types';
 
 interface ModerationRule {
   id: number;
@@ -49,107 +49,101 @@ interface ModerateItemCardProps {
 }
 
 const ContentModerationScreen: React.FC<ContentModerationScreenProps> = ({ navigation }) => {
-  const { colors } = useTheme()
-  const [items, setItems] = useState<ModerationItem[]>([])
-  const [loading, setLoading] = useState(true)
-  const [refreshing, setRefreshing] = useState(false)
-  const [selectedItems, setSelectedItems] = useState<string[]>([])
-  const [filterStatus, setFilterStatus] = useState("all")
-  const [searchQuery, setSearchQuery] = useState("")
-  const [sortBy, setSortBy] = useState("date")
-  const [showFilterModal, setShowFilterModal] = useState(false)
-  const [showChatModal, setShowChatModal] = useState(false)
-  const [currentItem, setCurrentItem] = useState<ModerationItem | null>(null)
-  const [moderationRules, setModerationRules] = useState<ModerationRule[]>([])
-  const [showRulesModal, setShowRulesModal] = useState(false)
+  const { colors } = useTheme();
+  const [items, setItems] = useState<ModerationItem[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [refreshing, setRefreshing] = useState(false);
+  const [selectedItems, setSelectedItems] = useState<string[]>([]);
+  const [filterStatus, setFilterStatus] = useState('all');
+  const [searchQuery, setSearchQuery] = useState('');
+  const [sortBy, setSortBy] = useState('date');
+  const [showFilterModal, setShowFilterModal] = useState(false);
+  const [showChatModal, setShowChatModal] = useState(false);
+  const [currentItem, setCurrentItem] = useState<ModerationItem | null>(null);
+  const [moderationRules, setModerationRules] = useState<ModerationRule[]>([]);
+  const [showRulesModal, setShowRulesModal] = useState(false);
 
-  const chatRef = useRef(null)
+  const chatRef = useRef(null);
 
   useEffect(() => {
-    fetchItems()
-    fetchModerationRules()
-  }, [filterStatus, sortBy])
+    fetchItems();
+    fetchModerationRules();
+  }, [filterStatus, sortBy]);
 
   const fetchItems = async () => {
     try {
-      setLoading(true)
-      const data = await adminApi.getItemsForModeration(filterStatus, sortBy)
-      setItems(data)
+      setLoading(true);
+      const data = await adminApi.getItemsForModeration(filterStatus, sortBy);
+      setItems(data);
     } catch (error) {
-      console.error("Failed to fetch items for moderation", error)
+      console.error('Failed to fetch items for moderation', error);
     } finally {
-      setLoading(false)
-      setRefreshing(false)
+      setLoading(false);
+      setRefreshing(false);
     }
-  }
+  };
 
   const fetchModerationRules = async () => {
     try {
-      const rules = await adminApi.getModerationRules()
-      setModerationRules(rules)
+      const rules = await adminApi.getModerationRules();
+      setModerationRules(rules);
     } catch (error) {
-      console.error("Failed to fetch moderation rules", error)
+      console.error('Failed to fetch moderation rules', error);
     }
-  }
+  };
 
   const onRefresh = () => {
-    setRefreshing(true)
-    fetchItems()
-  }
+    setRefreshing(true);
+    fetchItems();
+  };
 
   const handleSearch = (text: string) => {
-    setSearchQuery(text)
+    setSearchQuery(text);
     // Implement search functionality here
-  }
+  };
 
   const toggleItemSelection = (itemId: string) => {
-    setSelectedItems(prev => 
-      prev.includes(itemId) 
-        ? prev.filter(id => id !== itemId)
-        : [...prev, itemId]
-    )
-  }
+    setSelectedItems(prev =>
+      prev.includes(itemId) ? prev.filter(id => id !== itemId) : [...prev, itemId],
+    );
+  };
 
   const selectAllItems = () => {
-    setSelectedItems(
-      selectedItems.length === items.length 
-        ? [] 
-        : items.map(item => item.id)
-    )
-  }
+    setSelectedItems(selectedItems.length === items.length ? [] : items.map(item => item.id));
+  };
 
   const handleBatchAction = async (action: 'approve' | 'reject') => {
     if (selectedItems.length === 0) {
-      Alert.alert("No Items Selected", "Please select at least one item to perform this action.")
-      return
+      Alert.alert('No Items Selected', 'Please select at least one item to perform this action.');
+      return;
     }
 
     try {
-      setLoading(true)
-      await adminApi.batchModerateItems(selectedItems, action)
-      fetchItems()
-      setSelectedItems([])
+      setLoading(true);
+      await adminApi.batchModerateItems(selectedItems, action);
+      fetchItems();
+      setSelectedItems([]);
       Alert.alert(
-        "Success",
-        `${selectedItems.length} items have been ${action === "approve" ? "approved" : "rejected"}.`
-      )
+        'Success',
+        `${selectedItems.length} items have been ${action === 'approve' ? 'approved' : 'rejected'}.`,
+      );
     } catch (error) {
-      console.error(`Failed to ${action} items`, error)
-      Alert.alert("Error", `Failed to ${action} items. Please try again.`)
+      console.error(`Failed to ${action} items`, error);
+      Alert.alert('Error', `Failed to ${action} items. Please try again.`);
     } finally {
-      setLoading(false)
+      setLoading(false);
     }
-  }
+  };
 
   const openItemDetails = (item: ModerationItem) => {
-    setCurrentItem(item)
-    navigation.navigate('ItemModeration', { item })
-  }
+    setCurrentItem(item);
+    navigation.navigate('ItemModeration', { item });
+  };
 
   const openChat = (item: ModerationItem) => {
-    setCurrentItem(item)
-    setShowChatModal(true)
-  }
+    setCurrentItem(item);
+    setShowChatModal(true);
+  };
 
   const renderItem = ({ item }: { item: ModerationItem }) => (
     <ModerateItemCard
@@ -159,9 +153,17 @@ const ContentModerationScreen: React.FC<ContentModerationScreenProps> = ({ navig
       onPress={() => openItemDetails(item)}
       onChatPress={() => openChat(item)}
     />
-  )
+  );
 
-  const renderFilterChip = ({ label, value, count = 0 }: { label: string; value: string; count?: number }) => (
+  const renderFilterChip = ({
+    label,
+    value,
+    count = 0,
+  }: {
+    label: string;
+    value: string;
+    count?: number;
+  }) => (
     <FilterChip
       label={label}
       isSelected={filterStatus === value}
@@ -171,7 +173,12 @@ const ContentModerationScreen: React.FC<ContentModerationScreenProps> = ({ navig
   );
 
   const renderFilterModal = () => (
-    <Modal visible={showFilterModal} transparent animationType="slide" onRequestClose={() => setShowFilterModal(false)}>
+    <Modal
+      visible={showFilterModal}
+      transparent
+      animationType="slide"
+      onRequestClose={() => setShowFilterModal(false)}
+    >
       <View style={styles.modalOverlay}>
         <View style={[styles.modalContent, { backgroundColor: colors.card }]}>
           <View style={styles.modalHeader}>
@@ -183,17 +190,29 @@ const ContentModerationScreen: React.FC<ContentModerationScreenProps> = ({ navig
 
           <Text style={[styles.filterSectionTitle, { color: colors.text }]}>Status</Text>
           <View style={styles.filterChips}>
-            {renderFilterChip({ label: "All", value: "all", count: items.length })}
-            {renderFilterChip({ label: "Pending", value: "pending", count: items.filter(i => i.status === 'pending').length })}
-            {renderFilterChip({ label: "Flagged", value: "flagged", count: items.filter(i => i.status === 'flagged').length })}
-            {renderFilterChip({ label: "AI Flagged", value: "ai_flagged", count: items.filter(i => i.status === 'ai_flagged').length })}
+            {renderFilterChip({ label: 'All', value: 'all', count: items.length })}
+            {renderFilterChip({
+              label: 'Pending',
+              value: 'pending',
+              count: items.filter(i => i.status === 'pending').length,
+            })}
+            {renderFilterChip({
+              label: 'Flagged',
+              value: 'flagged',
+              count: items.filter(i => i.status === 'flagged').length,
+            })}
+            {renderFilterChip({
+              label: 'AI Flagged',
+              value: 'ai_flagged',
+              count: items.filter(i => i.status === 'ai_flagged').length,
+            })}
           </View>
 
           <Text style={[styles.filterSectionTitle, { color: colors.text }]}>Sort By</Text>
           <View style={styles.filterChips}>
-            {renderFilterChip({ label: "Date (Newest)", value: "date", count: 0 })}
-            {renderFilterChip({ label: "Priority", value: "priority", count: 0 })}
-            {renderFilterChip({ label: "User Rating", value: "rating", count: 0 })}
+            {renderFilterChip({ label: 'Date (Newest)', value: 'date', count: 0 })}
+            {renderFilterChip({ label: 'Priority', value: 'priority', count: 0 })}
+            {renderFilterChip({ label: 'User Rating', value: 'rating', count: 0 })}
           </View>
 
           <TouchableOpacity
@@ -205,10 +224,15 @@ const ContentModerationScreen: React.FC<ContentModerationScreenProps> = ({ navig
         </View>
       </View>
     </Modal>
-  )
+  );
 
   const renderRulesModal = () => (
-    <Modal visible={showRulesModal} transparent animationType="slide" onRequestClose={() => setShowRulesModal(false)}>
+    <Modal
+      visible={showRulesModal}
+      transparent
+      animationType="slide"
+      onRequestClose={() => setShowRulesModal(false)}
+    >
       <View style={styles.modalOverlay}>
         <View style={[styles.modalContent, { backgroundColor: colors.card }]}>
           <View style={styles.modalHeader}>
@@ -220,7 +244,7 @@ const ContentModerationScreen: React.FC<ContentModerationScreenProps> = ({ navig
 
           <FlatList
             data={moderationRules}
-            keyExtractor={(item) => item.id.toString()}
+            keyExtractor={item => item.id.toString()}
             renderItem={({ item }) => (
               <View style={[styles.ruleItem, { borderBottomColor: colors.border }]}>
                 <View style={styles.ruleHeader}>
@@ -228,22 +252,40 @@ const ContentModerationScreen: React.FC<ContentModerationScreenProps> = ({ navig
                   <View
                     style={[
                       styles.ruleStatusBadge,
-                      { backgroundColor: item.active ? colors.primary + "20" : colors.error + "20" },
+                      {
+                        backgroundColor: item.active ? colors.primary + '20' : colors.error + '20',
+                      },
                     ]}
                   >
-                    <Text style={[styles.ruleStatusText, { color: item.active ? colors.primary : colors.error }]}>
-                      {item.active ? "Active" : "Inactive"}
+                    <Text
+                      style={[
+                        styles.ruleStatusText,
+                        { color: item.active ? colors.primary : colors.error },
+                      ]}
+                    >
+                      {item.active ? 'Active' : 'Inactive'}
                     </Text>
                   </View>
                 </View>
-                <Text style={[styles.ruleDescription, { color: colors.secondary }]}>{item.description}</Text>
+                <Text style={[styles.ruleDescription, { color: colors.secondary }]}>
+                  {item.description}
+                </Text>
                 <View style={styles.ruleActions}>
-                  <TouchableOpacity style={[styles.ruleActionButton, { borderColor: colors.border }]}>
+                  <TouchableOpacity
+                    style={[styles.ruleActionButton, { borderColor: colors.border }]}
+                  >
                     <Text style={[styles.ruleActionText, { color: colors.primary }]}>Edit</Text>
                   </TouchableOpacity>
-                  <TouchableOpacity style={[styles.ruleActionButton, { borderColor: colors.border }]}>
-                    <Text style={[styles.ruleActionText, { color: item.active ? colors.error : colors.primary }]}>
-                      {item.active ? "Disable" : "Enable"}
+                  <TouchableOpacity
+                    style={[styles.ruleActionButton, { borderColor: colors.border }]}
+                  >
+                    <Text
+                      style={[
+                        styles.ruleActionText,
+                        { color: item.active ? colors.error : colors.primary },
+                      ]}
+                    >
+                      {item.active ? 'Disable' : 'Enable'}
                     </Text>
                   </TouchableOpacity>
                 </View>
@@ -258,10 +300,15 @@ const ContentModerationScreen: React.FC<ContentModerationScreenProps> = ({ navig
         </View>
       </View>
     </Modal>
-  )
+  );
 
   const renderChatModal = () => (
-    <Modal visible={showChatModal} transparent animationType="slide" onRequestClose={() => setShowChatModal(false)}>
+    <Modal
+      visible={showChatModal}
+      transparent
+      animationType="slide"
+      onRequestClose={() => setShowChatModal(false)}
+    >
       <View style={styles.chatModalOverlay}>
         <View style={[styles.chatModalContent, { backgroundColor: colors.card }]}>
           <View style={styles.chatModalHeader}>
@@ -276,18 +323,24 @@ const ContentModerationScreen: React.FC<ContentModerationScreenProps> = ({ navig
 
           {currentItem && (
             <View style={[styles.chatItemPreview, { backgroundColor: colors.background }]}>
-              <Image source={{ uri: currentItem.images[0] }} style={styles.chatItemImage} resizeMode="cover" />
+              <Image
+                source={{ uri: currentItem.images[0] }}
+                style={styles.chatItemImage}
+                resizeMode="cover"
+              />
               <View style={styles.chatItemInfo}>
                 <Text style={[styles.chatItemTitle, { color: colors.text }]} numberOfLines={1}>
                   {currentItem.title}
                 </Text>
-                <Text style={[styles.chatItemId, { color: colors.secondary }]}>ID: {currentItem.id}</Text>
+                <Text style={[styles.chatItemId, { color: colors.secondary }]}>
+                  ID: {currentItem.id}
+                </Text>
               </View>
               <TouchableOpacity
-                style={[styles.viewItemButton, { backgroundColor: colors.primary + "20" }]}
+                style={[styles.viewItemButton, { backgroundColor: colors.primary + '20' }]}
                 onPress={() => {
-                  setShowChatModal(false)
-                  openItemDetails(currentItem)
+                  setShowChatModal(false);
+                  openItemDetails(currentItem);
                 }}
               >
                 <Text style={[styles.viewItemText, { color: colors.primary }]}>View</Text>
@@ -297,7 +350,7 @@ const ContentModerationScreen: React.FC<ContentModerationScreenProps> = ({ navig
 
           <AdminChat
             onClose={() => setShowChatModal(false)}
-            onSend={(message) => {
+            onSend={message => {
               // Handle sending message
               console.log('Sending message:', message);
             }}
@@ -305,333 +358,333 @@ const ContentModerationScreen: React.FC<ContentModerationScreenProps> = ({ navig
         </View>
       </View>
     </Modal>
-  )
+  );
 
   const styles = StyleSheet.create({
-    container: {
-      flex: 1,
-      backgroundColor: colors.background,
-    },
     actionBar: {
+      alignItems: 'center',
+      backgroundColor: colors.card,
+      borderBottomColor: colors.border,
+      borderBottomWidth: 1,
       flexDirection: 'row',
       justifyContent: 'space-between',
-      alignItems: 'center',
       padding: 16,
-      backgroundColor: colors.card,
-      borderBottomWidth: 1,
-      borderBottomColor: colors.border,
     },
-    searchContainer: {
-      flex: 1,
-      flexDirection: 'row',
+    addRuleButton: {
       alignItems: 'center',
-      backgroundColor: colors.background,
       borderRadius: 8,
-      marginRight: 16,
-      paddingHorizontal: 12,
+      flexDirection: 'row',
+      justifyContent: 'center',
+      marginTop: 16,
+      paddingVertical: 12,
     },
-    searchInput: {
-      flex: 1,
-      height: 40,
-      color: colors.text,
+    addRuleText: {
+      color: '#FFFFFF',
+      fontSize: 16,
+      fontWeight: 'bold',
       marginLeft: 8,
     },
-    filterButton: {
-      backgroundColor: colors.primary,
+    applyFilterButton: {
+      alignItems: 'center',
+      borderRadius: 8,
+      marginTop: 16,
+      paddingVertical: 12,
+    },
+    applyFilterText: {
+      color: '#FFFFFF',
+      fontSize: 16,
+      fontWeight: 'bold',
+    },
+    approveButton: {
+      backgroundColor: colors.success,
+      borderRadius: 8,
       paddingHorizontal: 16,
       paddingVertical: 8,
-      borderRadius: 8,
     },
-    filterButtonText: {
+    batchActionBar: {
+      alignItems: 'center',
+      flexDirection: 'row',
+      justifyContent: 'space-between',
+      paddingHorizontal: 16,
+      paddingVertical: 12,
+    },
+    batchButton: {
+      alignItems: 'center',
+      borderRadius: 6,
+      flexDirection: 'row',
+      marginLeft: 8,
+      paddingHorizontal: 12,
+      paddingVertical: 6,
+    },
+    batchButtonText: {
+      fontSize: 14,
+      fontWeight: '500',
+      marginLeft: 4,
+    },
+    batchButtons: {
+      flexDirection: 'row',
+    },
+    buttonText: {
       color: '#FFFFFF',
       fontWeight: '600',
     },
-    contentList: {
+    chatItemId: {
+      fontSize: 12,
+    },
+    chatItemImage: {
+      borderRadius: 4,
+      height: 40,
+      width: 40,
+    },
+    chatItemInfo: {
       flex: 1,
+      marginLeft: 12,
+    },
+    chatItemPreview: {
+      alignItems: 'center',
+      borderRadius: 8,
+      flexDirection: 'row',
+      marginHorizontal: 16,
+      marginVertical: 8,
+      padding: 12,
+    },
+    chatItemTitle: {
+      fontSize: 14,
+      fontWeight: '500',
+    },
+    chatModalContent: {
+      borderTopLeftRadius: 20,
+      borderTopRightRadius: 20,
+      flex: 1,
+      marginTop: 50,
+    },
+    chatModalHeader: {
+      alignItems: 'center',
+      borderBottomColor: 'rgba(0, 0, 0, 0.1)',
+      borderBottomWidth: 1,
+      flexDirection: 'row',
+      justifyContent: 'space-between',
       padding: 16,
     },
-    contentItem: {
-      backgroundColor: colors.card,
-      borderRadius: 12,
-      marginBottom: 16,
-      padding: 16,
-      borderWidth: 1,
-      borderColor: colors.border,
+    chatModalOverlay: {
+      backgroundColor: 'rgba(0, 0, 0, 0.5)',
+      flex: 1,
+    },
+    chatModalTitle: {
+      fontSize: 18,
+      fontWeight: 'bold',
+    },
+    container: {
+      backgroundColor: colors.background,
+      flex: 1,
+    },
+    contentActions: {
+      flexDirection: 'row',
+      gap: 8,
+      justifyContent: 'flex-end',
+    },
+    contentBody: {
+      marginBottom: 12,
     },
     contentHeader: {
       flexDirection: 'row',
       justifyContent: 'space-between',
       marginBottom: 12,
     },
-    contentTitle: {
-      fontSize: 16,
-      fontWeight: '600',
-      color: colors.text,
+    contentItem: {
+      backgroundColor: colors.card,
+      borderColor: colors.border,
+      borderRadius: 12,
+      borderWidth: 1,
+      marginBottom: 16,
+      padding: 16,
+    },
+    contentList: {
+      flex: 1,
+      padding: 16,
     },
     contentStatus: {
-      fontSize: 14,
       color: colors.text,
-    },
-    contentBody: {
-      marginBottom: 12,
+      fontSize: 14,
     },
     contentText: {
-      fontSize: 14,
       color: colors.text,
+      fontSize: 14,
       lineHeight: 20,
     },
-    contentActions: {
-      flexDirection: 'row',
-      justifyContent: 'flex-end',
-      gap: 8,
+    contentTitle: {
+      color: colors.text,
+      fontSize: 16,
+      fontWeight: '600',
     },
-    approveButton: {
-      backgroundColor: colors.success,
+    disabledButton: {
+      opacity: 0.5,
+    },
+    emptyContainer: {
+      alignItems: 'center',
+      flex: 1,
+      justifyContent: 'center',
+      padding: 24,
+    },
+    emptySubtext: {
+      color: colors.text,
+      fontSize: 14,
+      opacity: 0.7,
+      textAlign: 'center',
+    },
+    emptyText: {
+      color: colors.text,
+      fontSize: 18,
+      fontWeight: '600',
+      marginBottom: 8,
+      textAlign: 'center',
+    },
+    filterButton: {
+      backgroundColor: colors.primary,
+      borderRadius: 8,
       paddingHorizontal: 16,
       paddingVertical: 8,
-      borderRadius: 8,
     },
-    rejectButton: {
-      backgroundColor: colors.error,
-      paddingHorizontal: 16,
-      paddingVertical: 8,
-      borderRadius: 8,
-    },
-    buttonText: {
+    filterButtonText: {
       color: '#FFFFFF',
       fontWeight: '600',
     },
-    modalOverlay: {
+    filterChips: {
+      flexDirection: 'row',
+      flexWrap: 'wrap',
+      gap: 8,
+      padding: 10,
+    },
+    filterSectionTitle: {
+      color: colors.text,
+      fontSize: 16,
+      fontWeight: '600',
+      marginBottom: 10,
+    },
+    listContent: {
       flex: 1,
-      backgroundColor: "rgba(0, 0, 0, 0.5)",
-      justifyContent: "flex-end",
+    },
+    loadingContainer: {
+      alignItems: 'center',
+      flex: 1,
+      justifyContent: 'center',
+    },
+    loadingText: {
+      color: colors.text,
+      fontSize: 16,
+      fontWeight: '500',
+      marginTop: 16,
     },
     modalContent: {
       backgroundColor: colors.card,
       borderTopLeftRadius: 20,
       borderTopRightRadius: 20,
+      minHeight: '50%',
       padding: 20,
-      minHeight: "50%",
     },
     modalHeader: {
-      flexDirection: "row",
-      justifyContent: "space-between",
-      alignItems: "center",
+      alignItems: 'center',
+      flexDirection: 'row',
+      justifyContent: 'space-between',
       marginBottom: 20,
     },
+    modalOverlay: {
+      backgroundColor: 'rgba(0, 0, 0, 0.5)',
+      flex: 1,
+      justifyContent: 'flex-end',
+    },
     modalTitle: {
+      color: colors.text,
       fontSize: 20,
-      fontWeight: "bold",
-      color: colors.text,
+      fontWeight: 'bold',
     },
-    filterSectionTitle: {
-      fontSize: 16,
-      fontWeight: "600",
-      marginBottom: 10,
-      color: colors.text,
-    },
-    filterChips: {
-      flexDirection: "row",
-      flexWrap: "wrap",
-      padding: 10,
-      gap: 8,
-    },
-    applyFilterButton: {
+    rejectButton: {
+      backgroundColor: colors.error,
       borderRadius: 8,
-      paddingVertical: 12,
-      alignItems: "center",
-      marginTop: 16,
-    },
-    applyFilterText: {
-      color: "#FFFFFF",
-      fontSize: 16,
-      fontWeight: "bold",
-    },
-    ruleItem: {
-      paddingVertical: 12,
-      borderBottomWidth: 1,
-    },
-    ruleHeader: {
-      flexDirection: "row",
-      justifyContent: "space-between",
-      alignItems: "center",
-    },
-    ruleName: {
-      fontSize: 16,
-      fontWeight: "600",
-    },
-    ruleStatusBadge: {
-      paddingHorizontal: 8,
-      paddingVertical: 4,
-      borderRadius: 4,
-    },
-    ruleStatusText: {
-      fontSize: 12,
-      fontWeight: "500",
-    },
-    ruleDescription: {
-      fontSize: 14,
-      marginTop: 4,
-      marginBottom: 8,
-    },
-    ruleActions: {
-      flexDirection: "row",
+      paddingHorizontal: 16,
+      paddingVertical: 8,
     },
     ruleActionButton: {
-      borderWidth: 1,
       borderRadius: 6,
+      borderWidth: 1,
+      marginRight: 8,
       paddingHorizontal: 12,
       paddingVertical: 6,
-      marginRight: 8,
     },
     ruleActionText: {
       fontSize: 14,
-      fontWeight: "500",
+      fontWeight: '500',
     },
-    addRuleButton: {
-      flexDirection: "row",
-      justifyContent: "center",
-      alignItems: "center",
-      borderRadius: 8,
+    ruleActions: {
+      flexDirection: 'row',
+    },
+    ruleDescription: {
+      fontSize: 14,
+      marginBottom: 8,
+      marginTop: 4,
+    },
+    ruleHeader: {
+      alignItems: 'center',
+      flexDirection: 'row',
+      justifyContent: 'space-between',
+    },
+    ruleItem: {
+      borderBottomWidth: 1,
       paddingVertical: 12,
-      marginTop: 16,
     },
-    addRuleText: {
-      color: "#FFFFFF",
+    ruleName: {
       fontSize: 16,
-      fontWeight: "bold",
+      fontWeight: '600',
+    },
+    ruleStatusBadge: {
+      borderRadius: 4,
+      paddingHorizontal: 8,
+      paddingVertical: 4,
+    },
+    ruleStatusText: {
+      fontSize: 12,
+      fontWeight: '500',
+    },
+    rulesButton: {
+      alignItems: 'center',
+      borderRadius: 8,
+      height: 44,
+      justifyContent: 'center',
+      marginLeft: 8,
+      width: 44,
+    },
+    searchContainer: {
+      alignItems: 'center',
+      backgroundColor: colors.background,
+      borderRadius: 8,
+      flex: 1,
+      flexDirection: 'row',
+      marginRight: 16,
+      paddingHorizontal: 12,
+    },
+    searchInput: {
+      color: colors.text,
+      flex: 1,
+      height: 40,
       marginLeft: 8,
     },
-    chatModalOverlay: {
-      flex: 1,
-      backgroundColor: "rgba(0, 0, 0, 0.5)",
+    selectAllButton: {
+      alignItems: 'center',
+      flexDirection: 'row',
     },
-    chatModalContent: {
-      flex: 1,
-      borderTopLeftRadius: 20,
-      borderTopRightRadius: 20,
-      marginTop: 50,
-    },
-    chatModalHeader: {
-      flexDirection: "row",
-      justifyContent: "space-between",
-      alignItems: "center",
-      padding: 16,
-      borderBottomWidth: 1,
-      borderBottomColor: "rgba(0, 0, 0, 0.1)",
-    },
-    chatModalTitle: {
-      fontSize: 18,
-      fontWeight: "bold",
-    },
-    chatItemPreview: {
-      flexDirection: "row",
-      alignItems: "center",
-      padding: 12,
-      marginHorizontal: 16,
-      marginVertical: 8,
-      borderRadius: 8,
-    },
-    chatItemImage: {
-      width: 40,
-      height: 40,
-      borderRadius: 4,
-    },
-    chatItemInfo: {
-      flex: 1,
-      marginLeft: 12,
-    },
-    chatItemTitle: {
+    selectAllText: {
       fontSize: 14,
-      fontWeight: "500",
-    },
-    chatItemId: {
-      fontSize: 12,
+      fontWeight: '500',
+      marginLeft: 8,
     },
     viewItemButton: {
+      borderRadius: 6,
       paddingHorizontal: 12,
       paddingVertical: 6,
-      borderRadius: 6,
     },
     viewItemText: {
       fontSize: 12,
-      fontWeight: "500",
-    },
-    rulesButton: {
-      width: 44,
-      height: 44,
-      borderRadius: 8,
-      justifyContent: 'center',
-      alignItems: 'center',
-      marginLeft: 8,
-    },
-    batchActionBar: {
-      flexDirection: 'row',
-      justifyContent: 'space-between',
-      alignItems: 'center',
-      paddingHorizontal: 16,
-      paddingVertical: 12,
-    },
-    selectAllButton: {
-      flexDirection: 'row',
-      alignItems: 'center',
-    },
-    selectAllText: {
-      marginLeft: 8,
-      fontSize: 14,
       fontWeight: '500',
-    },
-    batchButtons: {
-      flexDirection: 'row',
-    },
-    batchButton: {
-      flexDirection: 'row',
-      alignItems: 'center',
-      paddingHorizontal: 12,
-      paddingVertical: 6,
-      borderRadius: 6,
-      marginLeft: 8,
-    },
-    batchButtonText: {
-      marginLeft: 4,
-      fontSize: 14,
-      fontWeight: '500',
-    },
-    disabledButton: {
-      opacity: 0.5,
-    },
-    loadingContainer: {
-      flex: 1,
-      justifyContent: 'center',
-      alignItems: 'center',
-    },
-    loadingText: {
-      fontSize: 16,
-      fontWeight: '500',
-      marginTop: 16,
-      color: colors.text,
-    },
-    listContent: {
-      flex: 1,
-    },
-    emptyContainer: {
-      flex: 1,
-      justifyContent: 'center',
-      alignItems: 'center',
-      padding: 24,
-    },
-    emptyText: {
-      fontSize: 18,
-      fontWeight: '600',
-      color: colors.text,
-      textAlign: 'center',
-      marginBottom: 8,
-    },
-    emptySubtext: {
-      fontSize: 14,
-      color: colors.text,
-      textAlign: 'center',
-      opacity: 0.7,
     },
   });
 
@@ -648,16 +701,13 @@ const ContentModerationScreen: React.FC<ContentModerationScreenProps> = ({ navig
             onChangeText={handleSearch}
           />
           {searchQuery ? (
-            <TouchableOpacity onPress={() => setSearchQuery("")}>
+            <TouchableOpacity onPress={() => setSearchQuery('')}>
               <Ionicons name="close-circle" size={20} color={colors.secondary} />
             </TouchableOpacity>
           ) : null}
         </View>
 
-        <TouchableOpacity
-          style={styles.filterButton}
-          onPress={() => setShowFilterModal(true)}
-        >
+        <TouchableOpacity style={styles.filterButton} onPress={() => setShowFilterModal(true)}>
           <Text style={styles.filterButtonText}>Filter</Text>
         </TouchableOpacity>
 
@@ -672,12 +722,12 @@ const ContentModerationScreen: React.FC<ContentModerationScreenProps> = ({ navig
       <View style={styles.batchActionBar}>
         <TouchableOpacity style={styles.selectAllButton} onPress={selectAllItems}>
           <Ionicons
-            name={selectedItems.length === items.length ? "checkbox" : "square-outline"}
+            name={selectedItems.length === items.length ? 'checkbox' : 'square-outline'}
             size={20}
             color={colors.primary}
           />
           <Text style={[styles.selectAllText, { color: colors.text }]}>
-            {selectedItems.length === items.length ? "Deselect All" : "Select All"}
+            {selectedItems.length === items.length ? 'Deselect All' : 'Select All'}
           </Text>
         </TouchableOpacity>
 
@@ -685,27 +735,31 @@ const ContentModerationScreen: React.FC<ContentModerationScreenProps> = ({ navig
           <TouchableOpacity
             style={[
               styles.batchButton,
-              { backgroundColor: colors.primary + "20" },
+              { backgroundColor: colors.primary + '20' },
               selectedItems.length === 0 && styles.disabledButton,
             ]}
-            onPress={() => handleBatchAction("approve")}
+            onPress={() => handleBatchAction('approve')}
             disabled={selectedItems.length === 0}
           >
             <Ionicons name="checkmark" size={20} color={colors.primary} />
-            <Text style={[styles.batchButtonText, { color: colors.primary }]}>Approve ({selectedItems.length})</Text>
+            <Text style={[styles.batchButtonText, { color: colors.primary }]}>
+              Approve ({selectedItems.length})
+            </Text>
           </TouchableOpacity>
 
           <TouchableOpacity
             style={[
               styles.batchButton,
-              { backgroundColor: colors.error + "20" },
+              { backgroundColor: colors.error + '20' },
               selectedItems.length === 0 && styles.disabledButton,
             ]}
-            onPress={() => handleBatchAction("reject")}
+            onPress={() => handleBatchAction('reject')}
             disabled={selectedItems.length === 0}
           >
             <Ionicons name="close" size={20} color={colors.error} />
-            <Text style={[styles.batchButtonText, { color: colors.error }]}>Reject ({selectedItems.length})</Text>
+            <Text style={[styles.batchButtonText, { color: colors.error }]}>
+              Reject ({selectedItems.length})
+            </Text>
           </TouchableOpacity>
         </View>
       </View>
@@ -719,7 +773,7 @@ const ContentModerationScreen: React.FC<ContentModerationScreenProps> = ({ navig
         <FlatList
           data={items}
           renderItem={renderItem}
-          keyExtractor={(item) => item.id.toString()}
+          keyExtractor={item => item.id.toString()}
           contentContainerStyle={styles.listContent}
           onRefresh={onRefresh}
           refreshing={refreshing}
@@ -739,8 +793,7 @@ const ContentModerationScreen: React.FC<ContentModerationScreenProps> = ({ navig
       {renderRulesModal()}
       {renderChatModal()}
     </View>
-  )
-}
+  );
+};
 
-export default ContentModerationScreen
-
+export default ContentModerationScreen;

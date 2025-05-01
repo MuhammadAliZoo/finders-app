@@ -72,9 +72,7 @@ const GenerateReportScreen = () => {
             onPress={() => setSelectedReport(report.id)}
           >
             <View style={styles.reportInfo}>
-              <Text style={[styles.reportName, { color: colors.text }]}>
-                {report.name}
-              </Text>
+              <Text style={[styles.reportName, { color: colors.text }]}>{report.name}</Text>
               <Text style={[styles.reportDescription, { color: colors.secondary }]}>
                 {report.description}
               </Text>
@@ -139,39 +137,41 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
   },
-  header: {
-    padding: 20,
-    borderBottomWidth: 1,
-    borderBottomColor: '#eee',
+  dateInput: {
+    flex: 1,
+    marginRight: 8,
   },
-  title: {
-    fontSize: 24,
-    fontWeight: 'bold',
+  dateInputs: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+  },
+  generateButton: {
+    alignItems: 'center',
+    borderRadius: 12,
+    margin: 20,
+    padding: 16,
+  },
+  generateButtonText: {
+    color: '#fff',
+    fontSize: 16,
+    fontWeight: '600',
+  },
+  header: {
+    borderBottomColor: '#eee',
+    borderBottomWidth: 1,
+    padding: 20,
+  },
+  input: {
+    borderRadius: 8,
+    fontSize: 16,
+    padding: 12,
+  },
+  label: {
+    fontSize: 14,
     marginBottom: 8,
   },
-  subtitle: {
-    fontSize: 16,
-  },
-  section: {
-    padding: 20,
-  },
-  sectionTitle: {
-    fontSize: 18,
-    fontWeight: '600',
-    marginBottom: 16,
-  },
-  reportType: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    padding: 16,
-    borderRadius: 12,
-    marginBottom: 12,
-    elevation: 2,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.1,
-    shadowRadius: 4,
+  reportDescription: {
+    fontSize: 14,
   },
   reportInfo: {
     flex: 1,
@@ -182,37 +182,35 @@ const styles = StyleSheet.create({
     fontWeight: '600',
     marginBottom: 4,
   },
-  reportDescription: {
-    fontSize: 14,
-  },
-  dateInputs: {
+  reportType: {
+    alignItems: 'center',
+    borderRadius: 12,
+    elevation: 2,
     flexDirection: 'row',
     justifyContent: 'space-between',
-  },
-  dateInput: {
-    flex: 1,
-    marginRight: 8,
-  },
-  label: {
-    fontSize: 14,
-    marginBottom: 8,
-  },
-  input: {
-    padding: 12,
-    borderRadius: 8,
-    fontSize: 16,
-  },
-  generateButton: {
-    margin: 20,
+    marginBottom: 12,
     padding: 16,
-    borderRadius: 12,
-    alignItems: 'center',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.1,
+    shadowRadius: 4,
   },
-  generateButtonText: {
-    color: '#fff',
-    fontSize: 16,
+  section: {
+    padding: 20,
+  },
+  sectionTitle: {
+    fontSize: 18,
     fontWeight: '600',
+    marginBottom: 16,
+  },
+  subtitle: {
+    fontSize: 16,
+  },
+  title: {
+    fontSize: 24,
+    fontWeight: 'bold',
+    marginBottom: 8,
   },
 });
 
-export default GenerateReportScreen; 
+export default GenerateReportScreen;

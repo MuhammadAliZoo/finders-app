@@ -62,4 +62,4 @@ export const requestAllPermissions = async (): Promise<{ [key: string]: Permissi
     console.error('Error requesting multiple permissions:', error);
     return {};
   }
-}; 
+};

@@ -1,60 +1,86 @@
-import React, { createContext, useContext, useEffect, useState } from 'react';
-import { io, Socket } from 'socket.io-client';
-import { useAuth } from './AuthContext';
+import React, { createContext, useContext, useEffect, useRef, useState } from 'react';
+import { supabase } from '../config/supabase';
+import { User } from '@supabase/supabase-js';
 
 interface SocketContextType {
-  socket: Socket | null;
+  socket: WebSocket | null;
   isConnected: boolean;
+  sendMessage: (data: string) => void;
 }
 
 const SocketContext = createContext<SocketContextType>({
   socket: null,
   isConnected: false,
+  sendMessage: () => {},
 });
 
 export const useSocket = () => useContext(SocketContext);
 
 export const SocketProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
-  const [socket, setSocket] = useState<Socket | null>(null);
+  const [socket, setSocket] = useState<WebSocket | null>(null);
   const [isConnected, setIsConnected] = useState(false);
-  const { user } = useAuth();
+  const [currentUser, setCurrentUser] = useState<User | null>(null);
+  const socketRef = useRef<WebSocket | null>(null);
 
   useEffect(() => {
-    if (user) {
-      // Initialize socket connection
-      const socketInstance = io(process.env.EXPO_PUBLIC_API_URL || 'http://localhost:3000', {
-        auth: {
-          userId: user.id
-        }
-      });
+    // Get initial user
+    const getInitialUser = async () => {
+      const { data: { user } } = await supabase.auth.getUser();
+      setCurrentUser(user);
+    };
+    getInitialUser();
 
-      socketInstance.on('connect', () => {
-        console.log('Socket connected');
+    // Listen for auth changes
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
+      setCurrentUser(session?.user ?? null);
+    });
+
+    return () => {
+      subscription.unsubscribe();
+    };
+  }, []);
+
+  useEffect(() => {
+    if (currentUser) {
+      // You can pass the userId as a query param or in a custom header if your backend supports it
+      const wsUrl = (process.env.EXPO_PUBLIC_API_URL || 'ws://localhost:3000')
+        .replace(/^http/, 'ws') + `?userId=${currentUser.id}`;
+      const ws = new WebSocket(wsUrl);
+      socketRef.current = ws;
+      setSocket(ws);
+
+      ws.onopen = () => {
         setIsConnected(true);
-      });
+      };
 
-      socketInstance.on('disconnect', () => {
-        console.log('Socket disconnected');
+      ws.onclose = () => {
         setIsConnected(false);
-      });
+      };
 
-      setSocket(socketInstance);
+      ws.onerror = () => {
+        setIsConnected(false);
+      };
 
       return () => {
-        socketInstance.disconnect();
+        ws.close();
+        setSocket(null);
       };
     } else {
-      if (socket) {
-        socket.disconnect();
+      if (socketRef.current) {
+        socketRef.current.close();
         setSocket(null);
         setIsConnected(false);
       }
     }
-  }, [user]);
+  }, [currentUser]);
+
+  const sendMessage = (data: string) => {
+    if (socketRef.current && socketRef.current.readyState === WebSocket.OPEN) {
+      socketRef.current.send(data);
+    }
+  };
 
   return (
-    <SocketContext.Provider value={{ socket, isConnected }}>
-      {children}
-    </SocketContext.Provider>
+    <SocketContext.Provider value={{ socket, isConnected, sendMessage }}>{children}</SocketContext.Provider>
   );
-}; 
+};

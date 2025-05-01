@@ -1,4 +1,4 @@
-"use client"
+'use client';
 
 import React, { useState, useCallback, useEffect, useRef } from 'react';
 import {
@@ -14,217 +14,117 @@ import {
   Dimensions,
   ActivityIndicator,
   Platform,
-} from "react-native"
-import { useNavigation } from "@react-navigation/native"
-import type { NativeStackNavigationProp } from "@react-navigation/native-stack"
-import { Ionicons } from "@expo/vector-icons"
-import { useTheme } from "../theme/ThemeContext"
-import { ItemCard } from "../components/ItemCard"
-import MapView, { Heatmap, PROVIDER_GOOGLE } from "react-native-maps"
-import { RootStackParamList } from "../navigation/types"
+} from 'react-native';
+import { useNavigation } from '@react-navigation/native';
+import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
+import { Ionicons } from '@expo/vector-icons';
+import { useTheme } from '../theme/ThemeContext';
+import { ItemCard } from '../components/ItemCard';
+import MapView, { PROVIDER_GOOGLE } from 'react-native-maps';
+import { MainStackParamList, TabParamList } from '../navigation/types';
 import * as ImagePicker from 'expo-image-picker';
 import { manipulateAsync, SaveFormat } from 'expo-image-manipulator';
 import { check, PERMISSIONS, request, RESULTS } from 'react-native-permissions';
 import { processImageWithAI } from '../utils/ai';
 import { Item } from '../types/item';
 import * as Location from 'expo-location';
-import Voice, {
-  SpeechResultsEvent,
-  SpeechErrorEvent
-} from '@react-native-voice/voice';
 import { debounce } from 'lodash';
 import { SafeAreaView } from 'react-native-safe-area-context';
+import HeatmapView from '../components/admin/HeatmapView';
 
-// Mock data with images
+// Add mock data at the top of the file
 const trendingItems: Item[] = [
   {
-    id: "1",
-    title: "Black Wallet",
-    description: "Found at Central Park, leather material",
-    price: 0,
-    image: "https://picsum.photos/200/300",
-    location: {
-      latitude: 40.7829,
-      longitude: -73.9654
-    },
-    timestamp: "2024-03-20T10:30:00Z",
-    priority: "high",
-    category: "accessories",
-    rarity: "Common"
+    id: '1',
+    title: 'Lost iPhone 13',
+    description: 'Black iPhone 13 lost in Central Park area',
+    image: 'https://picsum.photos/200',
+    price: 100,
+    location: { latitude: 40.7829, longitude: -73.9654 },
+    timestamp: new Date().toISOString(),
+    priority: 'high',
+    category: 'electronics',
+    rarity: 'Common'
   },
   {
-    id: "2",
-    title: "iPhone 13",
-    description: "Lost at Coffee Shop, black color with clear case",
-    price: 0,
-    image: "https://picsum.photos/200/301",
-    location: {
-      latitude: 40.7831,
-      longitude: -73.9652
-    },
-    timestamp: "2024-03-19T15:45:00Z",
-    priority: "medium",
-    category: "electronics",
-    rarity: "Common"
-  },
-  {
-    id: "3",
-    title: "House Keys",
-    description: "Found on Main Street, has a red keychain",
-    price: 0,
-    image: "https://picsum.photos/200/302",
-    location: {
-      latitude: 40.7833,
-      longitude: -73.9650
-    },
-    timestamp: "2024-03-18T09:15:00Z",
-    priority: "low",
-    category: "accessories",
-    rarity: "Common"
-  },
-  {
-    id: "4",
-    title: "Backpack",
-    description: "Lost at Library, navy blue color with laptop inside",
-    price: 0,
-    image: "https://picsum.photos/200/303",
-    location: {
-      latitude: 40.7835,
-      longitude: -73.9648
-    },
-    timestamp: "2024-03-17T14:20:00Z",
-    priority: "high",
-    category: "accessories",
-    rarity: "Common"
-  },
-]
+    id: '2',
+    title: 'Gold Watch',
+    description: 'Vintage gold watch lost near Times Square',
+    image: 'https://picsum.photos/201',
+    price: 500,
+    location: { latitude: 40.7580, longitude: -73.9855 },
+    timestamp: new Date().toISOString(),
+    priority: 'medium',
+    category: 'accessories',
+    rarity: 'Uncommon'
+  }
+];
 
-// Add community tips data
-const communityTips = [
-  "Check local lost and found centers",
-  "Post on social media with clear photos",
-  "Use specific keywords in your search",
-  "Visit the location where you lost the item",
-  "Check with local businesses nearby"
-]
-
-// Add rare items data
 const rareItems: Item[] = [
   {
-    id: "r1",
-    title: "Vintage Rolex Watch",
-    description: "Found at Luxury Hotel, 1960s model",
-    price: 15000,
-    image: "https://picsum.photos/200/304",
-    isRare: true,
-    rarity: "Extremely Rare",
-    location: {
-      latitude: 40.7837,
-      longitude: -73.9646
-    },
-    timestamp: "2024-03-16T11:10:00Z",
-    priority: "high",
-    category: "jewelry"
-  },
-  {
-    id: "r2",
-    title: "Antique Diamond Ring",
-    description: "Found at Museum, Victorian era",
-    price: 25000,
-    image: "https://picsum.photos/200/305",
-    isRare: true,
-    rarity: "Very Rare",
-    location: {
-      latitude: 40.7839,
-      longitude: -73.9644
-    },
-    timestamp: "2024-03-15T16:30:00Z",
-    priority: "high",
-    category: "jewelry"
-  },
-  {
-    id: "r3",
-    title: "Rare Coin Collection",
-    description: "Found at Bank, 19th century coins",
-    price: 5000,
-    image: "https://picsum.photos/200/306",
-    isRare: true,
-    rarity: "Rare",
-    location: {
-      latitude: 40.7841,
-      longitude: -73.9642
-    },
-    timestamp: "2024-03-14T13:45:00Z",
-    priority: "medium",
-    category: "other"
-  },
-  {
-    id: "r4",
-    title: "Limited Edition Artwork",
-    description: "Found at Gallery, signed by artist",
-    price: 10000,
-    image: "https://picsum.photos/200/307",
-    isRare: true,
-    rarity: "Rare",
-    location: {
-      latitude: 40.7843,
-      longitude: -73.9640
-    },
-    timestamp: "2024-03-13T10:20:00Z",
-    priority: "low",
-    category: "other"
-  },
-]
+    id: '3',
+    title: 'Antique Ring',
+    description: 'Family heirloom lost in Brooklyn',
+    image: 'https://picsum.photos/202',
+    price: 1000,
+    location: { latitude: 40.6782, longitude: -73.9442 },
+    rarity: 'Very Rare',
+    timestamp: new Date().toISOString(),
+    priority: 'high',
+    category: 'jewelry'
+  }
+];
 
-// Mock heatmap data
 const heatmapPoints = [
-  { latitude: 37.78825, longitude: -122.4324, weight: 1 },
-  { latitude: 37.78925, longitude: -122.4344, weight: 1 },
-  { latitude: 37.78925, longitude: -122.4314, weight: 1 },
-  { latitude: 37.78725, longitude: -122.4324, weight: 1 },
-  { latitude: 37.78625, longitude: -122.4334, weight: 1 },
-]
+  { latitude: 40.7829, longitude: -73.9654, weight: 1 },
+  { latitude: 40.7580, longitude: -73.9855, weight: 0.8 },
+  { latitude: 40.6782, longitude: -73.9442, weight: 0.6 }
+];
 
-type HomeScreenNavigationProp = NativeStackNavigationProp<RootStackParamList, 'Home'>;
+const communityTips = [
+  "Always check lost and found offices in the area",
+  "Take clear photos of valuable items for identification",
+  "Register your items with unique identifiers"
+];
+
+type NavigationProp = NativeStackNavigationProp<MainStackParamList>;
 
 export const HomeScreen = () => {
-  const navigation = useNavigation<HomeScreenNavigationProp>();
-  const { colors } = useTheme()
-  const [searchQuery, setSearchQuery] = useState("")
-  const [activeFilter, setActiveFilter] = useState("Most Recent")
-  const [filteredItems, setFilteredItems] = useState<Item[]>(trendingItems)
-  const [isSearching, setIsSearching] = useState(false)
-  const [isProcessingImage, setIsProcessingImage] = useState(false)
-  const [userLocation, setUserLocation] = useState<{ latitude: number; longitude: number } | null>(null)
+  const navigation = useNavigation<NativeStackNavigationProp<MainStackParamList>>();
+  const { colors } = useTheme();
+  const [searchQuery, setSearchQuery] = useState('');
+  const [activeFilter, setActiveFilter] = useState('Most Recent');
+  const [filteredItems, setFilteredItems] = useState<Item[]>(trendingItems);
+  const [isSearching, setIsSearching] = useState(false);
+  const [isProcessingImage, setIsProcessingImage] = useState(false);
+  const [userLocation, setUserLocation] = useState<{ latitude: number; longitude: number } | null>(
+    null,
+  );
   const [feedbackMessage, setFeedbackMessage] = useState<string>('');
-  const [isVoiceAvailable, setIsVoiceAvailable] = useState(false)
-  const [isRecording, setIsRecording] = useState(false)
-  const isMounted = useRef(true)
-  const [error, setError] = useState<string | null>(null);
-  const [mapReady, setMapReady] = useState(false);
 
-  const filters = ["Most Recent", "Near Me", "High Priority"]
+  const filters = ['Most Recent', 'Near Me', 'High Priority'];
 
-  // Debounced search function
-  const debouncedSearch = useCallback(
-    debounce((query: string) => {
-      if (!isMounted.current) return;
-      
-      setIsSearching(true);
-      try {
-        const filtered = trendingItems.filter(item =>
+  const handleSearch = async (query: string) => {
+    setIsSearching(true);
+    try {
+      // Perform search logic here
+      const results = filteredItems.filter(
+        item =>
           item.title.toLowerCase().includes(query.toLowerCase()) ||
-          item.description.toLowerCase().includes(query.toLowerCase())
-        );
-        setFilteredItems(filtered);
-      } catch (error) {
-        console.error('Search error:', error);
-        setError('Error performing search');
-      } finally {
-        setIsSearching(false);
-      }
-    }, 300),
-    []
+          item.description.toLowerCase().includes(query.toLowerCase()),
+      );
+      setFilteredItems(results);
+    } catch (error) {
+      console.error('Search error:', error);
+      Alert.alert('Error', 'Failed to perform search');
+    } finally {
+      setIsSearching(false);
+    }
+  };
+
+  const debouncedSearch = useCallback(
+    debounce((query: string) => handleSearch(query), 500),
+    [],
   );
 
   // Handle search input changes
@@ -238,76 +138,83 @@ export const HomeScreen = () => {
     const R = 6371; // Radius of the earth in km
     const dLat = deg2rad(lat2 - lat1);
     const dLon = deg2rad(lon2 - lon1);
-    const a = 
-      Math.sin(dLat/2) * Math.sin(dLat/2) +
-      Math.cos(deg2rad(lat1)) * Math.cos(deg2rad(lat2)) * 
-      Math.sin(dLon/2) * Math.sin(dLon/2); 
-    const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1-a)); 
+    const a =
+      Math.sin(dLat / 2) * Math.sin(dLat / 2) +
+      Math.cos(deg2rad(lat1)) * Math.cos(deg2rad(lat2)) * Math.sin(dLon / 2) * Math.sin(dLon / 2);
+    const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
     return R * c; // Distance in km
   };
 
   const deg2rad = (deg: number) => {
-    return deg * (Math.PI/180);
+    return deg * (Math.PI / 180);
   };
 
   // Handle filter selection
   const handleFilterSelect = (filter: string) => {
     setActiveFilter(filter);
     let filtered = [...trendingItems];
-    
+
     switch (filter) {
-      case "Near Me":
+      case 'Near Me':
         if (userLocation) {
-          filtered = filtered.filter(item => item.location).sort((a, b) => {
-            if (!a.location || !b.location) return 0;
-            
-            const distA = calculateDistance(
-              userLocation.latitude,
-              userLocation.longitude,
-              a.location.latitude,
-              a.location.longitude
-            );
-            const distB = calculateDistance(
-              userLocation.latitude,
-              userLocation.longitude,
-              b.location.latitude,
-              b.location.longitude
-            );
-            return distA - distB;
-          });
+          filtered = filtered
+            .filter(item => item.location)
+            .sort((a, b) => {
+              if (!a.location || !b.location) return 0;
+
+              const distA = calculateDistance(
+                userLocation.latitude,
+                userLocation.longitude,
+                a.location.latitude,
+                a.location.longitude,
+              );
+              const distB = calculateDistance(
+                userLocation.latitude,
+                userLocation.longitude,
+                b.location.latitude,
+                b.location.longitude,
+              );
+              return distA - distB;
+            });
         }
         break;
-      case "High Priority":
-        filtered = filtered.filter(item => item.priority === "high");
+      case 'High Priority':
+        filtered = filtered.filter(item => item.priority === 'high');
         break;
       default:
         // Most Recent
-        filtered = filtered.filter(item => item.timestamp).sort((a, b) => {
-          if (!a.timestamp || !b.timestamp) return 0;
-          return new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime();
-        });
+        filtered = filtered
+          .filter(item => item.timestamp)
+          .sort((a, b) => {
+            if (!a.timestamp || !b.timestamp) return 0;
+            return new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime();
+          });
     }
-    
+
     setFilteredItems(filtered);
   };
 
   // Handle item press
   const handleItemPress = (item: Item) => {
-    navigation.navigate('ItemDetails', { itemId: item.id });
+    navigation.navigate('ItemDetails', { id: item.id });
   };
 
   // Handle rare item press
   const handleRareItemPress = (item: Item) => {
-    navigation.navigate('ItemDetails', { itemId: item.id });
+    navigation.navigate('ItemDetails', { id: item.id });
   };
 
   // Handle see all press
-  const handleSeeAll = () => {
-    navigation.navigate('Tabs', {
-      screen: 'Search',
-      params: { searchQuery: '' }
-    });
-  };
+  const handleSeeAll = useCallback(() => {
+    navigation.navigate('SearchResults', { searchQuery: '' });
+  }, [navigation]);
+
+  // Handle search submit
+  const handleSearchSubmit = useCallback(() => {
+    if (searchQuery.trim()) {
+      navigation.navigate('SearchResults', { searchQuery: searchQuery.trim() });
+    }
+  }, [searchQuery, navigation]);
 
   // Handle camera press
   const handleCameraPress = () => {
@@ -315,112 +222,51 @@ export const HomeScreen = () => {
     navigation.navigate('AIAssistant');
   };
 
-  // Voice recognition handlers
-  const startVoiceRecognition = async () => {
-    try {
-      if (!isVoiceAvailable) {
-        Alert.alert('Error', 'Voice recognition is not available');
-        return;
-      }
-      await Voice.start('en-US');
-      setIsRecording(true);
-    } catch (error) {
-      console.error('Voice recognition error:', error);
-      setIsRecording(false);
-    }
+  const handleAIAssistantPress = () => {
+    navigation.navigate('AIAssistant');
   };
 
-  const stopVoiceRecognition = async () => {
-    try {
-      await Voice.stop();
-      setIsRecording(false);
-    } catch (error) {
-      console.error('Error stopping voice recognition:', error);
-      setIsRecording(false);
-    }
-  };
-
-  // Initialize features
   useEffect(() => {
     const initializeFeatures = async () => {
       try {
-        // Check and request microphone permission
-        const micPermission = await check(PERMISSIONS.IOS.MICROPHONE);
-        if (micPermission === RESULTS.DENIED) {
-          const permissionResult = await request(PERMISSIONS.IOS.MICROPHONE);
-          setIsVoiceAvailable(permissionResult === RESULTS.GRANTED);
-        } else {
-          setIsVoiceAvailable(micPermission === RESULTS.GRANTED);
+        // Request location permissions
+        const { status } = await Location.requestForegroundPermissionsAsync();
+        if (status !== 'granted') {
+          Alert.alert('Permission Denied', 'Location permission is required for this feature.');
+          return;
         }
 
-        // Check and request location permission
-        const { status } = await Location.requestForegroundPermissionsAsync();
-        if (status === 'granted') {
-          const location = await Location.getCurrentPositionAsync({});
-          setUserLocation({
-            latitude: location.coords.latitude,
-            longitude: location.coords.longitude
-          });
-        }
+        // Get current location
+        const location = await Location.getCurrentPositionAsync({});
+        setUserLocation({
+          latitude: location.coords.latitude,
+          longitude: location.coords.longitude,
+        });
       } catch (error) {
         console.error('Error initializing features:', error);
+        Alert.alert('Error', 'Failed to initialize app features.');
       }
     };
 
     initializeFeatures();
-
-    // Voice recognition event listeners
-    Voice.onSpeechResults = (e: SpeechResultsEvent) => {
-      if (e.value) {
-        setSearchQuery(e.value[0]);
-        debouncedSearch(e.value[0]);
-      }
-    };
-
-    Voice.onSpeechError = (e: SpeechErrorEvent) => {
-      console.error('Speech error:', e.error);
-      setIsRecording(false);
-    };
-
-    return () => {
-      isMounted.current = false;
-      Voice.destroy().then(Voice.removeAllListeners);
-    };
   }, []);
 
   // Render map component
   const renderMap = () => (
     <View style={styles.mapContainer}>
-      <MapView
-        style={styles.map}
-        provider={PROVIDER_GOOGLE}
-        initialRegion={{
-          latitude: userLocation?.latitude || 37.78825,
-          longitude: userLocation?.longitude || -122.4324,
-          latitudeDelta: 0.0922,
-          longitudeDelta: 0.0421,
-        }}
-        onMapReady={() => setMapReady(true)}
-      >
-        {mapReady && (
-          <Heatmap
-            points={heatmapPoints}
-            radius={50}
-            opacity={0.7}
-            gradient={{
-              colors: ["#00ff00", "#ff0000"],
-              startPoints: [0.1, 1],
-              colorMapSize: 256
-            }}
-          />
-        )}
-      </MapView>
+      <HeatmapView
+        data={heatmapPoints.map(point => ({
+          latitude: point.latitude,
+          longitude: point.longitude,
+          weight: point.weight,
+        }))}
+      />
     </View>
   );
 
   return (
-    <SafeAreaView style={styles.container}>
-      <ScrollView 
+    <SafeAreaView style={[styles.container, { backgroundColor: colors.background }]}>
+      <ScrollView
         style={styles.scrollView}
         contentContainerStyle={styles.scrollViewContent}
         showsVerticalScrollIndicator={false}
@@ -432,53 +278,38 @@ export const HomeScreen = () => {
 
         <View style={styles.content}>
           {/* Search Bar */}
-          <View style={[styles.searchContainer, { backgroundColor: colors.card }]}>
-            <View style={styles.searchInputContainer}>
-              <Ionicons name="search" size={20} color={colors.secondary} />
-              <TextInput
-                style={[styles.searchInput, { color: colors.text }]}
-                placeholder="Search items..."
-                value={searchQuery}
-                onChangeText={handleSearchChange}
-                placeholderTextColor={colors.secondary}
-              />
-              {searchQuery.length > 0 && (
-                <TouchableOpacity onPress={() => setSearchQuery('')}>
-                  <Ionicons name="close-circle" size={20} color={colors.secondary} />
-                </TouchableOpacity>
-              )}
-              <TouchableOpacity onPress={isRecording ? stopVoiceRecognition : startVoiceRecognition}>
-                <Ionicons 
-                  name={isRecording ? "mic" : "mic-outline"} 
-                  size={24} 
-                  color={isRecording ? colors.primary : colors.secondary} 
-                />
-              </TouchableOpacity>
-              <TouchableOpacity onPress={handleCameraPress}>
-                <Ionicons name="camera-outline" size={24} color={colors.secondary} />
-              </TouchableOpacity>
-            </View>
+          <View style={styles.searchContainer}>
+            <TextInput
+              style={[styles.searchInput, { backgroundColor: colors.card }]}
+              placeholder="Search for items..."
+              value={searchQuery}
+              onChangeText={handleSearchChange}
+              placeholderTextColor={colors.text}
+            />
+            <TouchableOpacity style={styles.cameraButton} onPress={handleCameraPress}>
+              <Ionicons name="camera" size={24} color={colors.text} />
+            </TouchableOpacity>
           </View>
 
           {/* Quick Filters */}
-          <ScrollView 
-            horizontal 
+          <ScrollView
+            horizontal
             showsHorizontalScrollIndicator={false}
             style={styles.filtersContainer}
           >
-            {filters.map((filter) => (
+            {filters.map(filter => (
               <TouchableOpacity
                 key={filter}
                 style={[
                   styles.filterButton,
-                  activeFilter === filter && { backgroundColor: colors.primary }
+                  activeFilter === filter && { backgroundColor: colors.primary },
                 ]}
                 onPress={() => handleFilterSelect(filter)}
               >
                 <Text
                   style={[
                     styles.filterText,
-                    { color: activeFilter === filter ? colors.background : colors.text }
+                    { color: activeFilter === filter ? colors.background : colors.text },
                   ]}
                 >
                   {filter}
@@ -501,47 +332,50 @@ export const HomeScreen = () => {
           {/* Trending Items Section */}
           <View style={styles.section}>
             <View style={styles.sectionHeader}>
-              <Text style={[styles.sectionTitle, { color: colors.text }]}>
-                Trending Items
-              </Text>
-              <TouchableOpacity 
-                style={styles.seeAllButton}
-                onPress={handleSeeAll}
-              >
-                <Text style={[styles.seeAllText, { color: colors.primary }]}>
-                  See All
-                </Text>
+              <Text style={[styles.sectionTitle, { color: colors.text }]}>Trending Items</Text>
+              <TouchableOpacity style={styles.seeAllButton} onPress={handleSeeAll}>
+                <Text style={[styles.seeAllText, { color: colors.primary }]}>See All</Text>
                 <Ionicons name="chevron-forward" size={16} color={colors.primary} />
               </TouchableOpacity>
             </View>
-            <ScrollView 
-              horizontal 
+            <ScrollView
+              horizontal
               showsHorizontalScrollIndicator={false}
               contentContainerStyle={styles.trendingScrollContainer}
             >
-              {filteredItems.map((item) => (
+              {filteredItems.map(item => (
                 <TouchableOpacity
                   key={item.id}
                   style={[styles.trendingItemCard, { backgroundColor: colors.card }]}
                   onPress={() => handleItemPress(item)}
                 >
-                  <Image 
-                    source={{ uri: item.image }} 
+                  <Image
+                    source={{ uri: item.image }}
                     style={styles.trendingItemImage}
                     resizeMode="cover"
                   />
                   <View style={styles.trendingItemContent}>
-                    <Text style={[styles.trendingItemTitle, { color: colors.text }]} numberOfLines={1}>
+                    <Text
+                      style={[styles.trendingItemTitle, { color: colors.text }]}
+                      numberOfLines={1}
+                    >
                       {item.title}
                     </Text>
-                    <Text style={[styles.trendingItemDescription, { color: colors.text }]} numberOfLines={2}>
+                    <Text
+                      style={[styles.trendingItemDescription, { color: colors.text }]}
+                      numberOfLines={2}
+                    >
                       {item.description}
                     </Text>
                     <View style={styles.trendingItemFooter}>
                       <View style={styles.trendingItemLocation}>
                         <Ionicons name="location-outline" size={14} color={colors.secondary} />
-                        <Text style={[styles.trendingItemLocationText, { color: colors.secondary }]}>
-                          {item.location ? `${item.location.latitude.toFixed(2)}, ${item.location.longitude.toFixed(2)}` : 'Location not specified'}
+                        <Text
+                          style={[styles.trendingItemLocationText, { color: colors.secondary }]}
+                        >
+                          {item.location
+                            ? `${item.location.latitude.toFixed(2)}, ${item.location.longitude.toFixed(2)}`
+                            : 'Location not specified'}
                         </Text>
                       </View>
                       <Text style={[styles.trendingItemPrice, { color: colors.primary }]}>
@@ -559,9 +393,7 @@ export const HomeScreen = () => {
             <View style={styles.sectionHeader}>
               <View style={styles.sectionTitleContainer}>
                 <Ionicons name="map-outline" size={24} color={colors.primary} />
-                <Text style={[styles.sectionTitle, { color: colors.text }]}>
-                  Lost Item Heatmap
-                </Text>
+                <Text style={[styles.sectionTitle, { color: colors.text }]}>Lost Item Heatmap</Text>
               </View>
             </View>
             {renderMap()}
@@ -572,21 +404,16 @@ export const HomeScreen = () => {
             <View style={styles.sectionHeader}>
               <View style={styles.sectionTitleContainer}>
                 <Ionicons name="bulb-outline" size={24} color={colors.primary} />
-                <Text style={[styles.sectionTitle, { color: colors.text }]}>
-                  Community Tips
-                </Text>
+                <Text style={[styles.sectionTitle, { color: colors.text }]}>Community Tips</Text>
               </View>
             </View>
-            <ScrollView 
-              horizontal 
+            <ScrollView
+              horizontal
               showsHorizontalScrollIndicator={false}
               contentContainerStyle={styles.tipsContainer}
             >
               {communityTips.map((tip, index) => (
-                <View 
-                  key={index}
-                  style={[styles.tipCard, { backgroundColor: colors.card }]}
-                >
+                <View key={index} style={[styles.tipCard, { backgroundColor: colors.card }]}>
                   <Ionicons name="information-circle-outline" size={20} color={colors.primary} />
                   <Text style={[styles.tipText, { color: colors.text }]} numberOfLines={2}>
                     {tip}
@@ -605,54 +432,59 @@ export const HomeScreen = () => {
                   Rare Items Marketplace
                 </Text>
               </View>
-              <TouchableOpacity 
+              <TouchableOpacity
                 style={styles.seeAllButton}
-                onPress={() => navigation.navigate('Tabs', {
-                  screen: 'Search',
-                  params: { searchQuery: 'rare' }
-                })}
+                onPress={() => navigation.navigate('SearchResults', { searchQuery: 'rare' })}
               >
-                <Text style={[styles.seeAllText, { color: colors.primary }]}>
-                  See All
-                </Text>
+                <Text style={[styles.seeAllText, { color: colors.primary }]}>See All</Text>
                 <Ionicons name="chevron-forward" size={16} color={colors.primary} />
               </TouchableOpacity>
             </View>
-            <ScrollView 
-              horizontal 
+            <ScrollView
+              horizontal
               showsHorizontalScrollIndicator={false}
               contentContainerStyle={styles.rareItemsScrollContainer}
             >
-              {rareItems.map((item) => (
+              {rareItems.map(item => (
                 <TouchableOpacity
                   key={item.id}
                   style={[styles.rareItemCard, { backgroundColor: colors.card }]}
                   onPress={() => handleRareItemPress(item)}
                 >
-                  <Image 
-                    source={{ uri: item.image }} 
+                  <Image
+                    source={{ uri: item.image }}
                     style={styles.rareItemImage}
                     resizeMode="cover"
                   />
                   <View style={styles.rareItemContent}>
                     <View style={styles.rareItemHeader}>
-                      <Text style={[styles.rareItemTitle, { color: colors.text }]} numberOfLines={1}>
+                      <Text
+                        style={[styles.rareItemTitle, { color: colors.text }]}
+                        numberOfLines={1}
+                      >
                         {item.title}
                       </Text>
-                      <View style={[styles.rarityBadge, { backgroundColor: colors.primary + '20' }]}>
+                      <View
+                        style={[styles.rarityBadge, { backgroundColor: colors.primary + '20' }]}
+                      >
                         <Text style={[styles.rarityText, { color: colors.primary }]}>
                           {item.rarity}
                         </Text>
                       </View>
                     </View>
-                    <Text style={[styles.rareItemDescription, { color: colors.text }]} numberOfLines={2}>
+                    <Text
+                      style={[styles.rareItemDescription, { color: colors.text }]}
+                      numberOfLines={2}
+                    >
                       {item.description}
                     </Text>
                     <View style={styles.rareItemFooter}>
                       <View style={styles.rareItemLocation}>
                         <Ionicons name="location-outline" size={14} color={colors.secondary} />
                         <Text style={[styles.rareItemLocationText, { color: colors.secondary }]}>
-                          {item.location ? `${item.location.latitude.toFixed(2)}, ${item.location.longitude.toFixed(2)}` : 'Location not specified'}
+                          {item.location
+                            ? `${item.location.latitude.toFixed(2)}, ${item.location.longitude.toFixed(2)}`
+                            : 'Location not specified'}
                         </Text>
                       </View>
                       <View style={styles.rewardContainer}>
@@ -677,233 +509,119 @@ export const HomeScreen = () => {
       </ScrollView>
     </SafeAreaView>
   );
-}
+};
 
 const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    backgroundColor: '#FFFFFF',
-  },
-  scrollView: {
-    flex: 1,
-  },
-  scrollViewContent: {
-    flexGrow: 1,
-  },
-  content: {
-    paddingHorizontal: 20,
-  },
-  header: {
-    flexDirection: "row",
-    justifyContent: "space-between",
-    alignItems: "center",
-    paddingHorizontal: 20,
-    paddingTop: 60,
-    paddingBottom: 20,
-    marginBottom: 16,
-  },
-  headerTitle: {
-    fontSize: 34,
-    fontWeight: "800",
-    letterSpacing: -0.5,
-  },
-  searchContainer: {
-    padding: 16,
-    borderRadius: 16,
-    marginBottom: 24,
-  },
-  searchInputContainer: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 12,
-  },
-  searchInput: {
-    flex: 1,
-    fontSize: 16,
-    paddingVertical: 8,
-  },
-  filtersContainer: {
-    marginBottom: 24,
-    paddingLeft: 4,
-  },
-  filterButton: {
-    paddingHorizontal: 16,
-    paddingVertical: 8,
-    borderRadius: 20,
-    marginRight: 12,
-    borderWidth: 1,
-    borderColor: '#E0E0E0',
-  },
-  filterText: {
-    fontSize: 14,
-    fontWeight: '600',
-  },
   aiSearchBox: {
-    flexDirection: 'row',
     alignItems: 'center',
-    padding: 16,
     borderRadius: 16,
-    marginBottom: 32,
+    flexDirection: 'row',
     gap: 12,
+    marginBottom: 32,
+    padding: 16,
   },
   aiSearchText: {
     fontSize: 16,
     fontWeight: '600',
   },
-  section: {
-    marginBottom: 32,
+  cameraButton: {
+    backgroundColor: '#E0E0E0',
+    borderRadius: 20,
+    padding: 8,
   },
-  sectionHeader: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    marginBottom: 20,
+  container: {
+    backgroundColor: '#FFFFFF',
+    flex: 1,
   },
-  sectionTitle: {
-    fontSize: 20,
-    fontWeight: '700',
-    letterSpacing: -0.3,
+  content: {
+    paddingHorizontal: 20,
   },
-  seeAllText: {
+  filterButton: {
+    borderColor: '#E0E0E0',
+    borderRadius: 20,
+    borderWidth: 1,
+    marginRight: 12,
+    paddingHorizontal: 16,
+    paddingVertical: 8,
+  },
+  filterText: {
     fontSize: 14,
     fontWeight: '600',
   },
-  mapContainer: {
-    height: 200,
-    borderRadius: 16,
-    overflow: 'hidden',
+  filtersContainer: {
     marginBottom: 24,
+    paddingLeft: 4,
+  },
+  header: {
+    alignItems: 'center',
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    marginBottom: 16,
+    paddingBottom: 20,
+    paddingHorizontal: 20,
+    paddingTop: 60,
+  },
+  headerTitle: {
+    fontSize: 34,
+    fontWeight: '800',
+    letterSpacing: -0.5,
+  },
+  loadingOverlay: {
+    ...StyleSheet.absoluteFillObject,
+    alignItems: 'center',
+    justifyContent: 'center',
   },
   map: {
     ...StyleSheet.absoluteFillObject,
   },
-  sectionTitleContainer: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 8,
-  },
-  seeAllButton: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 4,
-  },
-  trendingScrollContainer: {
-    paddingLeft: 4,
-    paddingRight: 24,
-    gap: 16,
-  },
-  trendingItemCard: {
-    width: 280,
+  mapContainer: {
     borderRadius: 16,
+    height: 200,
+    marginBottom: 24,
     overflow: 'hidden',
-    marginRight: 16,
-    shadowColor: "#000",
-    shadowOffset: {
-      width: 0,
-      height: 2,
-    },
-    shadowOpacity: 0.1,
-    shadowRadius: 4,
-    elevation: 3,
-  },
-  trendingItemImage: {
-    width: '100%',
-    height: 160,
-    backgroundColor: '#f5f5f5',
-  },
-  trendingItemContent: {
-    padding: 12,
-  },
-  trendingItemTitle: {
-    fontSize: 16,
-    fontWeight: '600',
-    marginBottom: 4,
-  },
-  trendingItemDescription: {
-    fontSize: 14,
-    marginBottom: 8,
-    opacity: 0.8,
-    lineHeight: 18,
-  },
-  trendingItemFooter: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-  },
-  trendingItemLocation: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 4,
-  },
-  trendingItemLocationText: {
-    fontSize: 12,
-  },
-  trendingItemPrice: {
-    fontSize: 16,
-    fontWeight: '600',
-  },
-  rareItemsScrollContainer: {
-    paddingLeft: 4,
-    paddingRight: 24,
-    gap: 16,
   },
   rareItemCard: {
-    width: 280,
     borderRadius: 16,
-    overflow: 'hidden',
+    elevation: 3,
     marginRight: 12,
-    shadowColor: "#000",
+    overflow: 'hidden',
+    shadowColor: '#000',
     shadowOffset: {
       width: 0,
       height: 2,
     },
     shadowOpacity: 0.1,
     shadowRadius: 4,
-    elevation: 3,
-  },
-  rareItemImage: {
-    width: '100%',
-    height: 160,
-    backgroundColor: '#f5f5f5',
+    width: 280,
   },
   rareItemContent: {
     padding: 12,
   },
-  rareItemHeader: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    marginBottom: 8,
-  },
-  rareItemTitle: {
-    fontSize: 16,
-    fontWeight: '600',
-    flex: 1,
-    marginRight: 8,
-  },
-  rarityBadge: {
-    paddingHorizontal: 8,
-    paddingVertical: 4,
-    borderRadius: 12,
-  },
-  rarityText: {
-    fontSize: 12,
-    fontWeight: '600',
-  },
   rareItemDescription: {
     fontSize: 14,
+    lineHeight: 18,
     marginBottom: 8,
     opacity: 0.8,
-    lineHeight: 18,
   },
   rareItemFooter: {
+    alignItems: 'center',
     flexDirection: 'row',
     justifyContent: 'space-between',
+  },
+  rareItemHeader: {
     alignItems: 'center',
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    marginBottom: 8,
+  },
+  rareItemImage: {
+    backgroundColor: '#f5f5f5',
+    height: 160,
+    width: '100%',
   },
   rareItemLocation: {
-    flexDirection: 'row',
     alignItems: 'center',
+    flexDirection: 'row',
     gap: 4,
   },
   rareItemLocationText: {
@@ -913,41 +631,156 @@ const styles = StyleSheet.create({
     fontSize: 16,
     fontWeight: '600',
   },
-  rewardContainer: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 4,
+  rareItemTitle: {
+    flex: 1,
+    fontSize: 16,
+    fontWeight: '600',
+    marginRight: 8,
   },
-  loadingOverlay: {
-    ...StyleSheet.absoluteFillObject,
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  tipsContainer: {
+  rareItemsScrollContainer: {
+    gap: 16,
     paddingLeft: 4,
     paddingRight: 24,
-    gap: 16,
+  },
+  rarityBadge: {
+    borderRadius: 12,
+    paddingHorizontal: 8,
+    paddingVertical: 4,
+  },
+  rarityText: {
+    fontSize: 12,
+    fontWeight: '600',
+  },
+  rewardContainer: {
+    alignItems: 'center',
+    flexDirection: 'row',
+    gap: 4,
+  },
+  scrollView: {
+    flex: 1,
+  },
+  scrollViewContent: {
+    flexGrow: 1,
+  },
+  searchContainer: {
+    alignItems: 'center',
+    borderRadius: 16,
+    flexDirection: 'row',
+    marginBottom: 24,
+    padding: 16,
+  },
+  searchInput: {
+    flex: 1,
+    fontSize: 16,
+    paddingVertical: 8,
+  },
+  section: {
+    marginBottom: 32,
+  },
+  sectionHeader: {
+    alignItems: 'center',
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    marginBottom: 20,
+  },
+  sectionTitle: {
+    fontSize: 20,
+    fontWeight: '700',
+    letterSpacing: -0.3,
+  },
+  sectionTitleContainer: {
+    alignItems: 'center',
+    flexDirection: 'row',
+    gap: 8,
+  },
+  seeAllButton: {
+    alignItems: 'center',
+    flexDirection: 'row',
+    gap: 4,
+  },
+  seeAllText: {
+    fontSize: 14,
+    fontWeight: '600',
   },
   tipCard: {
-    padding: 12,
+    alignItems: 'center',
     borderRadius: 16,
-    shadowColor: "#000",
+    elevation: 3,
+    flexDirection: 'row',
+    gap: 8,
+    padding: 12,
+    shadowColor: '#000',
     shadowOffset: {
       width: 0,
       height: 2,
     },
     shadowOpacity: 0.1,
     shadowRadius: 4,
-    elevation: 3,
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 8,
     width: 280,
   },
   tipText: {
+    flex: 1,
     fontSize: 14,
     fontWeight: '500',
-    flex: 1,
   },
-})
-
+  tipsContainer: {
+    gap: 16,
+    paddingLeft: 4,
+    paddingRight: 24,
+  },
+  trendingItemCard: {
+    borderRadius: 16,
+    elevation: 3,
+    marginRight: 16,
+    overflow: 'hidden',
+    shadowColor: '#000',
+    shadowOffset: {
+      width: 0,
+      height: 2,
+    },
+    shadowOpacity: 0.1,
+    shadowRadius: 4,
+    width: 280,
+  },
+  trendingItemContent: {
+    padding: 12,
+  },
+  trendingItemDescription: {
+    fontSize: 14,
+    lineHeight: 18,
+    marginBottom: 8,
+    opacity: 0.8,
+  },
+  trendingItemFooter: {
+    alignItems: 'center',
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+  },
+  trendingItemImage: {
+    backgroundColor: '#f5f5f5',
+    height: 160,
+    width: '100%',
+  },
+  trendingItemLocation: {
+    alignItems: 'center',
+    flexDirection: 'row',
+    gap: 4,
+  },
+  trendingItemLocationText: {
+    fontSize: 12,
+  },
+  trendingItemPrice: {
+    fontSize: 16,
+    fontWeight: '600',
+  },
+  trendingItemTitle: {
+    fontSize: 16,
+    fontWeight: '600',
+    marginBottom: 4,
+  },
+  trendingScrollContainer: {
+    gap: 16,
+    paddingLeft: 4,
+    paddingRight: 24,
+  },
+});

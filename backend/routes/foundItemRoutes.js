@@ -8,7 +8,7 @@ router.post('/', auth, async (req, res) => {
   try {
     const foundItem = new FoundItem({
       ...req.body,
-      finder: req.user._id
+      finder: req.user._id,
     });
     await foundItem.save();
     res.status(201).json(foundItem);
@@ -22,13 +22,13 @@ router.get('/', async (req, res) => {
   try {
     const { category, isRareItem, sort = 'createdAt' } = req.query;
     const filter = {};
-    
+
     if (category) filter.category = category;
     if (isRareItem) filter.isRareItem = isRareItem === 'true';
 
     const sortOptions = {
       createdAt: { createdAt: -1 },
-      trending: { searchCount: -1 }
+      trending: { searchCount: -1 },
     };
 
     const items = await FoundItem.find(filter)
@@ -61,7 +61,7 @@ router.post('/:id/search', async (req, res) => {
     const item = await FoundItem.findByIdAndUpdate(
       req.params.id,
       { $inc: { searchCount: 1 } },
-      { new: true }
+      { new: true },
     );
     if (!item) {
       return res.status(404).json({ error: 'Item not found' });
@@ -75,8 +75,7 @@ router.post('/:id/search', async (req, res) => {
 // Get a specific found item
 router.get('/:id', async (req, res) => {
   try {
-    const item = await FoundItem.findById(req.params.id)
-      .populate('finder', 'name email');
+    const item = await FoundItem.findById(req.params.id).populate('finder', 'name email');
     if (!item) {
       return res.status(404).json({ error: 'Item not found' });
     }
@@ -86,4 +85,4 @@ router.get('/:id', async (req, res) => {
   }
 });
 
-module.exports = router; 
+module.exports = router;

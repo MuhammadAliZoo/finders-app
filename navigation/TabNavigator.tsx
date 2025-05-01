@@ -1,4 +1,4 @@
-"use client"
+'use client';
 
 import React from 'react';
 import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
@@ -84,4 +84,4 @@ export const TabNavigator = () => {
       />
     </Tab.Navigator>
   );
-}; 
+};

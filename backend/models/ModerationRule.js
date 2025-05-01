@@ -1,25 +1,25 @@
-import mongoose from "mongoose"
+import mongoose from 'mongoose';
 
 const moderationRuleSchema = new mongoose.Schema(
   {
     name: {
       type: String,
-      required: [true, "Please provide a rule name"],
+      required: [true, 'Please provide a rule name'],
       trim: true,
       unique: true,
     },
     description: {
       type: String,
-      required: [true, "Please provide a rule description"],
+      required: [true, 'Please provide a rule description'],
     },
     criteria: {
       type: Object,
-      required: [true, "Please provide rule criteria"],
+      required: [true, 'Please provide rule criteria'],
     },
     action: {
       type: String,
-      enum: ["flag", "reject", "approve", "notify"],
-      required: [true, "Please provide an action"],
+      enum: ['flag', 'reject', 'approve', 'notify'],
+      required: [true, 'Please provide an action'],
     },
     priority: {
       type: Number,
@@ -31,20 +31,19 @@ const moderationRuleSchema = new mongoose.Schema(
     },
     createdBy: {
       type: mongoose.Schema.ObjectId,
-      ref: "User",
+      ref: 'User',
       required: true,
     },
     updatedBy: {
       type: mongoose.Schema.ObjectId,
-      ref: "User",
+      ref: 'User',
     },
   },
   {
     timestamps: true,
   },
-)
+);
 
-const ModerationRule = mongoose.model("ModerationRule", moderationRuleSchema)
+const ModerationRule = mongoose.model('ModerationRule', moderationRuleSchema);
 
-export default ModerationRule
-
+export default ModerationRule;

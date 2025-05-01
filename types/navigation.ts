@@ -11,4 +11,4 @@ export type RootStackParamList = {
   NewChat: undefined;
 };
 
-export type RootStackNavigationProp = NativeStackNavigationProp<RootStackParamList>; 
+export type RootStackNavigationProp = NativeStackNavigationProp<RootStackParamList>;

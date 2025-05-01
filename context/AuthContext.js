@@ -1,141 +1,141 @@
-"use client"
+'use client';
 
-import { createContext, useState, useContext, useEffect } from "react"
-import AsyncStorage from "@react-native-async-storage/async-storage"
-import api from "../api"
+import { createContext, useState, useContext, useEffect } from 'react';
+import AsyncStorage from '@react-native-async-storage/async-storage';
+import api from '../api';
 
-const AuthContext = createContext()
+const AuthContext = createContext();
 
 export const AuthProvider = ({ children }) => {
-  const [user, setUser] = useState(null)
-  const [loading, setLoading] = useState(true)
-  const [error, setError] = useState(null)
+  const [user, setUser] = useState(null);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(null);
 
   useEffect(() => {
     // Check if user is logged in
     const loadUser = async () => {
       try {
-        const storedUser = await AsyncStorage.getItem("user")
-        const token = await AsyncStorage.getItem("token")
+        const storedUser = await AsyncStorage.getItem('user');
+        const token = await AsyncStorage.getItem('token');
 
         if (storedUser && token) {
-          setUser(JSON.parse(storedUser))
+          setUser(JSON.parse(storedUser));
 
           // Verify token is still valid
           try {
-            await api.get("/auth/me")
+            await api.get('/auth/me');
           } catch (error) {
             // Token is invalid, log out
-            await logout()
+            await logout();
           }
         }
       } catch (error) {
-        console.error("Error loading user from storage", error)
+        console.error('Error loading user from storage', error);
       } finally {
-        setLoading(false)
+        setLoading(false);
       }
-    }
+    };
 
-    loadUser()
-  }, [])
+    loadUser();
+  }, []);
 
-  const register = async (userData) => {
+  const register = async userData => {
     try {
-      setLoading(true)
-      setError(null)
+      setLoading(true);
+      setError(null);
 
-      const response = await api.post("/auth/register", userData)
+      const response = await api.post('/auth/register', userData);
 
-      await AsyncStorage.setItem("token", response.data.token)
-      await AsyncStorage.setItem("user", JSON.stringify(response.data))
+      await AsyncStorage.setItem('token', response.data.token);
+      await AsyncStorage.setItem('user', JSON.stringify(response.data));
 
-      setUser(response.data)
-      return response.data
+      setUser(response.data);
+      return response.data;
     } catch (error) {
-      setError(error.response?.data?.message || "Registration failed")
-      throw error
+      setError(error.response?.data?.message || 'Registration failed');
+      throw error;
     } finally {
-      setLoading(false)
+      setLoading(false);
     }
-  }
+  };
 
   const login = async (email, password) => {
     try {
-      setLoading(true)
-      setError(null)
+      setLoading(true);
+      setError(null);
 
-      const response = await api.post("/auth/login", { email, password })
+      const response = await api.post('/auth/login', { email, password });
 
-      await AsyncStorage.setItem("token", response.data.token)
-      await AsyncStorage.setItem("user", JSON.stringify(response.data))
+      await AsyncStorage.setItem('token', response.data.token);
+      await AsyncStorage.setItem('user', JSON.stringify(response.data));
 
-      setUser(response.data)
-      return response.data
+      setUser(response.data);
+      return response.data;
     } catch (error) {
-      setError(error.response?.data?.message || "Login failed")
-      throw error
+      setError(error.response?.data?.message || 'Login failed');
+      throw error;
     } finally {
-      setLoading(false)
+      setLoading(false);
     }
-  }
+  };
 
   const adminLogin = async (email, password) => {
     try {
-      setLoading(true)
-      setError(null)
+      setLoading(true);
+      setError(null);
 
-      const response = await api.post("/auth/admin/login", { email, password })
+      const response = await api.post('/auth/admin/login', { email, password });
 
       if (!response.data.isAdmin) {
-        throw new Error("Not authorized as admin")
+        throw new Error('Not authorized as admin');
       }
 
-      await AsyncStorage.setItem("token", response.data.token)
-      await AsyncStorage.setItem("user", JSON.stringify(response.data))
+      await AsyncStorage.setItem('token', response.data.token);
+      await AsyncStorage.setItem('user', JSON.stringify(response.data));
 
-      setUser(response.data)
-      return response.data
+      setUser(response.data);
+      return response.data;
     } catch (error) {
-      setError(error.response?.data?.message || "Admin login failed")
-      throw error
+      setError(error.response?.data?.message || 'Admin login failed');
+      throw error;
     } finally {
-      setLoading(false)
+      setLoading(false);
     }
-  }
+  };
 
   const logout = async () => {
     try {
-      setLoading(true)
+      setLoading(true);
 
-      await AsyncStorage.removeItem("token")
-      await AsyncStorage.removeItem("user")
+      await AsyncStorage.removeItem('token');
+      await AsyncStorage.removeItem('user');
 
-      setUser(null)
+      setUser(null);
     } catch (error) {
-      console.error("Error during logout", error)
+      console.error('Error during logout', error);
     } finally {
-      setLoading(false)
+      setLoading(false);
     }
-  }
+  };
 
-  const updateProfile = async (userData) => {
+  const updateProfile = async userData => {
     try {
-      setLoading(true)
-      setError(null)
+      setLoading(true);
+      setError(null);
 
-      const response = await api.put("/auth/profile", userData)
+      const response = await api.put('/auth/profile', userData);
 
-      await AsyncStorage.setItem("user", JSON.stringify(response.data))
+      await AsyncStorage.setItem('user', JSON.stringify(response.data));
 
-      setUser(response.data)
-      return response.data
+      setUser(response.data);
+      return response.data;
     } catch (error) {
-      setError(error.response?.data?.message || "Profile update failed")
-      throw error
+      setError(error.response?.data?.message || 'Profile update failed');
+      throw error;
     } finally {
-      setLoading(false)
+      setLoading(false);
     }
-  }
+  };
 
   return (
     <AuthContext.Provider
@@ -154,10 +154,9 @@ export const AuthProvider = ({ children }) => {
     >
       {children}
     </AuthContext.Provider>
-  )
-}
+  );
+};
 
-export const useAuth = () => useContext(AuthContext)
+export const useAuth = () => useContext(AuthContext);
 
-export default AuthContext
-
+export default AuthContext;

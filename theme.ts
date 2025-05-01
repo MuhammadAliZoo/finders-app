@@ -12,4 +12,4 @@ export const theme = {
     error: '#B00020',
   },
   roundness: 8,
-}; 
+};

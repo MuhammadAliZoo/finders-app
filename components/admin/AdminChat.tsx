@@ -67,7 +67,7 @@ const AdminChat: React.FC<AdminChatProps> = ({ onClose, onSend }) => {
       <FlatList
         data={messages}
         renderItem={renderMessage}
-        keyExtractor={(item) => item.id}
+        keyExtractor={item => item.id}
         inverted
         style={styles.messagesList}
         contentContainerStyle={styles.messagesContainer}
@@ -98,56 +98,56 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
   },
-  messagesList: {
+  input: {
+    borderRadius: 20,
     flex: 1,
+    fontSize: 16,
+    marginRight: 8,
+    maxHeight: 100,
+    minHeight: 40,
+    paddingHorizontal: 12,
+    paddingVertical: 8,
   },
-  messagesContainer: {
-    padding: 16,
+  inputContainer: {
+    alignItems: 'flex-end',
+    flexDirection: 'row',
+    padding: 8,
   },
   messageContainer: {
-    maxWidth: '80%',
-    padding: 12,
     borderRadius: 16,
     marginBottom: 8,
-  },
-  sentMessage: {
-    alignSelf: 'flex-end',
-    borderBottomRightRadius: 4,
-  },
-  receivedMessage: {
-    alignSelf: 'flex-start',
-    borderBottomLeftRadius: 4,
+    maxWidth: '80%',
+    padding: 12,
   },
   messageText: {
     fontSize: 16,
     marginBottom: 4,
   },
-  timestamp: {
-    fontSize: 12,
-    alignSelf: 'flex-end',
+  messagesContainer: {
+    padding: 16,
   },
-  inputContainer: {
-    flexDirection: 'row',
-    padding: 8,
-    alignItems: 'flex-end',
-  },
-  input: {
+  messagesList: {
     flex: 1,
-    minHeight: 40,
-    maxHeight: 100,
-    paddingHorizontal: 12,
-    paddingVertical: 8,
-    fontSize: 16,
-    borderRadius: 20,
-    marginRight: 8,
+  },
+  receivedMessage: {
+    alignSelf: 'flex-start',
+    borderBottomLeftRadius: 4,
   },
   sendButton: {
-    width: 40,
-    height: 40,
-    borderRadius: 20,
-    justifyContent: 'center',
     alignItems: 'center',
+    borderRadius: 20,
+    height: 40,
+    justifyContent: 'center',
+    width: 40,
+  },
+  sentMessage: {
+    alignSelf: 'flex-end',
+    borderBottomRightRadius: 4,
+  },
+  timestamp: {
+    alignSelf: 'flex-end',
+    fontSize: 12,
   },
 });
 
-export default AdminChat; 
+export default AdminChat;

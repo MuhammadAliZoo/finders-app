@@ -1,27 +1,27 @@
-"use client"
+'use client';
 
-import { View, Text, StyleSheet, Image, TouchableOpacity } from "react-native"
-import { DrawerContentScrollView, DrawerItemList } from "@react-navigation/drawer"
-import { Ionicons } from "@expo/vector-icons"
-import { useTheme } from "../../theme/ThemeContext"
-import { useAuth } from "../../context/AuthContext"
-import type { DrawerContentComponentProps } from '@react-navigation/drawer'
+import { View, Text, StyleSheet, Image, TouchableOpacity } from 'react-native';
+import { DrawerContentScrollView, DrawerItemList } from '@react-navigation/drawer';
+import { Ionicons } from '@expo/vector-icons';
+import { useTheme } from '../../theme/ThemeContext';
+import { useAuth } from '../../context/AuthContext';
+import type { DrawerContentComponentProps } from '@react-navigation/drawer';
 
 const AdminDrawerContent = (props: DrawerContentComponentProps) => {
-  const { colors, isInitialized } = useTheme()
-  const { user, logout } = useAuth()
+  const { colors, isInitialized } = useTheme();
+  const { user, logout } = useAuth();
 
   if (!isInitialized) {
-    return null
+    return null;
   }
 
   const handleLogout = async () => {
     try {
-      await logout()
+      await logout();
     } catch (error) {
-      console.error("Logout failed", error)
+      console.error('Logout failed', error);
     }
-  }
+  };
 
   return (
     <DrawerContentScrollView {...props} style={{ backgroundColor: colors.card }}>
@@ -30,14 +30,16 @@ const AdminDrawerContent = (props: DrawerContentComponentProps) => {
           {user?.profileImage ? (
             <Image source={{ uri: user.profileImage }} style={styles.userImage} />
           ) : (
-            <View style={[styles.userImagePlaceholder, { backgroundColor: colors.primary + "40" }]}>
+            <View style={[styles.userImagePlaceholder, { backgroundColor: colors.primary + '40' }]}>
               <Text style={[styles.userInitial, { color: colors.primary }]}>
-                {user?.name?.charAt(0).toUpperCase() || "A"}
+                {user?.name?.charAt(0).toUpperCase() || 'A'}
               </Text>
             </View>
           )}
           <View style={styles.userInfo}>
-            <Text style={[styles.userName, { color: colors.text }]}>{user?.name || "Admin User"}</Text>
+            <Text style={[styles.userName, { color: colors.text }]}>
+              {user?.name || 'Admin User'}
+            </Text>
             <Text style={[styles.userRole, { color: colors.secondary }]}>Administrator</Text>
           </View>
         </View>
@@ -52,26 +54,52 @@ const AdminDrawerContent = (props: DrawerContentComponentProps) => {
 
         <TouchableOpacity
           style={styles.drawerItem}
-          onPress={() => props.navigation.navigate("GenerateReport", { type: "overview" })}
+          onPress={() => props.navigation.navigate('GenerateReport', { type: 'overview' })}
         >
-          <Ionicons name="bar-chart-outline" size={22} color={colors.secondary} style={styles.drawerIcon} />
+          <Ionicons
+            name="bar-chart-outline"
+            size={22}
+            color={colors.secondary}
+            style={styles.drawerIcon}
+          />
           <Text style={[styles.drawerLabel, { color: colors.text }]}>Reports</Text>
         </TouchableOpacity>
 
-        <TouchableOpacity style={styles.drawerItem} onPress={() => props.navigation.navigate("CollaborativeWorkspace")}>
-          <Ionicons name="people-outline" size={22} color={colors.secondary} style={styles.drawerIcon} />
+        <TouchableOpacity
+          style={styles.drawerItem}
+          onPress={() => props.navigation.navigate('CollaborativeWorkspace')}
+        >
+          <Ionicons
+            name="people-outline"
+            size={22}
+            color={colors.secondary}
+            style={styles.drawerIcon}
+          />
           <Text style={[styles.drawerLabel, { color: colors.text }]}>Workspace</Text>
         </TouchableOpacity>
 
-        <TouchableOpacity style={styles.drawerItem} onPress={() => props.navigation.navigate("WidgetSettings")}>
-          <Ionicons name="settings-outline" size={22} color={colors.secondary} style={styles.drawerIcon} />
+        <TouchableOpacity
+          style={styles.drawerItem}
+          onPress={() => props.navigation.navigate('WidgetSettings')}
+        >
+          <Ionicons
+            name="settings-outline"
+            size={22}
+            color={colors.secondary}
+            style={styles.drawerIcon}
+          />
           <Text style={[styles.drawerLabel, { color: colors.text }]}>Settings</Text>
         </TouchableOpacity>
 
         <View style={[styles.divider, { backgroundColor: colors.border }]} />
 
         <TouchableOpacity style={styles.drawerItem} onPress={handleLogout}>
-          <Ionicons name="log-out-outline" size={22} color={colors.error} style={styles.drawerIcon} />
+          <Ionicons
+            name="log-out-outline"
+            size={22}
+            color={colors.error}
+            style={styles.drawerIcon}
+          />
           <Text style={[styles.drawerLabel, { color: colors.error }]}>Logout</Text>
         </TouchableOpacity>
       </View>
@@ -80,87 +108,86 @@ const AdminDrawerContent = (props: DrawerContentComponentProps) => {
         <Text style={[styles.versionText, { color: colors.secondary }]}>Finders Admin v1.0.0</Text>
       </View>
     </DrawerContentScrollView>
-  )
-}
+  );
+};
 
 const styles = StyleSheet.create({
-  drawerHeader: {
-    padding: 16,
-  },
-  userInfoSection: {
-    flexDirection: "row",
-    alignItems: "center",
-    marginBottom: 12,
-  },
-  userImage: {
-    width: 50,
-    height: 50,
-    borderRadius: 25,
-  },
-  userImagePlaceholder: {
-    width: 50,
-    height: 50,
-    borderRadius: 25,
-    justifyContent: "center",
-    alignItems: "center",
-  },
-  userInitial: {
-    fontSize: 24,
-    fontWeight: "bold",
-  },
-  userInfo: {
-    marginLeft: 12,
-  },
-  userName: {
-    fontSize: 16,
-    fontWeight: "bold",
-    marginBottom: 4,
-  },
-  userRole: {
-    fontSize: 12,
+  divider: {
+    height: 1,
+    marginHorizontal: 16,
+    marginVertical: 12,
   },
   drawerContent: {
     flex: 1,
     paddingTop: 8,
   },
-  divider: {
-    height: 1,
-    marginVertical: 12,
-    marginHorizontal: 16,
+  drawerFooter: {
+    borderTopColor: 'rgba(0, 0, 0, 0.1)',
+    borderTopWidth: 1,
+    marginTop: 16,
+    padding: 16,
   },
-  sectionTitle: {
-    fontSize: 12,
-    fontWeight: "bold",
-    textTransform: "uppercase",
-    marginLeft: 16,
-    marginBottom: 8,
-    marginTop: 4,
-  },
-  drawerItem: {
-    flexDirection: "row",
-    alignItems: "center",
-    paddingVertical: 12,
-    paddingHorizontal: 16,
+  drawerHeader: {
+    padding: 16,
   },
   drawerIcon: {
+    alignItems: 'center',
     marginRight: 32,
     width: 24,
-    alignItems: "center",
+  },
+  drawerItem: {
+    alignItems: 'center',
+    flexDirection: 'row',
+    paddingHorizontal: 16,
+    paddingVertical: 12,
   },
   drawerLabel: {
     fontSize: 15,
   },
-  drawerFooter: {
-    padding: 16,
-    borderTopWidth: 1,
-    borderTopColor: "rgba(0, 0, 0, 0.1)",
-    marginTop: 16,
+  sectionTitle: {
+    fontSize: 12,
+    fontWeight: 'bold',
+    marginBottom: 8,
+    marginLeft: 16,
+    marginTop: 4,
+    textTransform: 'uppercase',
+  },
+  userImage: {
+    borderRadius: 25,
+    height: 50,
+    width: 50,
+  },
+  userImagePlaceholder: {
+    alignItems: 'center',
+    borderRadius: 25,
+    height: 50,
+    justifyContent: 'center',
+    width: 50,
+  },
+  userInfo: {
+    marginLeft: 12,
+  },
+  userInfoSection: {
+    alignItems: 'center',
+    flexDirection: 'row',
+    marginBottom: 12,
+  },
+  userInitial: {
+    fontSize: 24,
+    fontWeight: 'bold',
+  },
+  userName: {
+    fontSize: 16,
+    fontWeight: 'bold',
+    marginBottom: 4,
+  },
+  userRole: {
+    fontSize: 12,
   },
   versionText: {
     fontSize: 12,
-    textAlign: "center",
+    textAlign: 'center',
   },
-})
+});
 
-export default AdminDrawerContent
-
+export default AdminDrawerContent;

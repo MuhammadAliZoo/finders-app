@@ -21,20 +21,20 @@ const InsightsCard: React.FC<InsightsCardProps> = ({ title, description }) => {
 
 const styles = StyleSheet.create({
   container: {
-    padding: 16,
     borderRadius: 12,
     marginRight: 12,
+    padding: 16,
     width: 280,
+  },
+  description: {
+    fontSize: 14,
+    lineHeight: 20,
   },
   title: {
     fontSize: 16,
     fontWeight: '600',
     marginBottom: 8,
   },
-  description: {
-    fontSize: 14,
-    lineHeight: 20,
-  },
 });
 
-export default InsightsCard; 
+export default InsightsCard;

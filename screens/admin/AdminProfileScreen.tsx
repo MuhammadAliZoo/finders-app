@@ -1,5 +1,13 @@
 import React from 'react';
-import { View, Text, StyleSheet, ScrollView, TouchableOpacity, Image, FlatList } from 'react-native';
+import {
+  View,
+  Text,
+  StyleSheet,
+  ScrollView,
+  TouchableOpacity,
+  Image,
+  FlatList,
+} from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { useTheme, type ThemeColors } from '../../theme/ThemeContext';
 
@@ -53,10 +61,7 @@ const AdminProfileScreen = () => {
     <ScrollView style={[styles.container, { backgroundColor: colors.background }]}>
       <View style={[styles.header, { backgroundColor: colors.card }]}>
         <View style={styles.profileImageContainer}>
-          <Image
-            source={{ uri: 'https://via.placeholder.com/150' }}
-            style={styles.profileImage}
-          />
+          <Image source={{ uri: 'https://via.placeholder.com/150' }} style={styles.profileImage} />
         </View>
         <Text style={[styles.name, { color: colors.text }]}>{adminData.name}</Text>
         <Text style={[styles.role, { color: colors.secondary }]}>{adminData.role}</Text>
@@ -71,7 +76,9 @@ const AdminProfileScreen = () => {
           </View>
           <View style={styles.infoRow}>
             <Ionicons name="calendar-outline" size={20} color={colors.secondary} />
-            <Text style={[styles.infoText, { color: colors.text }]}>Joined {adminData.joinDate}</Text>
+            <Text style={[styles.infoText, { color: colors.text }]}>
+              Joined {adminData.joinDate}
+            </Text>
           </View>
         </View>
       </View>
@@ -90,7 +97,9 @@ const AdminProfileScreen = () => {
 
       <TouchableOpacity
         style={[styles.logoutButton, { backgroundColor: colors.primary }]}
-        onPress={() => {/* Handle logout */}}
+        onPress={() => {
+          /* Handle logout */
+        }}
       >
         <Ionicons name="log-out-outline" size={20} color="#FFFFFF" />
         <Text style={styles.logoutText}>Logout</Text>
@@ -100,30 +109,73 @@ const AdminProfileScreen = () => {
 };
 
 const styles = StyleSheet.create({
+  actionContent: {
+    flex: 1,
+    marginLeft: 12,
+  },
+  actionDate: {
+    fontSize: 12,
+  },
+  actionItem: {
+    alignItems: 'flex-start',
+    flexDirection: 'row',
+    marginBottom: 16,
+  },
+  actionText: {
+    fontSize: 14,
+    marginBottom: 2,
+  },
+  card: {
+    borderRadius: 12,
+    padding: 16,
+  },
   container: {
     flex: 1,
   },
   header: {
     alignItems: 'center',
-    padding: 20,
     borderBottomLeftRadius: 20,
     borderBottomRightRadius: 20,
+    padding: 20,
   },
-  profileImageContainer: {
-    width: 120,
-    height: 120,
-    borderRadius: 60,
-    overflow: 'hidden',
-    marginBottom: 16,
+  infoRow: {
+    alignItems: 'center',
+    flexDirection: 'row',
+    marginBottom: 12,
   },
-  profileImage: {
-    width: '100%',
-    height: '100%',
+  infoText: {
+    fontSize: 16,
+    marginLeft: 12,
+  },
+  logoutButton: {
+    alignItems: 'center',
+    borderRadius: 12,
+    flexDirection: 'row',
+    justifyContent: 'center',
+    margin: 16,
+    padding: 16,
+  },
+  logoutText: {
+    color: '#FFFFFF',
+    fontSize: 16,
+    fontWeight: '600',
+    marginLeft: 8,
   },
   name: {
     fontSize: 24,
     fontWeight: 'bold',
     marginBottom: 4,
+  },
+  profileImage: {
+    height: '100%',
+    width: '100%',
+  },
+  profileImageContainer: {
+    borderRadius: 60,
+    height: 120,
+    marginBottom: 16,
+    overflow: 'hidden',
+    width: 120,
   },
   role: {
     fontSize: 16,
@@ -136,49 +188,6 @@ const styles = StyleSheet.create({
     fontWeight: '600',
     marginBottom: 12,
   },
-  card: {
-    borderRadius: 12,
-    padding: 16,
-  },
-  infoRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    marginBottom: 12,
-  },
-  infoText: {
-    fontSize: 16,
-    marginLeft: 12,
-  },
-  actionItem: {
-    flexDirection: 'row',
-    alignItems: 'flex-start',
-    marginBottom: 16,
-  },
-  actionContent: {
-    marginLeft: 12,
-    flex: 1,
-  },
-  actionText: {
-    fontSize: 14,
-    marginBottom: 2,
-  },
-  actionDate: {
-    fontSize: 12,
-  },
-  logoutButton: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    margin: 16,
-    padding: 16,
-    borderRadius: 12,
-  },
-  logoutText: {
-    color: '#FFFFFF',
-    fontSize: 16,
-    fontWeight: '600',
-    marginLeft: 8,
-  },
 });
 
-export default AdminProfileScreen; 
+export default AdminProfileScreen;

@@ -24,14 +24,14 @@ export const sendMessage = async (req, res) => {
       conversation,
       sender: req.user._id,
       content,
-      readBy: [req.user._id]
+      readBy: [req.user._id],
     });
 
     await message.save();
 
     // Update conversation's last message
     await Conversation.findByIdAndUpdate(conversation, {
-      lastMessage: message._id
+      lastMessage: message._id,
     });
 
     const populatedMessage = await Message.findById(message._id)
@@ -71,7 +71,7 @@ export const deleteMessage = async (req, res) => {
     const { messageId } = req.params;
     const message = await Message.findOneAndDelete({
       _id: messageId,
-      sender: req.user._id
+      sender: req.user._id,
     });
 
     if (!message) {
@@ -82,4 +82,4 @@ export const deleteMessage = async (req, res) => {
   } catch (error) {
     res.status(500).json({ message: error.message });
   }
-}; 
+};

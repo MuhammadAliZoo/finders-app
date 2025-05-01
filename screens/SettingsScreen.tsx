@@ -1,4 +1,4 @@
-"use client"
+'use client';
 
 import React from 'react';
 import { View, Text, StyleSheet, ScrollView, TouchableOpacity } from 'react-native';
@@ -47,42 +47,37 @@ const SettingsScreen = () => {
   return (
     <View style={[styles.container, { backgroundColor: colors.background }]}>
       <View style={[styles.header, { backgroundColor: colors.card }]}>
-        <TouchableOpacity
-          style={styles.backButton}
-          onPress={() => navigation.goBack()}
-        >
+        <TouchableOpacity style={styles.backButton} onPress={() => navigation.goBack()}>
           <Ionicons name="arrow-back" size={24} color={colors.text} />
         </TouchableOpacity>
         <Text style={[styles.headerTitle, { color: colors.text }]}>Settings</Text>
       </View>
-      <ScrollView style={styles.content}>
-        {renderContent()}
-      </ScrollView>
+      <ScrollView style={styles.content}>{renderContent()}</ScrollView>
     </View>
   );
 };
 
 const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-  },
-  header: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    padding: 16,
-    borderBottomWidth: 1,
-    borderBottomColor: '#E5E5E5',
-  },
   backButton: {
     marginRight: 16,
   },
-  headerTitle: {
-    fontSize: 20,
-    fontWeight: '600',
+  container: {
+    flex: 1,
   },
   content: {
     flex: 1,
     padding: 16,
+  },
+  header: {
+    alignItems: 'center',
+    borderBottomColor: '#E5E5E5',
+    borderBottomWidth: 1,
+    flexDirection: 'row',
+    padding: 16,
+  },
+  headerTitle: {
+    fontSize: 20,
+    fontWeight: '600',
   },
   section: {
     marginBottom: 24,
@@ -94,4 +89,4 @@ const styles = StyleSheet.create({
   },
 });
 
-export default SettingsScreen; 
+export default SettingsScreen;

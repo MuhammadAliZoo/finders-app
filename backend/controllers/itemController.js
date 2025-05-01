@@ -21,18 +21,18 @@ exports.completeItemClaim = async (req, res) => {
           $inc: {
             itemsFound: 1,
             itemsReturned: 1,
-            totalRewards: item.reward || 0
-          }
+            totalRewards: item.reward || 0,
+          },
         });
 
         // Update requester's stats
         await User.findByIdAndUpdate(item.owner, {
-          $inc: { itemsRecovered: 1 }
+          $inc: { itemsRecovered: 1 },
         });
       } else {
         // Update requester's stats
         await User.findByIdAndUpdate(userId, {
-          $inc: { itemsRecovered: 1 }
+          $inc: { itemsRecovered: 1 },
         });
 
         // Update finder's stats
@@ -40,14 +40,14 @@ exports.completeItemClaim = async (req, res) => {
           $inc: {
             itemsFound: 1,
             itemsReturned: 1,
-            totalRewards: item.reward || 0
-          }
+            totalRewards: item.reward || 0,
+          },
         });
       }
     } else {
       // If not completed, mark as lost for the requester
       await User.findByIdAndUpdate(item.owner, {
-        $inc: { itemsLost: 1 }
+        $inc: { itemsLost: 1 },
       });
     }
 
@@ -56,4 +56,4 @@ exports.completeItemClaim = async (req, res) => {
     console.error('Error completing item claim:', error);
     res.status(500).json({ message: 'Error completing item claim' });
   }
-}; 
+};

@@ -89,10 +89,6 @@ local.properties
 # VSCode
 .vscode/
 
-# Firebase
-google-services.json
-GoogleService-Info.plist
-
 # testing
 /coverage
 

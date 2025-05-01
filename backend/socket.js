@@ -2,12 +2,12 @@ import { Server } from 'socket.io';
 import jwt from 'jsonwebtoken';
 import User from './models/User.js';
 
-export const initializeSocket = (server) => {
+export const initializeSocket = server => {
   const io = new Server(server, {
     cors: {
       origin: process.env.CLIENT_URL || 'http://localhost:19006',
-      methods: ['GET', 'POST']
-    }
+      methods: ['GET', 'POST'],
+    },
   });
 
   // Authentication middleware
@@ -32,26 +32,26 @@ export const initializeSocket = (server) => {
     }
   });
 
-  io.on('connection', async (socket) => {
+  io.on('connection', async socket => {
     console.log(`User connected: ${socket.user._id}`);
 
     // Update user status
     await User.findByIdAndUpdate(socket.user._id, {
       isOnline: true,
-      lastSeen: new Date()
+      lastSeen: new Date(),
     });
 
     // Join personal room
     socket.join(socket.user._id.toString());
 
     // Handle joining conversation rooms
-    socket.on('joinConversation', (conversationId) => {
+    socket.on('joinConversation', conversationId => {
       socket.join(conversationId);
       console.log(`User ${socket.user._id} joined conversation: ${conversationId}`);
     });
 
     // Handle leaving conversation rooms
-    socket.on('leaveConversation', (conversationId) => {
+    socket.on('leaveConversation', conversationId => {
       socket.leave(conversationId);
       console.log(`User ${socket.user._id} left conversation: ${conversationId}`);
     });
@@ -80,10 +80,10 @@ export const initializeSocket = (server) => {
       console.log(`User disconnected: ${socket.user._id}`);
       await User.findByIdAndUpdate(socket.user._id, {
         isOnline: false,
-        lastSeen: new Date()
+        lastSeen: new Date(),
       });
     });
   });
 
   return io;
-}; 
+};

@@ -9,4 +9,4 @@ export const colors = {
   success: '#34C759',
   warning: '#FFCC00',
   link: '#007AFF',
-}; 
+};

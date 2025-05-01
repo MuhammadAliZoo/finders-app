@@ -30,4 +30,4 @@ export const colors: Colors = {
   gray: '#8E8E93',
   lightGray: '#F2F2F7',
   darkGray: '#1C1C1E',
-}; 
+};

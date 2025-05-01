@@ -1,68 +1,64 @@
-import React, { createContext, useContext, useEffect, useState } from 'react';
-import { io, Socket } from 'socket.io-client';
+import React, { createContext, useContext, useEffect, useRef, useState } from 'react';
 import { API_URL } from '@/config';
 
 interface SocketContextType {
-  socket: Socket | null;
+  socket: WebSocket | null;
   isConnected: boolean;
   error: Error | null;
+  sendMessage: (data: string) => void;
 }
 
 const SocketContext = createContext<SocketContextType>({
   socket: null,
   isConnected: false,
   error: null,
+  sendMessage: () => {},
 });
 
 export const useSocket = () => useContext(SocketContext);
 
 export const SocketProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
-  const [socket, setSocket] = useState<Socket | null>(null);
+  const [socket, setSocket] = useState<WebSocket | null>(null);
   const [isConnected, setIsConnected] = useState(false);
   const [error, setError] = useState<Error | null>(null);
+  const socketRef = useRef<WebSocket | null>(null);
 
   useEffect(() => {
-    let newSocket: Socket | null = null;
+    const ws = new WebSocket(API_URL.replace(/^http/, 'ws'));
+    socketRef.current = ws;
+    setSocket(ws);
 
-    try {
-      newSocket = io(API_URL, {
-        transports: ['websocket'],
-        autoConnect: true,
-        reconnection: true,
-        reconnectionAttempts: 5,
-        reconnectionDelay: 1000,
-      });
+    ws.onopen = () => {
+      setIsConnected(true);
+      setError(null);
+    };
 
-      newSocket.on('connect', () => {
-        setIsConnected(true);
-        setError(null);
-      });
+    ws.onclose = () => {
+      setIsConnected(false);
+    };
 
-      newSocket.on('disconnect', () => {
-        setIsConnected(false);
-      });
+    ws.onerror = (e: any) => {
+      setError(new Error(e?.message || 'WebSocket error'));
+      setIsConnected(false);
+    };
 
-      newSocket.on('connect_error', (err) => {
-        setError(err);
-        setIsConnected(false);
-      });
-
-      setSocket(newSocket);
-    } catch (err) {
-      setError(err instanceof Error ? err : new Error('Failed to initialize socket connection'));
-    }
+    // Optionally handle ws.onmessage here if you want to expose messages
 
     return () => {
-      if (newSocket) {
-        newSocket.removeAllListeners();
-        newSocket.close();
-      }
+      ws.close();
+      setSocket(null);
     };
   }, []);
 
+  const sendMessage = (data: string) => {
+    if (socketRef.current && socketRef.current.readyState === WebSocket.OPEN) {
+      socketRef.current.send(data);
+    }
+  };
+
   return (
-    <SocketContext.Provider value={{ socket, isConnected, error }}>
+    <SocketContext.Provider value={{ socket, isConnected, error, sendMessage }}>
       {children}
     </SocketContext.Provider>
   );
-}; 
+};

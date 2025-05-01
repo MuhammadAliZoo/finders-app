@@ -1,7 +1,7 @@
-"use client"
+'use client';
 
-import App from "../App"
+import App from '../App';
 
 export default function SyntheticV0PageForDeployment() {
-  return <App />
+  return <App />;
 }

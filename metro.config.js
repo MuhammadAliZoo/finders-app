@@ -1,30 +1,21 @@
 // Learn more https://docs.expo.io/guides/customizing-metro
 const { getDefaultConfig } = require('@react-native/metro-config');
 
-const defaultConfig = getDefaultConfig(__dirname);
-const { resolver: { sourceExts, assetExts } } = defaultConfig;
+module.exports = (async () => {
+  const defaultConfig = await getDefaultConfig(__dirname);
+  
+  defaultConfig.resolver.extraNodeModules = {
+    ...defaultConfig.resolver.extraNodeModules,
+    stream: require.resolve('stream-browserify'),
+    https: require.resolve('https-browserify'),
+    assert: require.resolve('assert'),
+    util: require.resolve('util/'),
+    process: require.resolve('process/browser'),
+    events: require.resolve('events/'),
+    buffer: require.resolve('@craftzdog/react-native-buffer'),
+    url: require.resolve('react-native-url-polyfill'),
+    crypto: require.resolve('react-native-get-random-values'),
+  };
 
-const config = {
-  ...defaultConfig,
-  resolver: {
-    ...defaultConfig.resolver,
-    sourceExts: [...sourceExts, 'jsx', 'js', 'ts', 'tsx', 'json', 'cjs', 'mjs'],
-    assetExts: [...assetExts],
-    extraNodeModules: {
-      ...defaultConfig.resolver.extraNodeModules,
-      'base64-js': require.resolve('base64-js'),
-      'buffer': require.resolve('buffer/'),
-    },
-  },
-  transformer: {
-    ...defaultConfig.transformer,
-    getTransformOptions: async () => ({
-      transform: {
-        experimentalImportSupport: false,
-        inlineRequires: true,
-      },
-    }),
-  },
-};
-
-module.exports = config; 
+  return defaultConfig;
+})(); 

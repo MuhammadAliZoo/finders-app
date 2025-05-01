@@ -1,10 +1,10 @@
-"use client"
+'use client';
 import React, { useEffect, useState } from 'react';
-import { View, StyleSheet, Dimensions } from "react-native"
+import { View, StyleSheet, Dimensions } from 'react-native';
 import MapView, { Heatmap, PROVIDER_GOOGLE } from 'react-native-maps';
-import { useTheme } from "../../theme/ThemeContext"
+import { useTheme } from '../../theme/ThemeContext';
 
-const { width } = Dimensions.get("window")
+const { width } = Dimensions.get('window');
 
 type HeatmapViewProps = {
   data?: {
@@ -29,18 +29,22 @@ const HeatmapView: React.FC<HeatmapViewProps> = ({ data = [] }) => {
   useEffect(() => {
     if (data && data.length > 0) {
       // Calculate center point of all locations
-      const validPoints = data.filter(point => 
-        typeof point.latitude === 'number' && 
-        !isNaN(point.latitude) && 
-        typeof point.longitude === 'number' && 
-        !isNaN(point.longitude)
+      const validPoints = data.filter(
+        point =>
+          typeof point.latitude === 'number' &&
+          !isNaN(point.latitude) &&
+          typeof point.longitude === 'number' &&
+          !isNaN(point.longitude),
       );
 
       if (validPoints.length > 0) {
-        const center = validPoints.reduce((acc, point) => ({
-          latitude: acc.latitude + point.latitude,
-          longitude: acc.longitude + point.longitude,
-        }), { latitude: 0, longitude: 0 });
+        const center = validPoints.reduce(
+          (acc, point) => ({
+            latitude: acc.latitude + point.latitude,
+            longitude: acc.longitude + point.longitude,
+          }),
+          { latitude: 0, longitude: 0 },
+        );
 
         setInitialRegion({
           latitude: center.latitude / validPoints.length,
@@ -52,12 +56,14 @@ const HeatmapView: React.FC<HeatmapViewProps> = ({ data = [] }) => {
     }
   }, [data]);
 
-  const validPoints = data?.filter(point => 
-    typeof point.latitude === 'number' && 
-    !isNaN(point.latitude) && 
-    typeof point.longitude === 'number' && 
-    !isNaN(point.longitude)
-  ) || [];
+  const validPoints =
+    data?.filter(
+      point =>
+        typeof point.latitude === 'number' &&
+        !isNaN(point.latitude) &&
+        typeof point.longitude === 'number' &&
+        !isNaN(point.longitude),
+    ) || [];
 
   return (
     <View style={[styles.container, { backgroundColor: colors.card }]}>
@@ -80,25 +86,24 @@ const HeatmapView: React.FC<HeatmapViewProps> = ({ data = [] }) => {
             gradient={{
               colors: ['#00ff00', '#ff0000'],
               startPoints: [0.1, 1],
-              colorMapSize: 256
+              colorMapSize: 256,
             }}
           />
         )}
       </MapView>
     </View>
-  )
-}
+  );
+};
 
 const styles = StyleSheet.create({
   container: {
-    height: 200,
     borderRadius: 12,
+    height: 200,
     overflow: 'hidden',
   },
   map: {
     ...StyleSheet.absoluteFillObject,
   },
-})
+});
 
-export default HeatmapView
-
+export default HeatmapView;

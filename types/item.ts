@@ -14,4 +14,4 @@ export interface Item {
   priority: 'high' | 'medium' | 'low';
   category: 'jewelry' | 'electronics' | 'documents' | 'accessories' | 'other';
   lastSeen?: string;
-} 
+}

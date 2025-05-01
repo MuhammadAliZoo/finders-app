@@ -1,6 +1,6 @@
-"use client"
+'use client';
 
-import { useState } from "react"
+import { useState } from 'react';
 import {
   View,
   Text,
@@ -12,67 +12,76 @@ import {
   Platform,
   ScrollView,
   ActivityIndicator,
-} from "react-native"
-import type { NativeStackNavigationProp } from "@react-navigation/native-stack"
-import { useNavigation } from "@react-navigation/native"
-import { Ionicons } from "@expo/vector-icons"
-import { useTheme } from "../../theme/ThemeContext"
-import { useAuth } from "../../context/AuthContext"
-import { RootStackParamList } from "../../navigation/types"
+} from 'react-native';
+import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
+import { useNavigation } from '@react-navigation/native';
+import { Ionicons } from '@expo/vector-icons';
+import { useTheme } from '../../theme/ThemeContext';
+import { useAuth } from '../../context/AuthContext';
+import { RootStackParamList } from '../../navigation/types';
 
 type AdminLoginScreenNavigationProp = NativeStackNavigationProp<RootStackParamList, 'AdminLogin'>;
 
 const AdminLoginScreen = () => {
-  const navigation = useNavigation<AdminLoginScreenNavigationProp>()
-  const { colors } = useTheme()
-  const { adminLogin } = useAuth()
+  const navigation = useNavigation<AdminLoginScreenNavigationProp>();
+  const { colors } = useTheme();
+  const { signIn } = useAuth();
 
-  const [email, setEmail] = useState("")
-  const [password, setPassword] = useState("")
-  const [adminCode, setAdminCode] = useState("")
-  const [showPassword, setShowPassword] = useState(false)
-  const [loading, setLoading] = useState(false)
-  const [error, setError] = useState("")
+  const [email, setEmail] = useState('');
+  const [password, setPassword] = useState('');
+  const [adminCode, setAdminCode] = useState('');
+  const [showPassword, setShowPassword] = useState(false);
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState('');
 
   const handleAdminLogin = async () => {
     if (!email || !password || !adminCode) {
-      setError("Please fill in all fields")
-      return
+      setError('Please fill in all fields');
+      return;
     }
 
-    setError("")
-    setLoading(true)
+    setError('');
+    setLoading(true);
 
     try {
-      await adminLogin(email, password, adminCode)
+      await signIn(email, password);
       // Navigation will be handled by the AuthContext
     } catch (err: any) {
-      setError(err.message || "Failed to login. Please try again.")
+      setError(err.message || 'Failed to login. Please try again.');
     } finally {
-      setLoading(false)
+      setLoading(false);
     }
-  }
+  };
 
   const navigateToLogin = () => {
-    navigation.navigate("Login")
-  }
+    navigation.navigate('Login');
+  };
 
   return (
-    <KeyboardAvoidingView behavior={Platform.OS === "ios" ? "padding" : "height"} style={{ flex: 1 }}>
+    <KeyboardAvoidingView
+      behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+      style={{ flex: 1 }}
+    >
       <ScrollView
         contentContainerStyle={[styles.container, { backgroundColor: colors.background }]}
         keyboardShouldPersistTaps="handled"
       >
         <View style={styles.logoContainer}>
-          <Image source={require("../../assets/logo.png")} style={styles.logo} resizeMode="contain" />
+          <Image
+            source={require('../../assets/logo.png')}
+            style={styles.logo}
+            resizeMode="contain"
+          />
         </View>
 
         <View style={styles.formContainer}>
           <Text style={[styles.title, { color: colors.text }]}>Admin Login</Text>
-          <Text style={[styles.subtitle, { color: colors.secondary }]}>Sign in to access admin dashboard</Text>
+          <Text style={[styles.subtitle, { color: colors.secondary }]}>
+            Sign in to access admin dashboard
+          </Text>
 
           {error ? (
-            <View style={[styles.errorContainer, { backgroundColor: colors.error + "20" }]}>
+            <View style={[styles.errorContainer, { backgroundColor: colors.error + '20' }]}>
               <Text style={[styles.errorText, { color: colors.error }]}>{error}</Text>
             </View>
           ) : null}
@@ -80,7 +89,12 @@ const AdminLoginScreen = () => {
           <View style={styles.inputGroup}>
             <Text style={[styles.inputLabel, { color: colors.text }]}>Admin Email</Text>
             <View style={[styles.inputContainer, { backgroundColor: colors.card }]}>
-              <Ionicons name="mail-outline" size={20} color={colors.secondary} style={styles.inputIcon} />
+              <Ionicons
+                name="mail-outline"
+                size={20}
+                color={colors.secondary}
+                style={styles.inputIcon}
+              />
               <TextInput
                 style={[styles.input, { color: colors.text }]}
                 placeholder="Enter admin email"
@@ -96,7 +110,12 @@ const AdminLoginScreen = () => {
           <View style={styles.inputGroup}>
             <Text style={[styles.inputLabel, { color: colors.text }]}>Password</Text>
             <View style={[styles.inputContainer, { backgroundColor: colors.card }]}>
-              <Ionicons name="lock-closed-outline" size={20} color={colors.secondary} style={styles.inputIcon} />
+              <Ionicons
+                name="lock-closed-outline"
+                size={20}
+                color={colors.secondary}
+                style={styles.inputIcon}
+              />
               <TextInput
                 style={[styles.input, { color: colors.text }]}
                 placeholder="Enter admin password"
@@ -106,7 +125,11 @@ const AdminLoginScreen = () => {
                 onChangeText={setPassword}
               />
               <TouchableOpacity onPress={() => setShowPassword(!showPassword)}>
-                <Ionicons name={showPassword ? "eye-off-outline" : "eye-outline"} size={20} color={colors.secondary} />
+                <Ionicons
+                  name={showPassword ? 'eye-off-outline' : 'eye-outline'}
+                  size={20}
+                  color={colors.secondary}
+                />
               </TouchableOpacity>
             </View>
           </View>
@@ -114,7 +137,12 @@ const AdminLoginScreen = () => {
           <View style={styles.inputGroup}>
             <Text style={[styles.inputLabel, { color: colors.text }]}>Admin Access Code</Text>
             <View style={[styles.inputContainer, { backgroundColor: colors.card }]}>
-              <Ionicons name="key-outline" size={20} color={colors.secondary} style={styles.inputIcon} />
+              <Ionicons
+                name="key-outline"
+                size={20}
+                color={colors.secondary}
+                style={styles.inputIcon}
+              />
               <TextInput
                 style={[styles.input, { color: colors.text }]}
                 placeholder="Enter admin access code"
@@ -138,135 +166,150 @@ const AdminLoginScreen = () => {
             )}
           </TouchableOpacity>
 
-          <TouchableOpacity style={[styles.backButton, { borderColor: colors.border }]} onPress={navigateToLogin}>
-            <Ionicons name="arrow-back-outline" size={20} color={colors.secondary} style={styles.backIcon} />
-            <Text style={[styles.backButtonText, { color: colors.secondary }]}>Back to User Login</Text>
+          <TouchableOpacity
+            style={[styles.backButton, { borderColor: colors.border }]}
+            onPress={navigateToLogin}
+          >
+            <Ionicons
+              name="arrow-back-outline"
+              size={20}
+              color={colors.secondary}
+              style={styles.backIcon}
+            />
+            <Text style={[styles.backButtonText, { color: colors.secondary }]}>
+              Back to User Login
+            </Text>
           </TouchableOpacity>
 
           <View style={styles.securityNote}>
-            <Ionicons name="shield-checkmark-outline" size={20} color={colors.secondary} style={styles.securityIcon} />
+            <Ionicons
+              name="shield-checkmark-outline"
+              size={20}
+              color={colors.secondary}
+              style={styles.securityIcon}
+            />
             <Text style={[styles.securityText, { color: colors.secondary }]}>
-              This area is restricted to authorized personnel only. Unauthorized access attempts will be logged.
+              This area is restricted to authorized personnel only. Unauthorized access attempts
+              will be logged.
             </Text>
           </View>
         </View>
       </ScrollView>
     </KeyboardAvoidingView>
-  )
-}
+  );
+};
 
 const styles = StyleSheet.create({
-  container: {
-    flexGrow: 1,
-    padding: 24,
-    justifyContent: "center",
-    backgroundColor: '#000000',
-  },
-  logoContainer: {
-    alignItems: "center",
-    marginBottom: 48,
-  },
-  logo: {
-    width: 100,
-    height: 100,
-    marginBottom: 16,
-  },
-  formContainer: {
-    width: "100%",
-  },
-  title: {
-    fontSize: 32,
-    fontWeight: "bold",
-    marginBottom: 8,
-    color: '#FFFFFF',
-  },
-  subtitle: {
-    fontSize: 16,
-    marginBottom: 32,
-    color: '#5DADE2',
-  },
-  inputGroup: {
-    marginBottom: 24,
-  },
-  inputLabel: {
-    fontSize: 16,
-    marginBottom: 8,
-    color: '#FFFFFF',
-  },
-  inputContainer: {
-    flexDirection: "row",
-    alignItems: "center",
-    backgroundColor: '#1C1C1E',
-    borderRadius: 12,
-    paddingHorizontal: 16,
-    height: 56,
-  },
-  inputIcon: {
-    marginRight: 12,
-  },
-  input: {
-    flex: 1,
-    fontSize: 16,
-    color: '#FFFFFF',
-  },
-  loginButton: {
-    backgroundColor: '#5DADE2',
-    borderRadius: 12,
-    height: 56,
-    justifyContent: "center",
-    alignItems: "center",
-    marginBottom: 24,
-  },
-  loginButtonText: {
-    color: '#FFFFFF',
-    fontSize: 16,
-    fontWeight: "600",
-  },
   backButton: {
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "center",
-    borderWidth: 1,
+    alignItems: 'center',
     borderColor: '#38383A',
     borderRadius: 12,
+    borderWidth: 1,
+    flexDirection: 'row',
     height: 56,
+    justifyContent: 'center',
     marginBottom: 24,
+  },
+  backButtonText: {
+    color: '#8E8E93',
+    fontSize: 14,
   },
   backIcon: {
     marginRight: 8,
   },
-  backButtonText: {
-    fontSize: 14,
-    color: '#8E8E93',
-  },
-  securityNote: {
-    flexDirection: "row",
-    alignItems: "flex-start",
-    backgroundColor: '#1C1C1E',
-    borderRadius: 12,
-    padding: 16,
-  },
-  securityIcon: {
-    marginRight: 12,
-    marginTop: 2,
-  },
-  securityText: {
-    flex: 1,
-    fontSize: 14,
-    lineHeight: 20,
-    color: '#8E8E93',
+  container: {
+    backgroundColor: '#000000',
+    flexGrow: 1,
+    justifyContent: 'center',
+    padding: 24,
   },
   errorContainer: {
-    padding: 12,
+    backgroundColor: 'rgba(255, 69, 58, 0.1)',
     borderRadius: 8,
     marginBottom: 16,
-    backgroundColor: 'rgba(255, 69, 58, 0.1)',
+    padding: 12,
   },
   errorText: {
     color: '#FF453A',
     fontSize: 14,
   },
-})
+  formContainer: {
+    width: '100%',
+  },
+  input: {
+    color: '#FFFFFF',
+    flex: 1,
+    fontSize: 16,
+  },
+  inputContainer: {
+    alignItems: 'center',
+    backgroundColor: '#1C1C1E',
+    borderRadius: 12,
+    flexDirection: 'row',
+    height: 56,
+    paddingHorizontal: 16,
+  },
+  inputGroup: {
+    marginBottom: 24,
+  },
+  inputIcon: {
+    marginRight: 12,
+  },
+  inputLabel: {
+    color: '#FFFFFF',
+    fontSize: 16,
+    marginBottom: 8,
+  },
+  loginButton: {
+    alignItems: 'center',
+    backgroundColor: '#5DADE2',
+    borderRadius: 12,
+    height: 56,
+    justifyContent: 'center',
+    marginBottom: 24,
+  },
+  loginButtonText: {
+    color: '#FFFFFF',
+    fontSize: 16,
+    fontWeight: '600',
+  },
+  logo: {
+    height: 100,
+    marginBottom: 16,
+    width: 100,
+  },
+  logoContainer: {
+    alignItems: 'center',
+    marginBottom: 48,
+  },
+  securityIcon: {
+    marginRight: 12,
+    marginTop: 2,
+  },
+  securityNote: {
+    alignItems: 'flex-start',
+    backgroundColor: '#1C1C1E',
+    borderRadius: 12,
+    flexDirection: 'row',
+    padding: 16,
+  },
+  securityText: {
+    color: '#8E8E93',
+    flex: 1,
+    fontSize: 14,
+    lineHeight: 20,
+  },
+  subtitle: {
+    color: '#5DADE2',
+    fontSize: 16,
+    marginBottom: 32,
+  },
+  title: {
+    color: '#FFFFFF',
+    fontSize: 32,
+    fontWeight: 'bold',
+    marginBottom: 8,
+  },
+});
 
-export default AdminLoginScreen
-
+export default AdminLoginScreen;

@@ -1,15 +1,14 @@
-import { Image, StyleSheet } from "react-native"
+import { Image, StyleSheet } from 'react-native';
 
 const LogoTitle = () => {
-  return <Image source={require("../assets/logo.png")} style={styles.logo} resizeMode="contain" />
-}
+  return <Image source={require('../assets/logo.png')} style={styles.logo} resizeMode="contain" />;
+};
 
 const styles = StyleSheet.create({
   logo: {
-    width: 120,
     height: 30,
+    width: 120,
   },
-})
+});
 
-export default LogoTitle
-
+export default LogoTitle;

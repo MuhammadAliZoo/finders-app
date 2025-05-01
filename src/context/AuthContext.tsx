@@ -1,80 +1,71 @@
 import React, { createContext, useContext, useState, useEffect } from 'react';
-
-interface User {
-  _id: string;
-  name: string;
-  email: string;
-  avatar?: string;
-}
+import { supabase } from '../config/supabase';
+import { User, Session } from '@supabase/supabase-js';
 
 interface AuthContextType {
   user: User | null;
   loading: boolean;
-  login: (email: string, password: string) => Promise<void>;
-  logout: () => Promise<void>;
-  register: (name: string, email: string, password: string) => Promise<void>;
+  signIn: (email: string, password: string) => Promise<{ user: User | null; session: Session | null }>;
+  signUp: (email: string, password: string) => Promise<{ user: User | null; session: Session | null }>;
+  signOut: () => Promise<void>;
+  fetchProfile: () => Promise<void>;
 }
 
-const AuthContext = createContext<AuthContextType>({
-  user: null,
-  loading: true,
-  login: async () => {},
-  logout: async () => {},
-  register: async () => {},
-});
-
-export const useAuth = () => useContext(AuthContext);
+const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
 export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const [user, setUser] = useState<User | null>(null);
   const [loading, setLoading] = useState(true);
 
+  const fetchProfile = async () => {
+    try {
+      const { data: { user: currentUser } } = await supabase.auth.getUser();
+      setUser(currentUser);
+    } catch (error) {
+      setUser(null);
+    } finally {
+      setLoading(false);
+    }
+  };
+
   useEffect(() => {
-    // Check for existing session
-    checkSession();
+    const initializeAuth = async () => {
+      await fetchProfile();
+    };
+    initializeAuth();
   }, []);
 
-  const checkSession = async () => {
-    try {
-      // Implement session check logic here
-      setLoading(false);
-    } catch (error) {
-      console.error('Error checking session:', error);
-      setLoading(false);
-    }
+  const signIn = async (email: string, password: string) => {
+    const { data, error } = await supabase.auth.signInWithPassword({ email, password });
+    if (error) throw error;
+    setUser(data.user);
+    return data;
   };
 
-  const login = async (email: string, password: string) => {
-    try {
-      // Implement login logic here
-    } catch (error) {
-      console.error('Error logging in:', error);
-      throw error;
-    }
+  const signUp = async (email: string, password: string) => {
+    const { data, error } = await supabase.auth.signUp({ email, password });
+    if (error) throw error;
+    setUser(data.user);
+    return data;
   };
 
-  const logout = async () => {
-    try {
-      // Implement logout logic here
-      setUser(null);
-    } catch (error) {
-      console.error('Error logging out:', error);
-      throw error;
-    }
-  };
-
-  const register = async (name: string, email: string, password: string) => {
-    try {
-      // Implement registration logic here
-    } catch (error) {
-      console.error('Error registering:', error);
-      throw error;
-    }
+  const signOut = async () => {
+    const { error } = await supabase.auth.signOut();
+    if (error) throw error;
+    setUser(null);
   };
 
   return (
-    <AuthContext.Provider value={{ user, loading, login, logout, register }}>
+    <AuthContext.Provider value={{ user, loading, signIn, signUp, signOut, fetchProfile }}>
       {children}
     </AuthContext.Provider>
   );
-}; 
+};
+
+export const useAuth = () => {
+  const context = useContext(AuthContext);
+  if (context === undefined) {
+    throw new Error('useAuth must be used within an AuthProvider');
+  }
+  return context;
+};

@@ -9,9 +9,14 @@ module.exports = function (api) {
         root: ['.'],
         alias: {
           '@': '.',
-          'crypto': 'react-native-crypto',
-          'stream': 'stream-browserify',
           'buffer': '@craftzdog/react-native-buffer',
+          'http': './polyfills/empty.js',
+          'https': './polyfills/empty.js',
+          'net': './polyfills/empty.js',
+          'tls': './polyfills/empty.js',
+          'fs': './polyfills/empty.js',
+          'path': './polyfills/empty.js',
+          'zlib': './polyfills/empty.js'
         },
         extensions: [
           '.ios.ts',
@@ -23,6 +28,8 @@ module.exports = function (api) {
           '.jsx',
           '.js',
           '.json',
+          '.cjs',
+          '.mjs'
         ],
       }],
       ["module:react-native-dotenv", {

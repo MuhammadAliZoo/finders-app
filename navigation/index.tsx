@@ -15,27 +15,19 @@ export default function Navigation() {
   return (
     <NavigationContainer>
       <Stack.Navigator initialRouteName="Home">
-        <Stack.Screen 
-          name="Home" 
-          component={HomeScreen}
-          options={{ headerShown: false }}
-        />
-        <Stack.Screen 
-          name="ItemDetails" 
+        <Stack.Screen name="Home" component={HomeScreen} options={{ headerShown: false }} />
+        <Stack.Screen
+          name="ItemDetails"
           component={ItemDetailsScreen}
           options={{ title: 'Item Details' }}
         />
-        <Stack.Screen 
-          name="AIAssistant" 
+        <Stack.Screen
+          name="AIAssistant"
           component={AIAssistantScreen}
           options={{ title: 'AI Assistant' }}
         />
-        <Stack.Screen 
-          name="AllItems" 
-          component={AllItemsScreen}
-          options={{ title: 'All Items' }}
-        />
+        <Stack.Screen name="AllItems" component={AllItemsScreen} options={{ title: 'All Items' }} />
       </Stack.Navigator>
     </NavigationContainer>
   );
-} 
+}

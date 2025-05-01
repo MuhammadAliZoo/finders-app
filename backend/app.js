@@ -20,14 +20,17 @@ const httpServer = createServer(app);
 const io = initializeSocket(httpServer);
 
 // Middleware
-app.use(cors({
-  origin: process.env.CLIENT_URL || 'http://localhost:19006',
-  credentials: true
-}));
+app.use(
+  cors({
+    origin: process.env.CLIENT_URL || 'http://localhost:19006',
+    credentials: true,
+  }),
+);
 app.use(express.json());
 
 // Connect to MongoDB
-mongoose.connect(process.env.MONGODB_URI || 'mongodb://localhost:27017/finders')
+mongoose
+  .connect(process.env.MONGODB_URI || 'mongodb://localhost:27017/finders')
   .then(() => console.log('Connected to MongoDB'))
   .catch(err => console.error('MongoDB connection error:', err));
 
@@ -45,4 +48,4 @@ app.use((err, req, res, next) => {
 const PORT = process.env.PORT || 3000;
 httpServer.listen(PORT, () => {
   console.log(`Server running on port ${PORT}`);
-}); 
+});

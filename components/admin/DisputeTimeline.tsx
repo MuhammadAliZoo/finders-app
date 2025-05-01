@@ -55,10 +55,7 @@ const DisputeTimeline: React.FC<DisputeTimelineProps> = ({ events }) => {
         <View key={event.id} style={styles.eventContainer}>
           <View style={styles.timelineLeft}>
             <View
-              style={[
-                styles.iconContainer,
-                { backgroundColor: getEventColor(event.type) + '20' },
-              ]}
+              style={[styles.iconContainer, { backgroundColor: getEventColor(event.type) + '20' }]}
             >
               <Ionicons
                 name={getEventIcon(event.type)}
@@ -67,28 +64,17 @@ const DisputeTimeline: React.FC<DisputeTimelineProps> = ({ events }) => {
               />
             </View>
             {index < events.length - 1 && (
-              <View
-                style={[styles.timelineLine, { backgroundColor: colors.border }]}
-              />
+              <View style={[styles.timelineLine, { backgroundColor: colors.border }]} />
             )}
           </View>
 
           <View style={styles.eventContent}>
             <View style={styles.eventHeader}>
-              <Text style={[styles.eventTitle, { color: colors.text }]}>
-                {event.title}
-              </Text>
-              <Text style={[styles.eventDate, { color: colors.secondary }]}>
-                {event.date}
-              </Text>
+              <Text style={[styles.eventTitle, { color: colors.text }]}>{event.title}</Text>
+              <Text style={[styles.eventDate, { color: colors.secondary }]}>{event.date}</Text>
             </View>
-            <Text style={[styles.eventActor, { color: colors.primary }]}>
-              {event.actor}
-            </Text>
-            <Text
-              style={[styles.eventDescription, { color: colors.secondary }]}
-              numberOfLines={2}
-            >
+            <Text style={[styles.eventActor, { color: colors.primary }]}>{event.actor}</Text>
+            <Text style={[styles.eventDescription, { color: colors.secondary }]} numberOfLines={2}>
               {event.description}
             </Text>
           </View>
@@ -102,53 +88,53 @@ const styles = StyleSheet.create({
   container: {
     padding: 16,
   },
+  eventActor: {
+    fontSize: 14,
+    marginBottom: 4,
+  },
   eventContainer: {
     flexDirection: 'row',
     marginBottom: 16,
-  },
-  timelineLeft: {
-    alignItems: 'center',
-    width: 40,
-  },
-  iconContainer: {
-    width: 32,
-    height: 32,
-    borderRadius: 16,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  timelineLine: {
-    width: 2,
-    flex: 1,
-    marginTop: 8,
   },
   eventContent: {
     flex: 1,
     marginLeft: 12,
   },
-  eventHeader: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'flex-start',
-    marginBottom: 4,
-  },
-  eventTitle: {
-    fontSize: 16,
-    fontWeight: '600',
-    flex: 1,
-    marginRight: 8,
-  },
   eventDate: {
     fontSize: 12,
-  },
-  eventActor: {
-    fontSize: 14,
-    marginBottom: 4,
   },
   eventDescription: {
     fontSize: 14,
     lineHeight: 20,
   },
+  eventHeader: {
+    alignItems: 'flex-start',
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    marginBottom: 4,
+  },
+  eventTitle: {
+    flex: 1,
+    fontSize: 16,
+    fontWeight: '600',
+    marginRight: 8,
+  },
+  iconContainer: {
+    alignItems: 'center',
+    borderRadius: 16,
+    height: 32,
+    justifyContent: 'center',
+    width: 32,
+  },
+  timelineLeft: {
+    alignItems: 'center',
+    width: 40,
+  },
+  timelineLine: {
+    flex: 1,
+    marginTop: 8,
+    width: 2,
+  },
 });
 
-export default DisputeTimeline; 
+export default DisputeTimeline;

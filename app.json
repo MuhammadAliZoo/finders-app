@@ -15,6 +15,7 @@
       "**/*"
     ],
     "jsEngine": "hermes",
+    "newArchEnabled": true,
     "ios": {
       "supportsTablet": true,
       "bundleIdentifier": "com.findersapp",
@@ -27,7 +28,10 @@
         "NSLocationWhenInUseUsageDescription": "This app needs access to location to show heatmap data.",
         "NSLocationAlwaysUsageDescription": "This app needs access to location to show heatmap data.",
         "NSMicrophoneUsageDescription": "This app needs access to your microphone for voice search.",
-        "UIBackgroundModes": ["location", "fetch"],
+        "UIBackgroundModes": [
+          "location",
+          "fetch"
+        ],
         "NSAppTransportSecurity": {
           "NSAllowsArbitraryLoads": true,
           "NSExceptionDomains": {
@@ -65,7 +69,6 @@
       "expo-location",
       "expo-camera",
       "expo-image-picker",
-      "@react-native-voice/voice",
       [
         "expo-build-properties",
         {
@@ -73,7 +76,9 @@
             "useFrameworks": "static"
           }
         }
-      ]
+      ],
+      "expo-font",
+      "expo-splash-screen"
     ],
     "extra": {
       "eas": {

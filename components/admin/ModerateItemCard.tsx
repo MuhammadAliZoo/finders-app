@@ -42,9 +42,7 @@ const ModerateItemCard: React.FC<ModerateItemCardProps> = ({
           <Text style={[styles.title, { color: colors.text }]} numberOfLines={1}>
             {moderationItem.title}
           </Text>
-          <Text style={[styles.date, { color: colors.secondary }]}>
-            {moderationItem.date}
-          </Text>
+          <Text style={[styles.date, { color: colors.secondary }]}>{moderationItem.date}</Text>
         </View>
         <TouchableOpacity style={styles.chatButton} onPress={onChatPress}>
           <Ionicons name="chatbubble-outline" size={24} color={colors.primary} />
@@ -52,11 +50,7 @@ const ModerateItemCard: React.FC<ModerateItemCardProps> = ({
       </View>
 
       <View style={styles.content}>
-        <Image
-          source={{ uri: moderationItem.images[0] }}
-          style={styles.image}
-          resizeMode="cover"
-        />
+        <Image source={{ uri: moderationItem.images[0] }} style={styles.image} resizeMode="cover" />
         <View style={styles.details}>
           <Text style={[styles.description, { color: colors.secondary }]} numberOfLines={2}>
             {moderationItem.description}
@@ -82,65 +76,65 @@ const ModerateItemCard: React.FC<ModerateItemCardProps> = ({
 };
 
 const styles = StyleSheet.create({
+  chatButton: {
+    marginLeft: 12,
+  },
+  checkbox: {
+    marginRight: 12,
+  },
   container: {
     borderRadius: 12,
     marginBottom: 16,
     overflow: 'hidden',
   },
-  header: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    padding: 12,
-    borderBottomWidth: 1,
-    borderBottomColor: '#333333',
-  },
-  checkbox: {
-    marginRight: 12,
-  },
-  titleContainer: {
-    flex: 1,
-  },
-  title: {
-    fontSize: 16,
-    fontWeight: '600',
-    marginBottom: 4,
-  },
-  date: {
-    fontSize: 12,
-  },
-  chatButton: {
-    marginLeft: 12,
-  },
   content: {
     flexDirection: 'row',
     padding: 12,
   },
-  image: {
-    width: 80,
-    height: 80,
-    borderRadius: 8,
-  },
-  details: {
-    flex: 1,
-    marginLeft: 12,
+  date: {
+    fontSize: 12,
   },
   description: {
     fontSize: 14,
     marginBottom: 8,
   },
-  stats: {
-    flexDirection: 'row',
+  details: {
+    flex: 1,
+    marginLeft: 12,
+  },
+  header: {
     alignItems: 'center',
+    borderBottomColor: '#333333',
+    borderBottomWidth: 1,
+    flexDirection: 'row',
+    padding: 12,
+  },
+  image: {
+    borderRadius: 8,
+    height: 80,
+    width: 80,
   },
   stat: {
-    flexDirection: 'row',
     alignItems: 'center',
+    flexDirection: 'row',
     marginRight: 16,
   },
   statText: {
     fontSize: 14,
     marginLeft: 4,
   },
+  stats: {
+    alignItems: 'center',
+    flexDirection: 'row',
+  },
+  title: {
+    fontSize: 16,
+    fontWeight: '600',
+    marginBottom: 4,
+  },
+  titleContainer: {
+    flex: 1,
+  },
 });
 
-export default ModerateItemCard; 
+export default ModerateItemCard;

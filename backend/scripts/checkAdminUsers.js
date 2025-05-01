@@ -37,4 +37,4 @@ const checkAdminUsers = async () => {
 };
 
 // Run the script
-checkAdminUsers(); 
+checkAdminUsers();

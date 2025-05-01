@@ -9,10 +9,10 @@ type SearchBarProps = {
   placeholder?: string;
 };
 
-const SearchBar: React.FC<SearchBarProps> = ({ 
-  value, 
-  onChangeText, 
-  placeholder = 'Search for lost items...' 
+const SearchBar: React.FC<SearchBarProps> = ({
+  value,
+  onChangeText,
+  placeholder = 'Search for lost items...',
 }) => {
   const { colors } = useTheme();
 
@@ -37,13 +37,13 @@ const SearchBar: React.FC<SearchBarProps> = ({
 
 const styles = StyleSheet.create({
   container: {
-    flexDirection: 'row',
     alignItems: 'center',
-    paddingHorizontal: 15,
-    paddingVertical: 10,
     borderRadius: 10,
+    flexDirection: 'row',
     marginHorizontal: 15,
     marginVertical: 10,
+    paddingHorizontal: 15,
+    paddingVertical: 10,
   },
   icon: {
     marginRight: 10,
@@ -54,4 +54,4 @@ const styles = StyleSheet.create({
   },
 });
 
-export default SearchBar; 
+export default SearchBar;

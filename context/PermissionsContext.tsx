@@ -45,7 +45,7 @@ export const PermissionsProvider: React.FC<{ children: React.ReactNode }> = ({ c
   const checkPermissions = async () => {
     try {
       const statuses = await checkAllPermissions();
-      
+
       setPermissions({
         camera: statuses[REQUIRED_PERMISSIONS.camera] === RESULTS.GRANTED,
         microphone: statuses[REQUIRED_PERMISSIONS.microphone] === RESULTS.GRANTED,
@@ -61,7 +61,7 @@ export const PermissionsProvider: React.FC<{ children: React.ReactNode }> = ({ c
   const requestPermissions = async () => {
     try {
       const statuses = await requestAllPermissions();
-      
+
       const newPermissions = {
         camera: statuses[REQUIRED_PERMISSIONS.camera] === RESULTS.GRANTED,
         microphone: statuses[REQUIRED_PERMISSIONS.microphone] === RESULTS.GRANTED,
@@ -87,7 +87,7 @@ export const PermissionsProvider: React.FC<{ children: React.ReactNode }> = ({ c
               text: 'Open Settings',
               onPress: () => Linking.openSettings(),
             },
-          ]
+          ],
         );
       }
     } catch (error) {
@@ -110,4 +110,4 @@ export const PermissionsProvider: React.FC<{ children: React.ReactNode }> = ({ c
       {children}
     </PermissionsContext.Provider>
   );
-}; 
+};

@@ -1,9 +1,9 @@
-"use client"
+'use client';
 import React from 'react';
-import { View, Text, StyleSheet, TouchableOpacity, Image } from "react-native"
-import { Ionicons } from "@expo/vector-icons"
-import { useTheme } from "../../theme/ThemeContext"
-import { useAuth } from "../../context/AuthContext"
+import { View, Text, StyleSheet, TouchableOpacity, Image } from 'react-native';
+import { Ionicons } from '@expo/vector-icons';
+import { useTheme } from '../../theme/ThemeContext';
+import { useAuth } from '../../context/AuthContext';
 
 type AdminHeaderProps = {
   title: string;
@@ -12,16 +12,16 @@ type AdminHeaderProps = {
 };
 
 const AdminHeader: React.FC<AdminHeaderProps> = ({ title, navigation, showBackButton = false }) => {
-  const { colors } = useTheme()
-  const { user } = useAuth()
+  const { colors } = useTheme();
+  const { user } = useAuth();
 
   const openDrawer = () => {
-    navigation.openDrawer()
-  }
+    navigation.openDrawer();
+  };
 
   const goBack = () => {
-    navigation.goBack()
-  }
+    navigation.goBack();
+  };
 
   return (
     <View style={[styles.container, { backgroundColor: colors.card }]}>
@@ -45,85 +45,87 @@ const AdminHeader: React.FC<AdminHeaderProps> = ({ title, navigation, showBackBu
           </View>
         </TouchableOpacity>
 
-        <TouchableOpacity style={styles.profileButton} onPress={() => navigation.navigate("AdminProfile")}>
+        <TouchableOpacity
+          style={styles.profileButton}
+          onPress={() => navigation.navigate('AdminProfile')}
+        >
           {user?.profileImage ? (
             <Image source={{ uri: user.profileImage }} style={styles.profileImage} />
           ) : (
-            <View style={[styles.profilePlaceholder, { backgroundColor: colors.primary + "40" }]}>
+            <View style={[styles.profilePlaceholder, { backgroundColor: colors.primary + '40' }]}>
               <Text style={[styles.profileInitial, { color: colors.primary }]}>
-                {user?.name?.charAt(0).toUpperCase() || "A"}
+                {user?.name?.charAt(0).toUpperCase() || 'A'}
               </Text>
             </View>
           )}
         </TouchableOpacity>
       </View>
     </View>
-  )
-}
+  );
+};
 
 const styles = StyleSheet.create({
-  container: {
-    flexDirection: 'row',
+  backButton: {
+    padding: 4,
+  },
+  badge: {
     alignItems: 'center',
-    justifyContent: 'space-between',
-    paddingHorizontal: 16,
-    paddingTop: 60,
-    paddingBottom: 16,
+    borderRadius: 9,
+    height: 18,
+    justifyContent: 'center',
+    minWidth: 18,
+    position: 'absolute',
+    right: 4,
+    top: 4,
+  },
+  badgeText: {
+    color: '#FFFFFF',
+    fontSize: 12,
+    fontWeight: 'bold',
+  },
+  container: {
+    alignItems: 'center',
     borderBottomLeftRadius: 20,
     borderBottomRightRadius: 20,
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    paddingBottom: 16,
+    paddingHorizontal: 16,
+    paddingTop: 60,
   },
   menuButton: {
     padding: 8,
   },
-  backButton: {
-    padding: 4,
-  },
-  title: {
-    fontSize: 20,
-    fontWeight: "bold",
-  },
-  rightContainer: {
-    flexDirection: "row",
-    alignItems: "center",
-  },
   notificationButton: {
     padding: 8,
-  },
-  badge: {
-    position: "absolute",
-    top: 4,
-    right: 4,
-    minWidth: 18,
-    height: 18,
-    borderRadius: 9,
-    justifyContent: "center",
-    alignItems: "center",
-  },
-  badgeText: {
-    color: "#FFFFFF",
-    fontSize: 12,
-    fontWeight: "bold",
   },
   profileButton: {
     padding: 2,
   },
   profileImage: {
-    width: 32,
-    height: 32,
     borderRadius: 16,
-  },
-  profilePlaceholder: {
-    width: 32,
     height: 32,
-    borderRadius: 16,
-    justifyContent: "center",
-    alignItems: "center",
+    width: 32,
   },
   profileInitial: {
     fontSize: 16,
-    fontWeight: "bold",
+    fontWeight: 'bold',
   },
-})
+  profilePlaceholder: {
+    alignItems: 'center',
+    borderRadius: 16,
+    height: 32,
+    justifyContent: 'center',
+    width: 32,
+  },
+  rightContainer: {
+    alignItems: 'center',
+    flexDirection: 'row',
+  },
+  title: {
+    fontSize: 20,
+    fontWeight: 'bold',
+  },
+});
 
-export default AdminHeader
-
+export default AdminHeader;

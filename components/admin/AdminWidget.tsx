@@ -37,26 +37,26 @@ const styles = StyleSheet.create({
     marginBottom: 16,
     overflow: 'hidden',
   },
+  content: {
+    padding: 16,
+  },
   header: {
-    flexDirection: 'row',
     alignItems: 'center',
+    borderBottomColor: 'rgba(0, 0, 0, 0.05)',
+    borderBottomWidth: 1,
+    flexDirection: 'row',
     justifyContent: 'space-between',
     padding: 16,
-    borderBottomWidth: 1,
-    borderBottomColor: 'rgba(0, 0, 0, 0.05)',
-  },
-  titleContainer: {
-    flexDirection: 'row',
-    alignItems: 'center',
   },
   title: {
     fontSize: 16,
     fontWeight: '600',
     marginLeft: 8,
   },
-  content: {
-    padding: 16,
+  titleContainer: {
+    alignItems: 'center',
+    flexDirection: 'row',
   },
 });
 
-export default AdminWidget; 
+export default AdminWidget;

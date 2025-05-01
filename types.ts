@@ -5,4 +5,4 @@ export interface ThemeColors {
   text: string;
   border: string;
   notification: string;
-} 
+}

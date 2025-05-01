@@ -14,11 +14,7 @@ type QuickFiltersProps = {
   onFilterSelect: (filterId: string) => void;
 };
 
-const QuickFilters: React.FC<QuickFiltersProps> = ({
-  filters,
-  selectedFilter,
-  onFilterSelect,
-}) => {
+const QuickFilters: React.FC<QuickFiltersProps> = ({ filters, selectedFilter, onFilterSelect }) => {
   const { colors } = useTheme();
 
   return (
@@ -28,7 +24,7 @@ const QuickFilters: React.FC<QuickFiltersProps> = ({
       style={styles.container}
       contentContainerStyle={styles.contentContainer}
     >
-      {filters.map((filter) => (
+      {filters.map(filter => (
         <TouchableOpacity
           key={filter.id}
           onPress={() => onFilterSelect(filter.id)}
@@ -64,10 +60,10 @@ const styles = StyleSheet.create({
     paddingVertical: 10,
   },
   filterButton: {
-    paddingHorizontal: 15,
-    paddingVertical: 8,
     borderRadius: 20,
     marginRight: 10,
+    paddingHorizontal: 15,
+    paddingVertical: 8,
   },
   filterText: {
     fontSize: 14,
@@ -75,4 +71,4 @@ const styles = StyleSheet.create({
   },
 });
 
-export default QuickFilters; 
+export default QuickFilters;

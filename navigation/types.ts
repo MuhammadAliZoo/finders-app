@@ -2,44 +2,21 @@ import { Dispute } from '../screens/admin/DisputeResolutionScreen';
 import { Item } from '../types/item';
 import { NativeStackScreenProps } from '@react-navigation/native-stack';
 import { NavigatorScreenParams } from '@react-navigation/native';
+import { NativeStackNavigationProp } from '@react-navigation/native-stack';
+import { BottomTabNavigationProp } from '@react-navigation/bottom-tabs';
+import { RouteProp } from '@react-navigation/native';
 
 export type RootStackParamList = {
-  Home: undefined;
+  // Auth Flow
+  Auth: undefined;
   Login: undefined;
   Signup: undefined;
-  Profile: undefined;
-  Settings: undefined;
-  FirebaseTest: undefined;
-  Chat: {
-    conversationId: string;
-    otherUser: {
-      id: string;
-      displayName: string;
-      photoURL?: string | null;
-    };
-    item?: {
-      _id: string;
-      title: string;
-      images: string[];
-    };
-  };
-  ItemDetails: { itemId: string };
-  AIAssistant: undefined;
-  Tabs: {
-    screen: 'Search' | 'Profile' | 'Settings' | 'Chat';
-    params?: {
-      searchQuery?: string;
-    };
-  };
-  
-  // Auth screens
-  Auth: undefined;
   AdminLogin: undefined;
-  
-  // Main navigator
-  Main: undefined;
-  
-  // Admin screens
+
+  // Main App Flow
+  Main: NavigatorScreenParams<MainStackParamList>;
+
+  // Admin Flow
   AdminHome: undefined;
   AdminProfile: undefined;
   AdminDashboard: undefined;
@@ -52,37 +29,51 @@ export type RootStackParamList = {
     type: 'performance' | 'activity' | 'issues' | 'users' | 'items' | 'matches' | 'disputes';
   };
   CollaborativeWorkspace: undefined;
-};
-
-export type RootStackScreenProps<T extends keyof RootStackParamList> = NativeStackScreenProps<RootStackParamList, T>;
-
-export type TabScreenParams = {
-  Home: undefined;
-  ProfileTab: undefined;
-  Search: { searchQuery?: string };
-  Notifications: undefined;
   Settings: undefined;
-};
-
-export type MainStackParamList = {
-  Tabs: NavigatorScreenParams<TabScreenParams>;
-  Login: undefined;
-  Register: undefined;
+  Chat: { conversationId: string; otherUser: any; item?: any };
   EditProfile: undefined;
   HelpSupport: undefined;
   PrivacySecurity: undefined;
-  ItemDetails: { itemId: string; item?: any };
+  RareItemsMarketplace: { items: any[] };
+};
+
+export type RootStackScreenProps<T extends keyof RootStackParamList> = {
+  navigation: NativeStackNavigationProp<RootStackParamList, T>;
+  route: RouteProp<RootStackParamList, T>;
+};
+
+export type MainStackParamList = {
+  Home: undefined;
+  ItemDetails: { id: string };
   AIAssistant: undefined;
+  Chat: { conversationId: string; otherUser: any; item?: any };
   Submission: undefined;
-  RareItemsMarketplace: undefined;
+  RareItemsMarketplace: { items: any[] };
+  Tabs: NavigatorScreenParams<TabParamList>;
+  SearchResults: { searchQuery: string };
+  ClaimTracking: { claimId: string };
+  AllTrendingItems: { items: Item[] };
+  Settings: {
+    section: 'profile' | 'help' | 'privacy';
+  };
 };
 
 export type TabParamList = {
   HomeTab: undefined;
-  ProfileTab: undefined;
-  SearchTab: undefined;
+  FinderTab: undefined;
+  RequesterTab: undefined;
   NotificationsTab: undefined;
-  SettingsTab: undefined;
+  ProfileTab: undefined;
+};
+
+export type MainStackScreenProps<T extends keyof MainStackParamList> = {
+  navigation: NativeStackNavigationProp<MainStackParamList, T>;
+  route: RouteProp<MainStackParamList, T>;
+};
+
+export type TabScreenProps<T extends keyof TabParamList> = {
+  navigation: BottomTabNavigationProp<TabParamList, T>;
+  route: RouteProp<TabParamList, T>;
 };
 
 export interface ModerationItem {
@@ -94,4 +85,4 @@ export interface ModerationItem {
   priority: number;
   rating: number;
   date: string;
-} 
+}

@@ -1,22 +1,25 @@
-"use client"
-import { createDrawerNavigator } from "@react-navigation/drawer"
-import { createNativeStackNavigator } from "@react-navigation/native-stack"
-import { Ionicons } from "@expo/vector-icons"
-import { useTheme } from "../theme/ThemeContext"
-import type { DrawerNavigationOptions, DrawerContentComponentProps } from '@react-navigation/drawer'
-import type { NativeStackNavigationOptions } from '@react-navigation/native-stack'
-import { ReactNode } from 'react'
+'use client';
+import { createDrawerNavigator } from '@react-navigation/drawer';
+import { createNativeStackNavigator } from '@react-navigation/native-stack';
+import { Ionicons } from '@expo/vector-icons';
+import { useTheme } from '../theme/ThemeContext';
+import type {
+  DrawerNavigationOptions,
+  DrawerContentComponentProps,
+} from '@react-navigation/drawer';
+import type { NativeStackNavigationOptions } from '@react-navigation/native-stack';
+import { ReactNode } from 'react';
 
-import AdminDashboardScreen from "../screens/admin/AdminDashboardScreen"
-import ContentModerationScreen from "../screens/admin/ContentModerationScreen"
-import DisputeResolutionScreen from "../screens/admin/DisputeResolutionScreen"
-import AdminProfileScreen from "../screens/admin/AdminProfileScreen"
-import ItemModerationScreen from "../screens/admin/ItemModerationScreen"
-import DisputeDetailsScreen from "../screens/admin/DisputeDetailsScreen"
-import GenerateReportScreen from "../screens/admin/GenerateReportScreen"
-import CollaborativeWorkspaceScreen from "../screens/admin/CollaborativeWorkspaceScreen"
-import WidgetSettingsScreen from "../screens/admin/WidgetSettingsScreen"
-import AdminDrawerContent from "../components/admin/AdminDrawerContent"
+import AdminDashboardScreen from '../screens/admin/AdminDashboardScreen';
+import ContentModerationScreen from '../screens/admin/ContentModerationScreen';
+import DisputeResolutionScreen from '../screens/admin/DisputeResolutionScreen';
+import AdminProfileScreen from '../screens/admin/AdminProfileScreen';
+import ItemModerationScreen from '../screens/admin/ItemModerationScreen';
+import DisputeDetailsScreen from '../screens/admin/DisputeDetailsScreen';
+import GenerateReportScreen from '../screens/admin/GenerateReportScreen';
+import CollaborativeWorkspaceScreen from '../screens/admin/CollaborativeWorkspaceScreen';
+import WidgetSettingsScreen from '../screens/admin/WidgetSettingsScreen';
+import AdminDrawerContent from '../components/admin/AdminDrawerContent';
 
 type RootStackParamList = {
   DashboardHome: undefined;
@@ -31,8 +34,8 @@ type RootStackParamList = {
   AdminProfile: undefined;
 };
 
-const Drawer = createDrawerNavigator<RootStackParamList>()
-const Stack = createNativeStackNavigator<RootStackParamList>()
+const Drawer = createDrawerNavigator<RootStackParamList>();
+const Stack = createNativeStackNavigator<RootStackParamList>();
 
 const stackScreenOptions: NativeStackNavigationOptions = {
   headerShown: false,
@@ -41,31 +44,63 @@ const stackScreenOptions: NativeStackNavigationOptions = {
 const DashboardStack = () => {
   return (
     <Stack.Navigator>
-      <Stack.Screen name="DashboardHome" component={AdminDashboardScreen} options={stackScreenOptions} />
-      <Stack.Screen name="GenerateReport" component={GenerateReportScreen} options={stackScreenOptions} />
-      <Stack.Screen name="CollaborativeWorkspace" component={CollaborativeWorkspaceScreen} options={stackScreenOptions} />
-      <Stack.Screen name="WidgetSettings" component={WidgetSettingsScreen} options={stackScreenOptions} />
+      <Stack.Screen
+        name="DashboardHome"
+        component={AdminDashboardScreen}
+        options={stackScreenOptions}
+      />
+      <Stack.Screen
+        name="GenerateReport"
+        component={GenerateReportScreen}
+        options={stackScreenOptions}
+      />
+      <Stack.Screen
+        name="CollaborativeWorkspace"
+        component={CollaborativeWorkspaceScreen}
+        options={stackScreenOptions}
+      />
+      <Stack.Screen
+        name="WidgetSettings"
+        component={WidgetSettingsScreen}
+        options={stackScreenOptions}
+      />
     </Stack.Navigator>
-  )
-}
+  );
+};
 
 const ModerationStack = () => {
   return (
     <Stack.Navigator>
-      <Stack.Screen name="ContentModeration" component={ContentModerationScreen} options={stackScreenOptions} />
-      <Stack.Screen name="ItemModeration" component={ItemModerationScreen} options={stackScreenOptions} />
+      <Stack.Screen
+        name="ContentModeration"
+        component={ContentModerationScreen}
+        options={stackScreenOptions}
+      />
+      <Stack.Screen
+        name="ItemModeration"
+        component={ItemModerationScreen}
+        options={stackScreenOptions}
+      />
     </Stack.Navigator>
-  )
-}
+  );
+};
 
 const DisputeStack = () => {
   return (
     <Stack.Navigator>
-      <Stack.Screen name="DisputeResolution" component={DisputeResolutionScreen} options={stackScreenOptions} />
-      <Stack.Screen name="DisputeDetails" component={DisputeDetailsScreen} options={stackScreenOptions} />
+      <Stack.Screen
+        name="DisputeResolution"
+        component={DisputeResolutionScreen}
+        options={stackScreenOptions}
+      />
+      <Stack.Screen
+        name="DisputeDetails"
+        component={DisputeDetailsScreen}
+        options={stackScreenOptions}
+      />
     </Stack.Navigator>
-  )
-}
+  );
+};
 
 const AdminNavigator = () => {
   const { colors, isInitialized } = useTheme();
@@ -87,7 +122,7 @@ const AdminNavigator = () => {
   };
 
   return (
-    <Drawer.Navigator drawerContent={(props) => <AdminDrawerContent {...props} />}>
+    <Drawer.Navigator drawerContent={props => <AdminDrawerContent {...props} />}>
       <Drawer.Screen
         name="AdminHome"
         component={DashboardStack}
@@ -126,4 +161,3 @@ const AdminNavigator = () => {
 };
 
 export default AdminNavigator;
-

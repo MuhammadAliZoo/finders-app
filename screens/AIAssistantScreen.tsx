@@ -1,17 +1,17 @@
-"use client"
+'use client';
 
 import React, { useState, useRef, useEffect } from 'react';
-import { 
-  View, 
-  Text, 
-  TextInput, 
-  TouchableOpacity, 
-  StyleSheet, 
+import {
+  View,
+  Text,
+  TextInput,
+  TouchableOpacity,
+  StyleSheet,
   ScrollView,
   KeyboardAvoidingView,
   Platform,
   Keyboard,
-  Animated
+  Animated,
 } from 'react-native';
 import { useTheme } from '../theme/ThemeContext';
 import { Ionicons } from '@expo/vector-icons';
@@ -42,13 +42,13 @@ export const AIAssistantScreen: React.FC = () => {
   useEffect(() => {
     const keyboardWillShow = Keyboard.addListener(
       Platform.OS === 'ios' ? 'keyboardWillShow' : 'keyboardDidShow',
-      (e) => {
+      e => {
         Animated.timing(keyboardHeight, {
           duration: 250,
           toValue: e.endCoordinates.height,
           useNativeDriver: false,
         }).start();
-      }
+      },
     );
 
     const keyboardWillHide = Keyboard.addListener(
@@ -59,7 +59,7 @@ export const AIAssistantScreen: React.FC = () => {
           toValue: 0,
           useNativeDriver: false,
         }).start();
-      }
+      },
     );
 
     return () => {
@@ -90,7 +90,7 @@ export const AIAssistantScreen: React.FC = () => {
 
     try {
       const response = await authApi.getAIAssistantResponse(input.trim());
-      
+
       const assistantMessage: Message = {
         id: (Date.now() + 1).toString(),
         text: response.message,
@@ -118,21 +118,16 @@ export const AIAssistantScreen: React.FC = () => {
   };
 
   return (
-    <KeyboardAvoidingView 
+    <KeyboardAvoidingView
       style={[styles.container, { backgroundColor: colors.background }]}
       behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
       keyboardVerticalOffset={Platform.OS === 'ios' ? 90 : 0}
     >
       <View style={styles.header}>
-        <TouchableOpacity 
-          onPress={() => navigation.goBack()}
-          style={styles.backButton}
-        >
+        <TouchableOpacity onPress={() => navigation.goBack()} style={styles.backButton}>
           <Ionicons name="arrow-back" size={24} color={colors.text} />
         </TouchableOpacity>
-        <Text style={[styles.headerTitle, { color: colors.text }]}>
-          AI Assistant
-        </Text>
+        <Text style={[styles.headerTitle, { color: colors.text }]}>AI Assistant</Text>
         <View style={styles.backButton} />
       </View>
 
@@ -142,7 +137,7 @@ export const AIAssistantScreen: React.FC = () => {
           contentContainerStyle={styles.scrollContent}
           showsVerticalScrollIndicator={false}
         >
-          {messages.map((message) => (
+          {messages.map(message => (
             <View
               key={message.id}
               style={[
@@ -154,9 +149,7 @@ export const AIAssistantScreen: React.FC = () => {
                 style={[
                   styles.messageBubble,
                   {
-                    backgroundColor: message.sender === 'user' 
-                      ? colors.primary 
-                      : colors.card,
+                    backgroundColor: message.sender === 'user' ? colors.primary : colors.card,
                   },
                 ]}
               >
@@ -164,9 +157,7 @@ export const AIAssistantScreen: React.FC = () => {
                   style={[
                     styles.messageText,
                     {
-                      color: message.sender === 'user' 
-                        ? '#FFFFFF' 
-                        : colors.text,
+                      color: message.sender === 'user' ? '#FFFFFF' : colors.text,
                     },
                   ]}
                 >
@@ -176,9 +167,8 @@ export const AIAssistantScreen: React.FC = () => {
                   style={[
                     styles.timestamp,
                     {
-                      color: message.sender === 'user' 
-                        ? 'rgba(255, 255, 255, 0.7)' 
-                        : colors.text + '80',
+                      color:
+                        message.sender === 'user' ? 'rgba(255, 255, 255, 0.7)' : colors.text + '80',
                     },
                   ]}
                 >
@@ -190,7 +180,7 @@ export const AIAssistantScreen: React.FC = () => {
         </ScrollView>
       </View>
 
-      <Animated.View 
+      <Animated.View
         style={[
           styles.inputContainer,
           {
@@ -224,11 +214,7 @@ export const AIAssistantScreen: React.FC = () => {
           onPress={handleSend}
           disabled={!input.trim() || isLoading}
         >
-          <Ionicons
-            name={isLoading ? 'time' : 'send'}
-            size={20}
-            color="#FFFFFF"
-          />
+          <Ionicons name={isLoading ? 'time' : 'send'} size={20} color="#FFFFFF" />
         </TouchableOpacity>
       </Animated.View>
     </KeyboardAvoidingView>
@@ -236,79 +222,79 @@ export const AIAssistantScreen: React.FC = () => {
 };
 
 const styles = StyleSheet.create({
+  assistantMessage: {
+    alignSelf: 'flex-start',
+  },
+  backButton: {
+    alignItems: 'center',
+    height: 40,
+    justifyContent: 'center',
+    width: 40,
+  },
   container: {
     flex: 1,
   },
+  content: {
+    flex: 1,
+  },
   header: {
-    flexDirection: 'row',
     alignItems: 'center',
+    borderBottomColor: 'rgba(0, 0, 0, 0.1)',
+    borderBottomWidth: 1,
+    flexDirection: 'row',
     justifyContent: 'space-between',
+    paddingBottom: 8,
     paddingHorizontal: 16,
     paddingTop: 16,
-    paddingBottom: 8,
-    borderBottomWidth: 1,
-    borderBottomColor: 'rgba(0, 0, 0, 0.1)',
-  },
-  backButton: {
-    width: 40,
-    height: 40,
-    alignItems: 'center',
-    justifyContent: 'center',
   },
   headerTitle: {
     fontSize: 18,
     fontWeight: '600',
   },
-  content: {
+  input: {
+    borderRadius: 20,
     flex: 1,
+    fontSize: 16,
+    height: 40,
+    marginRight: 8,
+    paddingHorizontal: 16,
   },
-  scrollContent: {
+  inputContainer: {
+    alignItems: 'center',
+    borderTopColor: 'rgba(0, 0, 0, 0.1)',
+    borderTopWidth: 1,
+    flexDirection: 'row',
     padding: 16,
-    paddingBottom: 32,
+  },
+  messageBubble: {
+    borderRadius: 16,
+    padding: 12,
   },
   messageContainer: {
     marginBottom: 16,
     maxWidth: '80%',
   },
-  userMessage: {
-    alignSelf: 'flex-end',
-  },
-  assistantMessage: {
-    alignSelf: 'flex-start',
-  },
-  messageBubble: {
-    padding: 12,
-    borderRadius: 16,
-  },
   messageText: {
     fontSize: 16,
     lineHeight: 24,
   },
-  timestamp: {
-    fontSize: 12,
-    marginTop: 4,
-    alignSelf: 'flex-end',
-  },
-  inputContainer: {
-    flexDirection: 'row',
-    alignItems: 'center',
+  scrollContent: {
     padding: 16,
-    borderTopWidth: 1,
-    borderTopColor: 'rgba(0, 0, 0, 0.1)',
-  },
-  input: {
-    flex: 1,
-    height: 40,
-    borderRadius: 20,
-    paddingHorizontal: 16,
-    marginRight: 8,
-    fontSize: 16,
+    paddingBottom: 32,
   },
   sendButton: {
-    width: 40,
-    height: 40,
-    borderRadius: 20,
     alignItems: 'center',
+    borderRadius: 20,
+    height: 40,
     justifyContent: 'center',
+    width: 40,
   },
-}); 
+  timestamp: {
+    alignSelf: 'flex-end',
+    fontSize: 12,
+    marginTop: 4,
+  },
+  userMessage: {
+    alignSelf: 'flex-end',
+  },
+});

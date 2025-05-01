@@ -1,6 +1,6 @@
-"use client"
+'use client';
 
-import { useState, useEffect } from "react"
+import { useState, useEffect } from 'react';
 import {
   View,
   Text,
@@ -11,28 +11,28 @@ import {
   ActivityIndicator,
   Modal,
   ScrollView,
-} from "react-native"
-import { Ionicons } from "@expo/vector-icons"
-import { useTheme } from "../../theme/ThemeContext"
-import { adminApi } from "../../api/admin"
-import DisputeCard from "../../components/admin/DisputeCard"
-import FilterChip from "../../components/admin/FilterChip"
-import DisputeTimeline from "../../components/admin/DisputeTimeline"
-import AIRecommendation from "../../components/admin/AIRecommendation"
-import { NativeStackNavigationProp } from "@react-navigation/native-stack"
-import { RootStackParamList } from "../../navigation/types"
+} from 'react-native';
+import { Ionicons } from '@expo/vector-icons';
+import { useTheme } from '../../theme/ThemeContext';
+import { adminApi } from '../../api/admin';
+import DisputeCard from '../../components/admin/DisputeCard';
+import FilterChip from '../../components/admin/FilterChip';
+import DisputeTimeline from '../../components/admin/DisputeTimeline';
+import AIRecommendation from '../../components/admin/AIRecommendation';
+import { NativeStackNavigationProp } from '@react-navigation/native-stack';
+import { RootStackParamList } from '../../navigation/types';
 
-type DisputeStatus = "all" | "open" | "in_progress" | "escalated" | "resolved"
-type SortBy = "date" | "priority" | "response_time"
+type DisputeStatus = 'all' | 'open' | 'in_progress' | 'escalated' | 'resolved';
+type SortBy = 'date' | 'priority' | 'response_time';
 
 export interface Dispute {
-  id: string
-  status: string
-  createdAt: string
-  itemTitle: string
-  requesterName: string
-  finderName: string
-  timeline: any[]
+  id: string;
+  status: string;
+  createdAt: string;
+  itemTitle: string;
+  requesterName: string;
+  finderName: string;
+  timeline: any[];
 }
 
 interface AIRecommendationData {
@@ -43,79 +43,79 @@ interface AIRecommendationData {
 }
 
 type DisputeResolutionScreenProps = {
-  navigation: NativeStackNavigationProp<RootStackParamList, 'DisputeResolution'>
-}
+  navigation: NativeStackNavigationProp<RootStackParamList, 'DisputeResolution'>;
+};
 
 const DisputeResolutionScreen = ({ navigation }: DisputeResolutionScreenProps) => {
-  const { colors } = useTheme()
-  const [disputes, setDisputes] = useState<Dispute[]>([])
-  const [loading, setLoading] = useState(true)
-  const [refreshing, setRefreshing] = useState(false)
-  const [filterStatus, setFilterStatus] = useState<DisputeStatus>("all")
-  const [searchQuery, setSearchQuery] = useState("")
-  const [sortBy, setSortBy] = useState<SortBy>("date")
-  const [showFilterModal, setShowFilterModal] = useState(false)
-  const [selectedDispute, setSelectedDispute] = useState<Dispute | null>(null)
-  const [showDisputeModal, setShowDisputeModal] = useState(false)
-  const [aiRecommendation, setAiRecommendation] = useState<AIRecommendationData | null>(null)
-  const [loadingRecommendation, setLoadingRecommendation] = useState(false)
+  const { colors } = useTheme();
+  const [disputes, setDisputes] = useState<Dispute[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [refreshing, setRefreshing] = useState(false);
+  const [filterStatus, setFilterStatus] = useState<DisputeStatus>('all');
+  const [searchQuery, setSearchQuery] = useState('');
+  const [sortBy, setSortBy] = useState<SortBy>('date');
+  const [showFilterModal, setShowFilterModal] = useState(false);
+  const [selectedDispute, setSelectedDispute] = useState<Dispute | null>(null);
+  const [showDisputeModal, setShowDisputeModal] = useState(false);
+  const [aiRecommendation, setAiRecommendation] = useState<AIRecommendationData | null>(null);
+  const [loadingRecommendation, setLoadingRecommendation] = useState(false);
 
   useEffect(() => {
-    fetchDisputes()
-  }, [filterStatus, sortBy])
+    fetchDisputes();
+  }, [filterStatus, sortBy]);
 
   const fetchDisputes = async () => {
     try {
-      setLoading(true)
-      const data = await adminApi.getDisputes(filterStatus, sortBy)
-      setDisputes(data)
+      setLoading(true);
+      const data = await adminApi.getDisputes(filterStatus, sortBy);
+      setDisputes(data);
     } catch (error) {
-      console.error("Failed to fetch disputes", error)
+      console.error('Failed to fetch disputes', error);
     } finally {
-      setLoading(false)
-      setRefreshing(false)
+      setLoading(false);
+      setRefreshing(false);
     }
-  }
+  };
 
   const onRefresh = () => {
-    setRefreshing(true)
-    fetchDisputes()
-  }
+    setRefreshing(true);
+    fetchDisputes();
+  };
 
   const handleSearch = (text: string) => {
-    setSearchQuery(text)
+    setSearchQuery(text);
     // Implement search functionality here
-  }
+  };
 
   const openDisputeDetails = (dispute: Dispute) => {
-    navigation.navigate("DisputeDetails", { dispute })
-  }
+    navigation.navigate('DisputeDetails', { dispute });
+  };
 
   const openQuickView = async (dispute: Dispute) => {
-    setSelectedDispute(dispute)
-    setShowDisputeModal(true)
+    setSelectedDispute(dispute);
+    setShowDisputeModal(true);
 
     try {
-      setLoadingRecommendation(true)
-      const recommendation = await adminApi.getAIRecommendation(dispute.id)
+      setLoadingRecommendation(true);
+      const recommendation = await adminApi.getAIRecommendation(dispute.id);
       setAiRecommendation({
-        title: "AI Analysis",
+        title: 'AI Analysis',
         description: recommendation.recommendation,
         confidence: 0.85,
-        action: "Review and take action"
-      })
+        action: 'Review and take action',
+      });
     } catch (error) {
-      console.error("Failed to get AI recommendation", error)
-      setAiRecommendation(null)
+      console.error('Failed to get AI recommendation', error);
+      setAiRecommendation(null);
     } finally {
-      setLoadingRecommendation(false)
+      setLoadingRecommendation(false);
     }
-  }
+  };
 
   const initiateCall = (dispute: Dispute) => {
     // Implement call functionality
-    console.log("Initiating call for dispute:", dispute.id)
-  }
+    console.log('Initiating call for dispute:', dispute.id);
+  };
 
   const renderItem = ({ item }: { item: Dispute }) => (
     <DisputeCard
@@ -124,10 +124,15 @@ const DisputeResolutionScreen = ({ navigation }: DisputeResolutionScreenProps) =
       onQuickView={() => openQuickView(item)}
       onCall={() => initiateCall(item)}
     />
-  )
+  );
 
   const renderFilterModal = () => (
-    <Modal visible={showFilterModal} transparent animationType="slide" onRequestClose={() => setShowFilterModal(false)}>
+    <Modal
+      visible={showFilterModal}
+      transparent
+      animationType="slide"
+      onRequestClose={() => setShowFilterModal(false)}
+    >
       <View style={styles.modalOverlay}>
         <View style={[styles.modalContent, { backgroundColor: colors.card }]}>
           <View style={styles.modalHeader}>
@@ -139,36 +144,56 @@ const DisputeResolutionScreen = ({ navigation }: DisputeResolutionScreenProps) =
 
           <Text style={[styles.filterSectionTitle, { color: colors.text }]}>Status</Text>
           <View style={styles.filterChips}>
-            <FilterChip label="All" isSelected={filterStatus === "all"} onPress={() => setFilterStatus("all")} count={0} />
-            <FilterChip label="Open" isSelected={filterStatus === "open"} onPress={() => setFilterStatus("open")} count={0} />
+            <FilterChip
+              label="All"
+              isSelected={filterStatus === 'all'}
+              onPress={() => setFilterStatus('all')}
+              count={0}
+            />
+            <FilterChip
+              label="Open"
+              isSelected={filterStatus === 'open'}
+              onPress={() => setFilterStatus('open')}
+              count={0}
+            />
             <FilterChip
               label="In Progress"
-              isSelected={filterStatus === "in_progress"}
-              onPress={() => setFilterStatus("in_progress")}
+              isSelected={filterStatus === 'in_progress'}
+              onPress={() => setFilterStatus('in_progress')}
               count={0}
             />
             <FilterChip
               label="Escalated"
-              isSelected={filterStatus === "escalated"}
-              onPress={() => setFilterStatus("escalated")}
+              isSelected={filterStatus === 'escalated'}
+              onPress={() => setFilterStatus('escalated')}
               count={0}
             />
             <FilterChip
               label="Resolved"
-              isSelected={filterStatus === "resolved"}
-              onPress={() => setFilterStatus("resolved")}
+              isSelected={filterStatus === 'resolved'}
+              onPress={() => setFilterStatus('resolved')}
               count={0}
             />
           </View>
 
           <Text style={[styles.filterSectionTitle, { color: colors.text }]}>Sort By</Text>
           <View style={styles.filterChips}>
-            <FilterChip label="Date (Newest)" isSelected={sortBy === "date"} onPress={() => setSortBy("date")} count={0} />
-            <FilterChip label="Priority" isSelected={sortBy === "priority"} onPress={() => setSortBy("priority")} count={0} />
+            <FilterChip
+              label="Date (Newest)"
+              isSelected={sortBy === 'date'}
+              onPress={() => setSortBy('date')}
+              count={0}
+            />
+            <FilterChip
+              label="Priority"
+              isSelected={sortBy === 'priority'}
+              onPress={() => setSortBy('priority')}
+              count={0}
+            />
             <FilterChip
               label="Response Time"
-              isSelected={sortBy === "response_time"}
-              onPress={() => setSortBy("response_time")}
+              isSelected={sortBy === 'response_time'}
+              onPress={() => setSortBy('response_time')}
               count={0}
             />
           </View>
@@ -182,10 +207,10 @@ const DisputeResolutionScreen = ({ navigation }: DisputeResolutionScreenProps) =
         </View>
       </View>
     </Modal>
-  )
+  );
 
   const renderDisputeModal = () => {
-    if (!selectedDispute) return null
+    if (!selectedDispute) return null;
 
     return (
       <Modal
@@ -200,7 +225,9 @@ const DisputeResolutionScreen = ({ navigation }: DisputeResolutionScreenProps) =
               <TouchableOpacity onPress={() => setShowDisputeModal(false)}>
                 <Ionicons name="close" size={24} color={colors.secondary} />
               </TouchableOpacity>
-              <Text style={[styles.disputeModalTitle, { color: colors.text }]}>Dispute #{selectedDispute.id}</Text>
+              <Text style={[styles.disputeModalTitle, { color: colors.text }]}>
+                Dispute #{selectedDispute.id}
+              </Text>
               <TouchableOpacity onPress={() => openDisputeDetails(selectedDispute)}>
                 <Text style={[styles.viewFullButton, { color: colors.primary }]}>Full View</Text>
               </TouchableOpacity>
@@ -208,33 +235,53 @@ const DisputeResolutionScreen = ({ navigation }: DisputeResolutionScreenProps) =
 
             <View style={styles.disputeModalBody}>
               <View style={[styles.disputeSection, { borderBottomColor: colors.border }]}>
-                <Text style={[styles.disputeSectionTitle, { color: colors.text }]}>Dispute Information</Text>
+                <Text style={[styles.disputeSectionTitle, { color: colors.text }]}>
+                  Dispute Information
+                </Text>
                 <View style={styles.disputeInfo}>
                   <View style={styles.disputeInfoRow}>
-                    <Text style={[styles.disputeInfoLabel, { color: colors.secondary }]}>Status:</Text>
+                    <Text style={[styles.disputeInfoLabel, { color: colors.secondary }]}>
+                      Status:
+                    </Text>
                     <View
-                      style={[styles.statusBadge, { backgroundColor: getStatusColor(selectedDispute.status) + "20" }]}
+                      style={[
+                        styles.statusBadge,
+                        { backgroundColor: getStatusColor(selectedDispute.status) + '20' },
+                      ]}
                     >
-                      <Text style={[styles.statusText, { color: getStatusColor(selectedDispute.status) }]}>
+                      <Text
+                        style={[
+                          styles.statusText,
+                          { color: getStatusColor(selectedDispute.status) },
+                        ]}
+                      >
                         {selectedDispute.status}
                       </Text>
                     </View>
                   </View>
 
                   <View style={styles.disputeInfoRow}>
-                    <Text style={[styles.disputeInfoLabel, { color: colors.secondary }]}>Created:</Text>
+                    <Text style={[styles.disputeInfoLabel, { color: colors.secondary }]}>
+                      Created:
+                    </Text>
                     <Text style={[styles.disputeInfoValue, { color: colors.text }]}>
                       {new Date(selectedDispute.createdAt).toLocaleString()}
                     </Text>
                   </View>
 
                   <View style={styles.disputeInfoRow}>
-                    <Text style={[styles.disputeInfoLabel, { color: colors.secondary }]}>Item:</Text>
-                    <Text style={[styles.disputeInfoValue, { color: colors.text }]}>{selectedDispute.itemTitle}</Text>
+                    <Text style={[styles.disputeInfoLabel, { color: colors.secondary }]}>
+                      Item:
+                    </Text>
+                    <Text style={[styles.disputeInfoValue, { color: colors.text }]}>
+                      {selectedDispute.itemTitle}
+                    </Text>
                   </View>
 
                   <View style={styles.disputeInfoRow}>
-                    <Text style={[styles.disputeInfoLabel, { color: colors.secondary }]}>Parties:</Text>
+                    <Text style={[styles.disputeInfoLabel, { color: colors.secondary }]}>
+                      Parties:
+                    </Text>
                     <Text style={[styles.disputeInfoValue, { color: colors.text }]}>
                       {selectedDispute.requesterName} vs {selectedDispute.finderName}
                     </Text>
@@ -248,14 +295,18 @@ const DisputeResolutionScreen = ({ navigation }: DisputeResolutionScreenProps) =
               </View>
 
               <View style={styles.disputeSection}>
-                <Text style={[styles.disputeSectionTitle, { color: colors.text }]}>AI Recommendation</Text>
+                <Text style={[styles.disputeSectionTitle, { color: colors.text }]}>
+                  AI Recommendation
+                </Text>
                 {loadingRecommendation ? (
                   <View style={styles.loadingRecommendation}>
                     <ActivityIndicator size="small" color={colors.primary} />
-                    <Text style={[styles.loadingText, { color: colors.secondary }]}>Analyzing dispute data...</Text>
+                    <Text style={[styles.loadingText, { color: colors.secondary }]}>
+                      Analyzing dispute data...
+                    </Text>
                   </View>
                 ) : aiRecommendation ? (
-                  <AIRecommendation 
+                  <AIRecommendation
                     recommendation={aiRecommendation}
                     onAccept={() => {
                       setShowDisputeModal(false);
@@ -274,19 +325,25 @@ const DisputeResolutionScreen = ({ navigation }: DisputeResolutionScreenProps) =
 
             <View style={styles.disputeModalActions}>
               <TouchableOpacity
-                style={[styles.actionButton, { backgroundColor: colors.primary + "20" }]}
+                style={[styles.actionButton, { backgroundColor: colors.primary + '20' }]}
                 onPress={() => initiateCall(selectedDispute)}
               >
                 <Ionicons name="call" size={20} color={colors.primary} />
-                <Text style={[styles.actionButtonText, { color: colors.primary }]}>Call Parties</Text>
+                <Text style={[styles.actionButtonText, { color: colors.primary }]}>
+                  Call Parties
+                </Text>
               </TouchableOpacity>
 
-              <TouchableOpacity style={[styles.actionButton, { backgroundColor: colors.warning + "20" }]}>
+              <TouchableOpacity
+                style={[styles.actionButton, { backgroundColor: colors.warning + '20' }]}
+              >
                 <Ionicons name="chatbubbles" size={20} color={colors.warning} />
                 <Text style={[styles.actionButtonText, { color: colors.warning }]}>Group Chat</Text>
               </TouchableOpacity>
 
-              <TouchableOpacity style={[styles.actionButton, { backgroundColor: colors.primary + "20" }]}>
+              <TouchableOpacity
+                style={[styles.actionButton, { backgroundColor: colors.primary + '20' }]}
+              >
                 <Ionicons name="checkmark-circle" size={20} color={colors.primary} />
                 <Text style={[styles.actionButtonText, { color: colors.primary }]}>Resolve</Text>
               </TouchableOpacity>
@@ -294,23 +351,23 @@ const DisputeResolutionScreen = ({ navigation }: DisputeResolutionScreenProps) =
           </View>
         </View>
       </Modal>
-    )
-  }
+    );
+  };
 
   const getStatusColor = (status: string) => {
     switch (status.toLowerCase()) {
-      case "open":
-        return colors.warning
-      case "in_progress":
-        return colors.primary
-      case "escalated":
-        return colors.error
-      case "resolved":
-        return colors.primary
+      case 'open':
+        return colors.warning;
+      case 'in_progress':
+        return colors.primary;
+      case 'escalated':
+        return colors.error;
+      case 'resolved':
+        return colors.primary;
       default:
-        return colors.secondary
+        return colors.secondary;
     }
-  }
+  };
 
   return (
     <View style={[styles.container, { backgroundColor: colors.background }]}>
@@ -325,7 +382,7 @@ const DisputeResolutionScreen = ({ navigation }: DisputeResolutionScreenProps) =
             onChangeText={handleSearch}
           />
           {searchQuery ? (
-            <TouchableOpacity onPress={() => setSearchQuery("")}>
+            <TouchableOpacity onPress={() => setSearchQuery('')}>
               <Ionicons name="close-circle" size={20} color={colors.secondary} />
             </TouchableOpacity>
           ) : null}
@@ -341,30 +398,35 @@ const DisputeResolutionScreen = ({ navigation }: DisputeResolutionScreenProps) =
 
       <View style={styles.statusFilters}>
         <ScrollView horizontal showsHorizontalScrollIndicator={false}>
-          <FilterChip label="All" isSelected={filterStatus === "all"} onPress={() => setFilterStatus("all")} count={0} />
+          <FilterChip
+            label="All"
+            isSelected={filterStatus === 'all'}
+            onPress={() => setFilterStatus('all')}
+            count={0}
+          />
           <FilterChip
             label="Open"
-            isSelected={filterStatus === "open"}
-            onPress={() => setFilterStatus("open")}
-            count={disputes.filter((d) => d.status.toLowerCase() === "open").length}
+            isSelected={filterStatus === 'open'}
+            onPress={() => setFilterStatus('open')}
+            count={disputes.filter(d => d.status.toLowerCase() === 'open').length}
           />
           <FilterChip
             label="In Progress"
-            isSelected={filterStatus === "in_progress"}
-            onPress={() => setFilterStatus("in_progress")}
-            count={disputes.filter((d) => d.status.toLowerCase() === "in_progress").length}
+            isSelected={filterStatus === 'in_progress'}
+            onPress={() => setFilterStatus('in_progress')}
+            count={disputes.filter(d => d.status.toLowerCase() === 'in_progress').length}
           />
           <FilterChip
             label="Escalated"
-            isSelected={filterStatus === "escalated"}
-            onPress={() => setFilterStatus("escalated")}
-            count={disputes.filter((d) => d.status.toLowerCase() === "escalated").length}
+            isSelected={filterStatus === 'escalated'}
+            onPress={() => setFilterStatus('escalated')}
+            count={disputes.filter(d => d.status.toLowerCase() === 'escalated').length}
           />
           <FilterChip
             label="Resolved"
-            isSelected={filterStatus === "resolved"}
-            onPress={() => setFilterStatus("resolved")}
-            count={disputes.filter((d) => d.status.toLowerCase() === "resolved").length}
+            isSelected={filterStatus === 'resolved'}
+            onPress={() => setFilterStatus('resolved')}
+            count={disputes.filter(d => d.status.toLowerCase() === 'resolved').length}
           />
         </ScrollView>
       </View>
@@ -378,7 +440,7 @@ const DisputeResolutionScreen = ({ navigation }: DisputeResolutionScreenProps) =
         <FlatList
           data={disputes}
           renderItem={renderItem}
-          keyExtractor={(item) => item.id.toString()}
+          keyExtractor={item => item.id.toString()}
           contentContainerStyle={styles.listContent}
           onRefresh={onRefresh}
           refreshing={refreshing}
@@ -397,217 +459,216 @@ const DisputeResolutionScreen = ({ navigation }: DisputeResolutionScreenProps) =
       {renderFilterModal()}
       {renderDisputeModal()}
     </View>
-  )
-}
+  );
+};
 
 const styles = StyleSheet.create({
+  actionBar: {
+    alignItems: 'center',
+    flexDirection: 'row',
+    padding: 16,
+  },
+  actionButton: {
+    alignItems: 'center',
+    borderRadius: 8,
+    flexDirection: 'row',
+    flex: 1,
+    justifyContent: 'center',
+    marginHorizontal: 4,
+    paddingHorizontal: 16,
+    paddingVertical: 10,
+  },
+  actionButtonText: {
+    fontSize: 14,
+    fontWeight: '500',
+    marginLeft: 6,
+  },
+  applyFilterButton: {
+    alignItems: 'center',
+    borderRadius: 8,
+    marginTop: 16,
+    paddingVertical: 12,
+  },
+  applyFilterText: {
+    color: '#FFFFFF',
+    fontSize: 16,
+    fontWeight: 'bold',
+  },
   container: {
     flex: 1,
   },
-  actionBar: {
-    flexDirection: "row",
-    padding: 16,
-    alignItems: "center",
-  },
-  searchContainer: {
-    flex: 1,
-    flexDirection: "row",
-    alignItems: "center",
+  disputeInfo: {
+    backgroundColor: 'rgba(0, 0, 0, 0.05)',
     borderRadius: 8,
-    paddingHorizontal: 12,
-    height: 44,
+    padding: 12,
   },
-  searchInput: {
+  disputeInfoLabel: {
+    fontSize: 14,
+    fontWeight: '500',
+  },
+  disputeInfoRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    marginBottom: 8,
+  },
+  disputeInfoValue: {
+    fontSize: 14,
+    maxWidth: '60%',
+    textAlign: 'right',
+  },
+  disputeModalActions: {
+    borderTopColor: 'rgba(0, 0, 0, 0.1)',
+    borderTopWidth: 1,
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    padding: 16,
+  },
+  disputeModalBody: {
+    maxHeight: '70%',
+    padding: 16,
+  },
+  disputeModalContent: {
+    borderTopLeftRadius: 20,
+    borderTopRightRadius: 20,
+    maxHeight: '90%',
+  },
+  disputeModalHeader: {
+    alignItems: 'center',
+    borderBottomColor: 'rgba(0, 0, 0, 0.1)',
+    borderBottomWidth: 1,
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    padding: 16,
+  },
+  disputeModalOverlay: {
+    backgroundColor: 'rgba(0, 0, 0, 0.5)',
     flex: 1,
-    marginLeft: 8,
+    justifyContent: 'flex-end',
+  },
+  disputeModalTitle: {
+    fontSize: 18,
+    fontWeight: 'bold',
+  },
+  disputeSection: {
+    borderBottomWidth: 1,
+    marginBottom: 20,
+    paddingBottom: 16,
+  },
+  disputeSectionTitle: {
     fontSize: 16,
+    fontWeight: '600',
+    marginBottom: 12,
+  },
+  emptyContainer: {
+    alignItems: 'center',
+    flex: 1,
+    justifyContent: 'center',
+    padding: 32,
+  },
+  emptySubtext: {
+    fontSize: 14,
+    marginTop: 8,
+    textAlign: 'center',
+  },
+  emptyText: {
+    fontSize: 18,
+    fontWeight: 'bold',
+    marginTop: 16,
   },
   filterButton: {
-    width: 44,
-    height: 44,
+    alignItems: 'center',
     borderRadius: 8,
-    justifyContent: "center",
-    alignItems: "center",
+    height: 44,
+    justifyContent: 'center',
     marginLeft: 8,
+    width: 44,
   },
-  statusFilters: {
-    paddingHorizontal: 16,
-    marginBottom: 8,
+  filterChips: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    marginBottom: 16,
+  },
+  filterSectionTitle: {
+    fontSize: 16,
+    fontWeight: '600',
+    marginBottom: 12,
+    marginTop: 8,
   },
   listContent: {
     padding: 16,
   },
   loadingContainer: {
+    alignItems: 'center',
     flex: 1,
-    justifyContent: "center",
-    alignItems: "center",
+    justifyContent: 'center',
+  },
+  loadingRecommendation: {
+    alignItems: 'center',
+    flexDirection: 'row',
+    justifyContent: 'center',
+    padding: 16,
   },
   loadingText: {
-    marginTop: 12,
     fontSize: 16,
-  },
-  emptyContainer: {
-    flex: 1,
-    justifyContent: "center",
-    alignItems: "center",
-    padding: 32,
-  },
-  emptyText: {
-    fontSize: 18,
-    fontWeight: "bold",
-    marginTop: 16,
-  },
-  emptySubtext: {
-    fontSize: 14,
-    textAlign: "center",
-    marginTop: 8,
-  },
-  modalOverlay: {
-    flex: 1,
-    backgroundColor: "rgba(0, 0, 0, 0.5)",
-    justifyContent: "flex-end",
+    marginTop: 12,
   },
   modalContent: {
     borderTopLeftRadius: 20,
     borderTopRightRadius: 20,
+    maxHeight: '80%',
     padding: 20,
-    maxHeight: "80%",
   },
   modalHeader: {
-    flexDirection: "row",
-    justifyContent: "space-between",
-    alignItems: "center",
+    alignItems: 'center',
+    flexDirection: 'row',
+    justifyContent: 'space-between',
     marginBottom: 20,
+  },
+  modalOverlay: {
+    backgroundColor: 'rgba(0, 0, 0, 0.5)',
+    flex: 1,
+    justifyContent: 'flex-end',
   },
   modalTitle: {
     fontSize: 20,
-    fontWeight: "bold",
+    fontWeight: 'bold',
   },
-  filterSectionTitle: {
-    fontSize: 16,
-    fontWeight: "600",
-    marginBottom: 12,
-    marginTop: 8,
+  noRecommendation: {
+    fontSize: 14,
+    padding: 16,
+    textAlign: 'center',
   },
-  filterChips: {
-    flexDirection: "row",
-    flexWrap: "wrap",
-    marginBottom: 16,
-  },
-  applyFilterButton: {
+  searchContainer: {
+    alignItems: 'center',
     borderRadius: 8,
-    paddingVertical: 12,
-    alignItems: "center",
-    marginTop: 16,
-  },
-  applyFilterText: {
-    color: "#FFFFFF",
-    fontSize: 16,
-    fontWeight: "bold",
-  },
-  disputeModalOverlay: {
     flex: 1,
-    backgroundColor: "rgba(0, 0, 0, 0.5)",
-    justifyContent: "flex-end",
+    flexDirection: 'row',
+    height: 44,
+    paddingHorizontal: 12,
   },
-  disputeModalContent: {
-    borderTopLeftRadius: 20,
-    borderTopRightRadius: 20,
-    maxHeight: "90%",
-  },
-  disputeModalHeader: {
-    flexDirection: "row",
-    justifyContent: "space-between",
-    alignItems: "center",
-    padding: 16,
-    borderBottomWidth: 1,
-    borderBottomColor: "rgba(0, 0, 0, 0.1)",
-  },
-  disputeModalTitle: {
-    fontSize: 18,
-    fontWeight: "bold",
-  },
-  viewFullButton: {
-    fontSize: 14,
-    fontWeight: "500",
-  },
-  disputeModalBody: {
-    padding: 16,
-    maxHeight: "70%",
-  },
-  disputeSection: {
-    marginBottom: 20,
-    paddingBottom: 16,
-    borderBottomWidth: 1,
-  },
-  disputeSectionTitle: {
+  searchInput: {
+    flex: 1,
     fontSize: 16,
-    fontWeight: "600",
-    marginBottom: 12,
-  },
-  disputeInfo: {
-    backgroundColor: "rgba(0, 0, 0, 0.05)",
-    borderRadius: 8,
-    padding: 12,
-  },
-  disputeInfoRow: {
-    flexDirection: "row",
-    justifyContent: "space-between",
-    marginBottom: 8,
-  },
-  disputeInfoLabel: {
-    fontSize: 14,
-    fontWeight: "500",
-  },
-  disputeInfoValue: {
-    fontSize: 14,
-    maxWidth: "60%",
-    textAlign: "right",
+    marginLeft: 8,
   },
   statusBadge: {
+    borderRadius: 4,
     paddingHorizontal: 8,
     paddingVertical: 4,
-    borderRadius: 4,
+  },
+  statusFilters: {
+    marginBottom: 8,
+    paddingHorizontal: 16,
   },
   statusText: {
     fontSize: 12,
-    fontWeight: "500",
-    textTransform: "capitalize",
+    fontWeight: '500',
+    textTransform: 'capitalize',
   },
-  loadingRecommendation: {
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "center",
-    padding: 16,
-  },
-  noRecommendation: {
-    textAlign: "center",
-    padding: 16,
+  viewFullButton: {
     fontSize: 14,
+    fontWeight: '500',
   },
-  disputeModalActions: {
-    flexDirection: "row",
-    justifyContent: "space-between",
-    padding: 16,
-    borderTopWidth: 1,
-    borderTopColor: "rgba(0, 0, 0, 0.1)",
-  },
-  actionButton: {
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "center",
-    borderRadius: 8,
-    paddingVertical: 10,
-    paddingHorizontal: 16,
-    flex: 1,
-    marginHorizontal: 4,
-  },
-  actionButtonText: {
-    fontSize: 14,
-    fontWeight: "500",
-    marginLeft: 6,
-  },
-})
+});
 
-export default DisputeResolutionScreen
-
+export default DisputeResolutionScreen;

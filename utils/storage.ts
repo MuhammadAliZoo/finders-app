@@ -1,5 +1,6 @@
-import { getStorage, ref, uploadBytes, getDownloadURL, deleteObject } from 'firebase/storage';
-import { storage } from '../config/firebase';
+import { storage as supabaseStorage } from '../config/supabase';
+import * as ImageManipulator from 'expo-image-manipulator';
+import { supabase } from '../config/supabase';
 
 interface UploadOptions {
   maxWidth?: number;
@@ -7,43 +8,74 @@ interface UploadOptions {
   quality?: number;
 }
 
-export const uploadImage = async (uri: string, path: string, options: UploadOptions = {}) => {
+// Function to compress image before upload
+export const compressImage = async (uri: string): Promise<string> => {
+  const result = await ImageManipulator.manipulateAsync(uri, [{ resize: { width: 800 } }], {
+    compress: 0.7,
+    format: ImageManipulator.SaveFormat.JPEG,
+  });
+  return result.uri;
+};
+
+// Function to generate a unique file path
+export const generateStoragePath = (folder: string, fileName: string): string => {
+  const timestamp = Date.now();
+  const randomString = Math.random().toString(36).substring(7);
+  return `${folder}/${timestamp}-${randomString}-${fileName}`;
+};
+
+export const uploadToSupabase = async (uri: string, path: string): Promise<string> => {
   try {
-    // Fetch the image
-    const response = await fetch(uri);
+    // Compress image before upload
+    const compressedUri = await compressImage(uri);
+
+    // Convert URI to blob
+    const response = await fetch(compressedUri);
     const blob = await response.blob();
 
-    // Create a reference to the file location in Firebase Storage
-    const storageRef = ref(storage, path);
+    // Upload to Supabase Storage
+    const { data, error } = await supabaseStorage.from('finders-app').upload(path, blob, {
+      contentType: 'image/jpeg',
+      upsert: true,
+    });
 
-    // Upload the file
-    await uploadBytes(storageRef, blob);
+    if (error) throw error;
 
-    // Get the download URL
-    const downloadURL = await getDownloadURL(storageRef);
-    return downloadURL;
+    // Get public URL
+    const {
+      data: { publicUrl },
+    } = supabaseStorage.from('finders-app').getPublicUrl(path);
+
+    return publicUrl;
   } catch (error) {
-    console.error('Error uploading image:', error);
+    console.error('Error uploading to Supabase:', error);
     throw error;
   }
 };
 
-export const deleteImage = async (path: string) => {
+export const deleteFromSupabase = async (path: string): Promise<void> => {
   try {
-    const storageRef = ref(storage, path);
-    await deleteObject(storageRef);
+    const { error } = await supabaseStorage.from('finders-app').remove([path]);
+
+    if (error) throw error;
   } catch (error) {
-    console.error('Error deleting image:', error);
+    console.error('Error deleting from Supabase:', error);
     throw error;
   }
 };
 
-export const getImageUrl = async (path: string) => {
-  try {
-    const storageRef = ref(storage, path);
-    return await getDownloadURL(storageRef);
-  } catch (error) {
-    console.error('Error getting image URL:', error);
-    throw error;
-  }
-}; 
+export const uploadImage = async (uri: string, userId: string) => {
+  const response = await fetch(uri);
+  const blob = await response.blob();
+  const filePath = `profile-pictures/${userId}/${Date.now()}.jpg`;
+
+  const { data, error } = await supabase.storage
+    .from('profile-pictures')
+    .upload(filePath, blob, { upsert: true });
+
+  if (error) throw error;
+
+  const { data: urlData } = supabase.storage.from('profile-pictures').getPublicUrl(filePath);
+
+  return urlData.publicUrl;
+};

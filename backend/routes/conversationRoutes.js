@@ -5,7 +5,7 @@ import {
   getConversations,
   getConversation,
   updateConversation,
-  deleteConversation
+  deleteConversation,
 } from '../controllers/conversationController.js';
 
 const router = express.Router();
@@ -28,4 +28,4 @@ router.put('/:id', updateConversation);
 // Delete a conversation
 router.delete('/:id', deleteConversation);
 
-export default router; 
+export default router;

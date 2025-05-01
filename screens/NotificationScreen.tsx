@@ -1,13 +1,23 @@
-"use client"
-import { View, Text, StyleSheet, FlatList, TouchableOpacity, Image } from "react-native"
-import { useNavigation } from "@react-navigation/native"
-import { Ionicons } from "@expo/vector-icons"
-import { useTheme } from "../theme/ThemeContext"
-import { NativeStackNavigationProp } from "@react-navigation/native-stack"
-import { MainStackParamList } from "../navigation/types"
-import { useCallback } from "react"
+'use client';
+import React, { useEffect, useState } from 'react';
+import {
+  View,
+  Text,
+  StyleSheet,
+  FlatList,
+  TouchableOpacity,
+  Image,
+  ActivityIndicator,
+} from 'react-native';
+import { useNavigation } from '@react-navigation/native';
+import { Ionicons } from '@expo/vector-icons';
+import { useTheme } from '../theme/ThemeContext';
+import { NativeStackNavigationProp } from '@react-navigation/native-stack';
+import { MainStackParamList } from '../navigation/types';
+import { useCallback } from 'react';
+import { supabase } from '../config/supabase';
 
-type NotificationType = "match" | "message" | "status" | "reminder";
+type NotificationType = 'match' | 'message' | 'status' | 'reminder';
 
 type Notification = {
   id: string;
@@ -23,104 +33,141 @@ type Notification = {
 // Mock data
 const notifications: Notification[] = [
   {
-    id: "1",
-    type: "match",
-    title: "Potential Match Found",
-    message: "We found a potential match for your lost Gold Watch",
-    time: "2 hours ago",
+    id: '1',
+    type: 'match',
+    title: 'Potential Match Found',
+    message: 'We found a potential match for your lost Gold Watch',
+    time: '2 hours ago',
     read: false,
-    itemId: "1",
-    image: "https://via.placeholder.com/100",
+    itemId: '1',
+    image: 'https://via.placeholder.com/100',
   },
   {
-    id: "2",
-    type: "message",
-    title: "New Message",
-    message: "Michael Rodriguez: Is the watch still available?",
-    time: "5 hours ago",
+    id: '2',
+    type: 'message',
+    title: 'New Message',
+    message: 'Michael Rodriguez: Is the watch still available?',
+    time: '5 hours ago',
     read: true,
-    itemId: "2",
-    image: "https://via.placeholder.com/100",
+    itemId: '2',
+    image: 'https://via.placeholder.com/100',
   },
   {
-    id: "3",
-    type: "status",
-    title: "Status Update",
-    message: "Your claim for Black Wallet has been approved",
-    time: "1 day ago",
+    id: '3',
+    type: 'status',
+    title: 'Status Update',
+    message: 'Your claim for Black Wallet has been approved',
+    time: '1 day ago',
     read: true,
-    itemId: "3",
-    image: "https://via.placeholder.com/100",
+    itemId: '3',
+    image: 'https://via.placeholder.com/100',
   },
   {
-    id: "4",
-    type: "reminder",
-    title: "Reminder",
+    id: '4',
+    type: 'reminder',
+    title: 'Reminder',
     message: "Don't forget to update your lost item description",
-    time: "2 days ago",
+    time: '2 days ago',
     read: true,
     itemId: null,
     image: null,
   },
-]
+];
 
 const NotificationScreen = () => {
-  const navigation = useNavigation<NativeStackNavigationProp<MainStackParamList>>()
-  const { colors } = useTheme()
+  const navigation = useNavigation<NativeStackNavigationProp<MainStackParamList>>();
+  const { colors } = useTheme();
+  const [notifications, setNotifications] = useState<Notification[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
 
-  const handleNavigateToSearchResults = useCallback((itemId: string) => {
-    if (!itemId) {
-      console.warn('Invalid itemId for SearchResults navigation');
-      return;
-    }
-    navigation.navigate("SearchResults", { searchQuery: itemId });
-  }, [navigation]);
+  useEffect(() => {
+    const fetchNotifications = async () => {
+      setLoading(true);
+      setError(null);
+      try {
+        const { data, error } = await supabase
+          .from('notifications')
+          .select('*')
+          .order('created_at', { ascending: false });
 
-  const handleNavigateToItemDetails = useCallback((itemId: string) => {
-    if (!itemId) {
-      console.warn('Invalid itemId for ItemDetails navigation');
-      return;
-    }
-    navigation.navigate("ItemDetails", { itemId });
-  }, [navigation]);
+        if (error) throw error;
+        setNotifications(data || []);
+      } catch (err: any) {
+        setError(err.message || 'Failed to fetch notifications');
+      } finally {
+        setLoading(false);
+      }
+    };
 
-  const handleNotificationPress = useCallback((notification: Notification) => {
-    if (!notification.itemId) {
-      console.warn('No itemId associated with this notification');
-      return;
-    }
+    fetchNotifications();
+  }, []);
 
-    switch (notification.type) {
-      case "match":
-        handleNavigateToSearchResults(notification.itemId);
-        break;
-      case "message":
-      case "status":
-        handleNavigateToItemDetails(notification.itemId);
-        break;
-      default:
-        console.warn('No navigation action for this notification type');
-    }
-  }, [handleNavigateToSearchResults, handleNavigateToItemDetails]);
+  const handleNavigateToSearchResults = useCallback(
+    (itemId: string) => {
+      if (!itemId) {
+        console.warn('Invalid itemId for SearchResults navigation');
+        return;
+      }
+      navigation.navigate('SearchResults', { searchQuery: itemId });
+    },
+    [navigation],
+  );
+
+  const handleNavigateToItemDetails = useCallback(
+    (itemId: string) => {
+      if (!itemId) {
+        console.warn('Invalid itemId for ItemDetails navigation');
+        return;
+      }
+      navigation.navigate('ItemDetails', { id: itemId });
+    },
+    [navigation],
+  );
+
+  const handleNotificationPress = useCallback(
+    (notification: Notification) => {
+      if (!notification.itemId) {
+        console.warn('No itemId associated with this notification');
+        return;
+      }
+
+      switch (notification.type) {
+        case 'match':
+          handleNavigateToSearchResults(notification.itemId as string);
+          break;
+        case 'message':
+        case 'status':
+          handleNavigateToItemDetails(notification.itemId as string);
+          break;
+        default:
+          console.warn('No navigation action for this notification type');
+      }
+    },
+    [handleNavigateToSearchResults, handleNavigateToItemDetails],
+  );
 
   const getNotificationIcon = (type: NotificationType) => {
     switch (type) {
-      case "match":
-        return <Ionicons name="search" size={24} color={colors.primary} />
-      case "message":
-        return <Ionicons name="chatbubble" size={24} color={colors.primary} />
-      case "status":
-        return <Ionicons name="checkmark-circle" size={24} color={colors.warning} />
-      case "reminder":
-        return <Ionicons name="alarm" size={24} color={colors.error} />
+      case 'match':
+        return <Ionicons name="search" size={24} color={colors.primary} />;
+      case 'message':
+        return <Ionicons name="chatbubble" size={24} color={colors.primary} />;
+      case 'status':
+        return <Ionicons name="checkmark-circle" size={24} color={colors.warning} />;
+      case 'reminder':
+        return <Ionicons name="alarm" size={24} color={colors.error} />;
       default:
-        return <Ionicons name="notifications" size={24} color={colors.primary} />
+        return <Ionicons name="notifications" size={24} color={colors.primary} />;
     }
-  }
+  };
 
   const renderNotificationItem = ({ item }: { item: Notification }) => (
     <TouchableOpacity
-      style={[styles.notificationItem, { backgroundColor: item.read ? colors.background : colors.card }]}
+      style={[
+        styles.notificationItem,
+        { backgroundColor: item.read ? colors.background : colors.card },
+      ]}
       onPress={() => handleNotificationPress(item)}
       testID={`notification-${item.id}`}
     >
@@ -132,7 +179,7 @@ const NotificationScreen = () => {
         </View>
         <Text style={[styles.notificationMessage, { color: colors.text }]}>{item.message}</Text>
         {item.image && <Image source={{ uri: item.image }} style={styles.notificationImage} />}
-        {item.type === "match" && item.itemId && (
+        {item.type === 'match' && item.itemId && (
           <View style={styles.actionButtons}>
             <TouchableOpacity
               style={[styles.actionButton, { backgroundColor: colors.primary }]}
@@ -143,9 +190,9 @@ const NotificationScreen = () => {
             </TouchableOpacity>
           </View>
         )}
-        {item.type === "message" && item.itemId && (
+        {item.type === 'message' && item.itemId && (
           <View style={styles.actionButtons}>
-            <TouchableOpacity 
+            <TouchableOpacity
               style={[styles.actionButton, { backgroundColor: colors.primary }]}
               onPress={() => handleNavigateToItemDetails(item.itemId as string)}
               testID={`reply-${item.id}`}
@@ -157,12 +204,30 @@ const NotificationScreen = () => {
       </View>
       {!item.read && <View style={[styles.unreadIndicator, { backgroundColor: colors.primary }]} />}
     </TouchableOpacity>
-  )
+  );
+
+  if (loading) {
+    return (
+      <View style={[styles.container, { backgroundColor: colors.background }]}>
+        <ActivityIndicator size="large" color={colors.primary} />
+      </View>
+    );
+  }
+
+  if (error) {
+    return (
+      <View style={[styles.container, { backgroundColor: colors.background }]}>
+        <Text style={[styles.errorText, { color: colors.error }]}>{error}</Text>
+      </View>
+    );
+  }
 
   return (
     <View style={[styles.container, { backgroundColor: colors.background }]}>
       <View style={[styles.header, { backgroundColor: colors.background }]}>
-        <Text style={[styles.headerTitle, { color: colors.text }]} numberOfLines={1}>Notifications</Text>
+        <Text style={[styles.headerTitle, { color: colors.text }]} numberOfLines={1}>
+          Notifications
+        </Text>
         <TouchableOpacity style={styles.markAllReadButton}>
           <Text style={[styles.markAllRead, { color: colors.primary }]}>Mark all read</Text>
         </TouchableOpacity>
@@ -171,128 +236,161 @@ const NotificationScreen = () => {
       <FlatList
         data={notifications}
         renderItem={renderNotificationItem}
-        keyExtractor={(item) => item.id}
+        keyExtractor={item => item.id}
         contentContainerStyle={styles.notificationsList}
         showsVerticalScrollIndicator={false}
+        ListEmptyComponent={
+          <View style={styles.emptyState}>
+            <Ionicons name="notifications-off-outline" size={48} color={colors.secondary} />
+            <Text style={[styles.emptyStateText, { color: colors.text }]}>
+              No notifications yet
+            </Text>
+            <Text style={[styles.emptyStateSubtext, { color: colors.secondary }]}>
+              We'll notify you when something important happens
+            </Text>
+          </View>
+        }
       />
     </View>
-  )
-}
+  );
+};
 
 const styles = StyleSheet.create({
+  actionButton: {
+    alignItems: 'center',
+    borderRadius: 24,
+    justifyContent: 'center',
+    marginRight: 12,
+    paddingHorizontal: 20,
+    paddingVertical: 10,
+  },
+  actionButtonText: {
+    color: '#FFFFFF',
+    fontSize: 14,
+    fontWeight: '600',
+    letterSpacing: -0.2,
+  },
+  actionButtons: {
+    flexDirection: 'row',
+    marginTop: 4,
+  },
   container: {
     flex: 1,
   },
+  emptyState: {
+    alignItems: 'center',
+    flex: 1,
+    justifyContent: 'center',
+    padding: 20,
+  },
+  emptyStateSubtext: {
+    fontSize: 14,
+    marginTop: 8,
+    opacity: 0.8,
+    textAlign: 'center',
+  },
+  emptyStateText: {
+    fontSize: 18,
+    fontWeight: '600',
+    marginTop: 16,
+    textAlign: 'center',
+  },
+  errorText: {
+    fontSize: 16,
+    margin: 20,
+    textAlign: 'center',
+  },
   header: {
-    flexDirection: "row",
-    justifyContent: "space-between",
-    alignItems: "center",
+    alignItems: 'center',
+    borderBottomColor: 'rgba(0,0,0,0.05)',
+    borderBottomWidth: 1,
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    paddingBottom: 20,
     paddingHorizontal: 20,
     paddingTop: 60,
-    paddingBottom: 20,
-    borderBottomWidth: 1,
-    borderBottomColor: 'rgba(0,0,0,0.05)',
   },
   headerTitle: {
-    fontSize: 34,
-    fontWeight: "800",
     flex: 1,
+    fontSize: 34,
+    fontWeight: '800',
     letterSpacing: -0.5,
-  },
-  markAllReadButton: {
-    paddingVertical: 8,
-    paddingHorizontal: 12,
-    borderRadius: 16,
-    backgroundColor: 'rgba(0,0,0,0.05)',
   },
   markAllRead: {
     fontSize: 14,
-    fontWeight: "600",
+    fontWeight: '600',
   },
-  notificationsList: {
-    padding: 16,
+  markAllReadButton: {
+    backgroundColor: 'rgba(0,0,0,0.05)',
+    borderRadius: 16,
+    paddingHorizontal: 12,
+    paddingVertical: 8,
+  },
+  notificationContent: {
+    flex: 1,
+  },
+  notificationHeader: {
+    alignItems: 'center',
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    marginBottom: 6,
+  },
+  notificationIcon: {
+    alignItems: 'center',
+    backgroundColor: 'rgba(0,0,0,0.05)',
+    borderRadius: 22,
+    height: 44,
+    justifyContent: 'center',
+    marginRight: 16,
+    width: 44,
+  },
+  notificationImage: {
+    borderRadius: 12,
+    height: 180,
+    marginBottom: 12,
+    width: '100%',
   },
   notificationItem: {
-    flexDirection: "row",
-    padding: 16,
     borderRadius: 16,
+    elevation: 3,
+    flexDirection: 'row',
     marginBottom: 12,
-    position: "relative",
-    shadowColor: "#000",
+    padding: 16,
+    position: 'relative',
+    shadowColor: '#000',
     shadowOffset: {
       width: 0,
       height: 2,
     },
     shadowOpacity: 0.1,
     shadowRadius: 3,
-    elevation: 3,
-  },
-  notificationIcon: {
-    width: 44,
-    height: 44,
-    borderRadius: 22,
-    justifyContent: "center",
-    alignItems: "center",
-    marginRight: 16,
-    backgroundColor: 'rgba(0,0,0,0.05)',
-  },
-  notificationContent: {
-    flex: 1,
-  },
-  notificationHeader: {
-    flexDirection: "row",
-    justifyContent: "space-between",
-    alignItems: "center",
-    marginBottom: 6,
-  },
-  notificationTitle: {
-    fontSize: 16,
-    fontWeight: "700",
-    letterSpacing: -0.3,
-  },
-  notificationTime: {
-    fontSize: 12,
-    fontWeight: "500",
   },
   notificationMessage: {
     fontSize: 14,
-    marginBottom: 12,
     lineHeight: 20,
+    marginBottom: 12,
     opacity: 0.8,
   },
-  notificationImage: {
-    width: "100%",
-    height: 180,
-    borderRadius: 12,
-    marginBottom: 12,
+  notificationTime: {
+    fontSize: 12,
+    fontWeight: '500',
+  },
+  notificationTitle: {
+    fontSize: 16,
+    fontWeight: '700',
+    letterSpacing: -0.3,
+  },
+  notificationsList: {
+    padding: 16,
   },
   unreadIndicator: {
-    width: 10,
-    height: 10,
     borderRadius: 5,
-    position: "absolute",
-    top: 18,
+    height: 10,
+    position: 'absolute',
     right: 18,
+    top: 18,
+    width: 10,
   },
-  actionButtons: {
-    flexDirection: "row",
-    marginTop: 4,
-  },
-  actionButton: {
-    paddingHorizontal: 20,
-    paddingVertical: 10,
-    borderRadius: 24,
-    alignItems: "center",
-    justifyContent: "center",
-    marginRight: 12,
-  },
-  actionButtonText: {
-    color: "#FFFFFF",
-    fontWeight: "600",
-    fontSize: 14,
-    letterSpacing: -0.2,
-  },
-})
+});
 
-export default NotificationScreen
-
+export default NotificationScreen;

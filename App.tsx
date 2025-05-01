@@ -1,144 +1,90 @@
-import React from 'react';
+// Import polyfills first
+import './polyfills';
+
+import React, { useEffect, useCallback, useState } from 'react';
 import { NavigationContainer } from '@react-navigation/native';
-import { createNativeStackNavigator } from '@react-navigation/native-stack';
-import { FirebaseProvider } from './context/FirebaseContext';
-import { SocketProvider } from './context/SocketContext';
 import { StatusBar } from 'expo-status-bar';
-import { StyleSheet, View, Text } from 'react-native';
-import { SafeAreaProvider } from 'react-native-safe-area-context';
-import { GestureHandlerRootView } from 'react-native-gesture-handler';
-import { Provider as PaperProvider } from 'react-native-paper';
+import { AuthProvider } from './context/AuthContext';
+import { ThemeProvider } from './context/ThemeContext';
+import AppNavigator from './navigation/AppNavigator';
 import * as SplashScreen from 'expo-splash-screen';
-import { useCallback } from 'react';
-import { Platform } from 'react-native';
-import { RootStackParamList } from './navigation/types';
-import {
-  useFonts,
-  Poppins_400Regular as PoppinsRegular,
-  Poppins_500Medium as PoppinsMedium,
-  Poppins_600SemiBold as PoppinsSemiBold,
-  Poppins_700Bold as PoppinsBold,
-} from '@expo-google-fonts/poppins';
-import { useFirebase } from './context/FirebaseContext';
-
-// Import screens
-import { HomeScreen } from './screens/HomeScreen';
-import LoginScreen from './screens/auth/LoginScreen';
-import SignupScreen from './screens/auth/SignupScreen';
-import ProfileScreen from './screens/ProfileScreen';
-import SettingsScreen from './screens/SettingsScreen';
-import { ChatScreen } from './screens/ChatScreen';
-import { FirebaseTest } from './screens/FirebaseTest';
-
-const Stack = createNativeStackNavigator<RootStackParamList>();
+import { View, Alert } from 'react-native';
+import { initializeSupabase } from './config/supabase';
 
 // Keep the splash screen visible while we fetch resources
 SplashScreen.preventAutoHideAsync();
 
-function AppContent() {
-  const [fontsLoaded] = useFonts({
-    'Poppins-Regular': PoppinsRegular,
-    'Poppins-Medium': PoppinsMedium,
-    'Poppins-SemiBold': PoppinsSemiBold,
-    'Poppins-Bold': PoppinsBold,
-  });
+export default function App() {
+  const [appIsReady, setAppIsReady] = React.useState(false);
+  const [error, setError] = React.useState<Error | null>(null);
 
-  const { isInitialized, error } = useFirebase();
+  useEffect(() => {
+    async function prepare() {
+      try {
+        console.log('Starting app initialization...');
+        
+        // Initialize Supabase with more detailed error logging
+        console.log('Initializing Supabase...');
+        try {
+          await initializeSupabase();
+          console.log('Supabase initialized successfully');
+        } catch (supabaseError) {
+          console.error('Supabase initialization failed:', supabaseError);
+          throw supabaseError;
+        }
+        
+        // Ensure minimum splash screen time
+        console.log('Waiting for minimum splash screen time...');
+        await new Promise(resolve => setTimeout(resolve, 1000));
+        
+        console.log('App initialization completed successfully');
+        setAppIsReady(true);
+      } catch (e) {
+        console.error('Critical initialization error:', e);
+        setError(e instanceof Error ? e : new Error(String(e)));
+        // Important: Set appIsReady even if there's an error to prevent splash screen from being stuck
+        setAppIsReady(true);
+        Alert.alert(
+          'Initialization Error',
+          'Failed to initialize the app. Please check your internet connection and try again.',
+          [{ text: 'OK' }]
+        );
+      }
+    }
+
+    prepare();
+  }, []);
 
   const onLayoutRootView = useCallback(async () => {
-    if (fontsLoaded && isInitialized) {
-      await SplashScreen.hideAsync();
+    if (appIsReady) {
+      try {
+        console.log('Attempting to hide splash screen...');
+        await SplashScreen.hideAsync();
+        console.log('Splash screen hidden successfully');
+      } catch (e) {
+        console.error('Error hiding splash screen:', e);
+      }
     }
-  }, [fontsLoaded, isInitialized]);
+  }, [appIsReady]);
 
-  if (!fontsLoaded || !isInitialized) {
+  if (!appIsReady) {
     return (
-      <View style={styles.loadingContainer}>
-        <Text style={styles.loadingText}>Loading...</Text>
-      </View>
-    );
-  }
-
-  if (error) {
-    return (
-      <View style={styles.errorContainer}>
-        <Text style={styles.errorText}>Error initializing app: {error.message}</Text>
+      <View style={{ flex: 1, backgroundColor: '#FFFFFF' }}>
+        <StatusBar style="auto" />
       </View>
     );
   }
 
   return (
-    <GestureHandlerRootView style={{ flex: 1 }} onLayout={onLayoutRootView}>
-      <SafeAreaProvider>
-        <PaperProvider>
+    <ThemeProvider>
+      <AuthProvider>
+        <View style={{ flex: 1 }} onLayout={onLayoutRootView}>
           <NavigationContainer>
-            <Stack.Navigator
-              initialRouteName="Home"
-              screenOptions={{
-                headerShown: false,
-                contentStyle: { backgroundColor: '#FFFFFF' },
-              }}
-            >
-              <Stack.Screen name="Home" component={HomeScreen} />
-              <Stack.Screen name="Auth" component={LoginScreen} />
-              <Stack.Screen name="Signup" component={SignupScreen} />
-              <Stack.Screen name="Profile" component={ProfileScreen} />
-              <Stack.Screen name="Settings" component={SettingsScreen} />
-              <Stack.Screen name="FirebaseTest" component={FirebaseTest} />
-              <Stack.Screen 
-                name="Chat" 
-                component={ChatScreen}
-                initialParams={{
-                  conversationId: '',
-                  otherUser: {
-                    id: '',
-                    displayName: '',
-                    photoURL: null
-                  },
-                  item: undefined
-                }}
-              />
-            </Stack.Navigator>
             <StatusBar style="auto" />
+            <AppNavigator />
           </NavigationContainer>
-        </PaperProvider>
-      </SafeAreaProvider>
-    </GestureHandlerRootView>
+        </View>
+      </AuthProvider>
+    </ThemeProvider>
   );
 }
-
-export default function App() {
-  return (
-    <FirebaseProvider>
-      <SocketProvider>
-        <AppContent />
-      </SocketProvider>
-    </FirebaseProvider>
-  );
-}
-
-const styles = StyleSheet.create({
-  loadingContainer: {
-    flex: 1,
-    justifyContent: 'center',
-    alignItems: 'center',
-    backgroundColor: '#FFFFFF',
-  },
-  loadingText: {
-    fontSize: 18,
-    color: '#000000',
-  },
-  errorContainer: {
-    flex: 1,
-    justifyContent: 'center',
-    alignItems: 'center',
-    padding: 20,
-    backgroundColor: '#FFFFFF',
-  },
-  errorText: {
-    textAlign: 'center',
-    color: 'red',
-    fontSize: 16,
-  },
-});
-

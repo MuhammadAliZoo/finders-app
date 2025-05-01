@@ -63,35 +63,6 @@ const AIRecommendation: React.FC<AIRecommendationProps> = ({
 };
 
 const styles = StyleSheet.create({
-  container: {
-    padding: 16,
-    borderRadius: 12,
-    marginBottom: 12,
-  },
-  header: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    marginBottom: 12,
-  },
-  title: {
-    fontSize: 16,
-    fontWeight: '600',
-  },
-  confidenceBadge: {
-    paddingHorizontal: 8,
-    paddingVertical: 4,
-    borderRadius: 12,
-  },
-  confidenceText: {
-    fontSize: 12,
-    fontWeight: '600',
-  },
-  description: {
-    fontSize: 14,
-    lineHeight: 20,
-    marginBottom: 12,
-  },
   action: {
     fontSize: 14,
     marginBottom: 16,
@@ -101,19 +72,48 @@ const styles = StyleSheet.create({
     gap: 12,
   },
   button: {
+    alignItems: 'center',
+    borderRadius: 8,
     flex: 1,
     flexDirection: 'row',
-    alignItems: 'center',
+    gap: 8,
     justifyContent: 'center',
     padding: 12,
-    borderRadius: 8,
-    gap: 8,
   },
   buttonText: {
     color: '#fff',
     fontSize: 14,
     fontWeight: '600',
   },
+  confidenceBadge: {
+    borderRadius: 12,
+    paddingHorizontal: 8,
+    paddingVertical: 4,
+  },
+  confidenceText: {
+    fontSize: 12,
+    fontWeight: '600',
+  },
+  container: {
+    borderRadius: 12,
+    marginBottom: 12,
+    padding: 16,
+  },
+  description: {
+    fontSize: 14,
+    lineHeight: 20,
+    marginBottom: 12,
+  },
+  header: {
+    alignItems: 'center',
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    marginBottom: 12,
+  },
+  title: {
+    fontSize: 16,
+    fontWeight: '600',
+  },
 });
 
-export default AIRecommendation; 
+export default AIRecommendation;

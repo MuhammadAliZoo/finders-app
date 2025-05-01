@@ -1,439 +1,324 @@
-import React, { useState, useEffect, useRef, useCallback } from 'react';
-import { View, Text, StyleSheet, FlatList, TouchableOpacity, TextInput, KeyboardAvoidingView, Platform, ActivityIndicator, Image } from 'react-native';
+import React, { useEffect, useState, useRef } from 'react';
+import {
+  View,
+  Text,
+  StyleSheet,
+  FlatList,
+  TouchableOpacity,
+  TextInput,
+  KeyboardAvoidingView,
+  Platform,
+  ActivityIndicator,
+} from 'react-native';
+import { NativeStackScreenProps } from '@react-navigation/native-stack';
 import { Ionicons } from '@expo/vector-icons';
-import { colors } from '../theme/colors';
+import { useTheme } from '../theme/ThemeContext';
+import { MainStackParamList } from '../navigation/types';
+import { supabase } from '../config/supabase';
 import { useAuth } from '../context/AuthContext';
-import { useSocket } from '../context/SocketContext';
-import { useNavigation, useRoute, RouteProp } from '@react-navigation/native';
-import { formatDistanceToNow } from 'date-fns';
-import { ClaimCompletionPopup } from '../components/ClaimCompletionPopup';
-import { API_URL } from '../config';
-import { RootStackParamList } from '../navigation/types';
-import { auth, db } from '../config/firebase';
-import { collection, query, where, orderBy, onSnapshot, addDoc, serverTimestamp } from 'firebase/firestore';
-import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
 
-type ChatScreenNavigationProp = NativeStackNavigationProp<RootStackParamList>;
-type ChatScreenRouteProp = RouteProp<RootStackParamList, 'Chat'>;
-
-interface ChatUser {
-  id: string;
-  displayName: string;
-  photoURL?: string | null;
-}
-
-// Helper function to convert Auth User to ChatUser
-const convertToChatUser = (user: any | null): ChatUser | null => {
-  if (!user) return null;
-  return {
-    id: user.id || user._id || '',
-    displayName: user.displayName || user.name || 'Anonymous',
-    photoURL: user.photoURL || user.avatar
-  };
-};
+type Props = NativeStackScreenProps<MainStackParamList, 'Chat'>;
 
 interface Message {
-  _id: string;
+  id: string;
   content: string;
-  sender: ChatUser;
-  createdAt: string;
-  readBy: string[];
-  attachments?: {
-    type: string;
-    url: string;
-  }[];
+  created_at: string;
+  sender_id: string;
+  conversation_id: string;
+  is_read: boolean;
 }
 
-export const ChatScreen: React.FC = () => {
-  const route = useRoute<ChatScreenRouteProp>();
+export const ChatScreen: React.FC<Props> = ({ route, navigation }) => {
+  const { colors } = useTheme();
+  const { user } = useAuth();
   const { conversationId, otherUser, item } = route.params;
-  const { user: firebaseUser } = useAuth();
-  const user = convertToChatUser(firebaseUser);
-  const { socket, isConnected } = useSocket();
-  const navigation = useNavigation<ChatScreenNavigationProp>();
   const [messages, setMessages] = useState<Message[]>([]);
   const [newMessage, setNewMessage] = useState('');
   const [loading, setLoading] = useState(true);
-  const [showClaimPopup, setShowClaimPopup] = useState(false);
-  const [isFinder, setIsFinder] = useState(false);
-  const [isTyping, setIsTyping] = useState(false);
-  const [otherUserTyping, setOtherUserTyping] = useState(false);
-  const typingTimeoutRef = useRef<NodeJS.Timeout>();
+  const [error, setError] = useState<string | null>(null);
   const flatListRef = useRef<FlatList>(null);
 
   useEffect(() => {
-    if (!user) {
-      navigation.navigate('Auth');
-      return;
-    }
+    // Fetch initial messages
+    const fetchMessages = async () => {
+      setLoading(true);
+      setError(null);
+      try {
+        const { data, error } = await supabase
+          .from('messages')
+          .select('*')
+          .eq('conversation_id', conversationId)
+          .order('created_at', { ascending: true });
 
-    fetchMessages();
-    checkUserRole();
-    setupSocketListeners();
-
-    return () => {
-      if (typingTimeoutRef.current) {
-        clearTimeout(typingTimeoutRef.current);
+        if (error) throw error;
+        setMessages(data || []);
+      } catch (err: any) {
+        setError(err.message || 'Failed to fetch messages');
+      } finally {
+        setLoading(false);
       }
     };
-  }, [conversationId, socket, user]);
 
-  const setupSocketListeners = () => {
-    if (!socket) return;
+    fetchMessages();
 
-    socket.on('newMessage', (message: Message) => {
-      setMessages(prev => [...prev, message]);
-      if (user?.id) {
-        markMessageAsRead(message._id);
-      }
-    });
-
-    socket.on('messageRead', (messageId: string) => {
-      setMessages(prev => prev.map(msg => 
-        msg._id === messageId 
-          ? { ...msg, readBy: [...msg.readBy, otherUser.id] }
-          : msg
-      ));
-    });
-
-    socket.on('typing', (userId: string) => {
-      if (userId === otherUser.id) {
-        setOtherUserTyping(true);
-        setTimeout(() => setOtherUserTyping(false), 3000);
-      }
-    });
-
-    socket.on('stopTyping', (userId: string) => {
-      if (userId === otherUser.id) {
-        setOtherUserTyping(false);
-      }
-    });
-  };
-
-  const checkUserRole = async () => {
-    if (item) {
-      try {
-        const response = await fetch(`${API_URL}/items/${item._id}`);
-        const data = await response.json();
-        setIsFinder(data.finder?.id === user?.id);
-      } catch (error) {
-        console.error('Error checking user role:', error);
-      }
-    }
-  };
-
-  const fetchMessages = async () => {
-    try {
-      const response = await fetch(`${API_URL}/messages/${conversationId}`);
-      const data = await response.json();
-      setMessages(data);
-      setLoading(false);
-      
-      // Mark all messages as read
-      if (user?.id) {
-        data.forEach((message: Message) => {
-          if (!message.readBy.includes(user.id)) {
-            markMessageAsRead(message._id);
-          }
-        });
-      }
-    } catch (error) {
-      console.error('Error fetching messages:', error);
-      setLoading(false);
-    }
-  };
-
-  const markMessageAsRead = async (messageId: string) => {
-    if (!socket || !user?.id) return;
-
-    try {
-      await fetch(`${API_URL}/messages/${messageId}/read`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
+    // Subscribe to new messages
+    const subscription = supabase
+      .channel(`conversation:${conversationId}`)
+      .on(
+        'postgres_changes',
+        {
+          event: 'INSERT',
+          schema: 'public',
+          table: 'messages',
+          filter: `conversation_id=eq.${conversationId}`,
         },
-        body: JSON.stringify({ userId: user.id }),
-      });
+        payload => {
+          const newMessage = payload.new as Message;
+          setMessages(prev => [...prev, newMessage]);
+          scrollToBottom();
+        },
+      )
+      .subscribe();
 
-      socket.emit('messageRead', { messageId, userId: user.id });
-    } catch (error) {
-      console.error('Error marking message as read:', error);
-    }
+    // Mark messages as read
+    const markMessagesAsRead = async () => {
+      try {
+        await supabase
+          .from('messages')
+          .update({ is_read: true })
+          .eq('conversation_id', conversationId)
+          .eq('is_read', false)
+          .neq('sender_id', user?.id);
+      } catch (err) {
+        console.error('Error marking messages as read:', err);
+      }
+    };
+
+    markMessagesAsRead();
+
+    return () => {
+      subscription.unsubscribe();
+    };
+  }, [conversationId, user?.id]);
+
+  const scrollToBottom = () => {
+    flatListRef.current?.scrollToEnd({ animated: true });
   };
 
   const handleSendMessage = async () => {
-    if (!newMessage.trim() || !socket || !isConnected || !user?.id) return;
-
-    const messageData = {
-      conversation: conversationId,
-      content: newMessage.trim(),
-      sender: user.id,
-    };
+    if (!newMessage.trim()) return;
 
     try {
-      const response = await fetch(`${API_URL}/messages`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify(messageData),
+      const { error } = await supabase.from('messages').insert({
+        content: newMessage,
+        conversation_id: conversationId,
+        sender_id: user?.id,
+        is_read: false,
       });
 
-      if (response.ok) {
-        const newMessageData = await response.json();
-        setMessages(prev => [...prev, newMessageData]);
-        setNewMessage('');
-        
-        if (messages.length === 0) {
-          setShowClaimPopup(true);
-        }
-
-        socket.emit('sendMessage', {
-          conversationId,
-          message: newMessageData,
-        });
-      }
-    } catch (error) {
-      console.error('Error sending message:', error);
-    }
-  };
-
-  const handleTyping = () => {
-    if (!socket || !isConnected || !user?.id) return;
-
-    setIsTyping(true);
-    socket.emit('typing', { userId: user.id, conversationId });
-
-    if (typingTimeoutRef.current) {
-      clearTimeout(typingTimeoutRef.current);
-    }
-
-    typingTimeoutRef.current = setTimeout(() => {
-      setIsTyping(false);
-      socket.emit('stopTyping', { userId: user.id, conversationId });
-    }, 3000);
-  };
-
-  const handleClaimCompletion = async (completed: boolean) => {
-    if (!item || !user?.id) return;
-
-    try {
-      const response = await fetch(`${API_URL}/items/${item._id}/complete`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          completed,
-          userId: user.id,
-          isFinder,
-        }),
-      });
-
-      if (response.ok) {
-        if (completed) {
-          navigation.goBack();
-        }
-      }
-    } catch (error) {
-      console.error('Error handling claim completion:', error);
-    } finally {
-      setShowClaimPopup(false);
+      if (error) throw error;
+      setNewMessage('');
+      scrollToBottom();
+    } catch (err: any) {
+      setError(err.message || 'Failed to send message');
     }
   };
 
   const renderMessage = ({ item }: { item: Message }) => {
-    const isOwnMessage = item.sender.id === user?.id;
+    const isOwnMessage = item.sender_id === user?.id;
 
     return (
-      <View style={[styles.messageContainer, isOwnMessage ? styles.ownMessage : styles.otherMessage]}>
-        {!isOwnMessage && (
-          <Image
-            source={{ uri: item.sender.photoURL || 'https://via.placeholder.com/40' }}
-            style={styles.avatar}
-          />
-        )}
-        <View style={[styles.messageContent, isOwnMessage ? styles.ownMessageContent : styles.otherMessageContent]}>
-          <Text style={styles.messageText}>{item.content}</Text>
-          <Text style={styles.messageTime}>
-            {formatDistanceToNow(new Date(item.createdAt), { addSuffix: true })}
-            {isOwnMessage && item.readBy.includes(otherUser.id) && (
-              <Ionicons name="checkmark-done" size={16} color={colors.primary} style={styles.readIcon} />
-            )}
+      <View
+        style={[styles.messageContainer, isOwnMessage ? styles.ownMessage : styles.otherMessage]}
+      >
+        <View
+          style={[
+            styles.messageBubble,
+            {
+              backgroundColor: isOwnMessage ? colors.primary : colors.card,
+            },
+          ]}
+        >
+          <Text style={[styles.messageText, { color: isOwnMessage ? '#FFFFFF' : colors.text }]}>
+            {item.content}
+          </Text>
+          <Text
+            style={[
+              styles.messageTime,
+              { color: isOwnMessage ? 'rgba(255,255,255,0.7)' : colors.secondary },
+            ]}
+          >
+            {new Date(item.created_at).toLocaleTimeString([], {
+              hour: '2-digit',
+              minute: '2-digit',
+            })}
           </Text>
         </View>
       </View>
     );
   };
 
+  if (loading) {
+    return (
+      <View style={[styles.container, { backgroundColor: colors.background }]}>
+        <ActivityIndicator size="large" color={colors.primary} />
+      </View>
+    );
+  }
+
+  if (error) {
+    return (
+      <View style={[styles.container, { backgroundColor: colors.background }]}>
+        <Text style={[styles.errorText, { color: colors.error }]}>{error}</Text>
+      </View>
+    );
+  }
+
   return (
     <KeyboardAvoidingView
-      style={styles.container}
-      behavior={Platform.OS === 'ios' ? 'padding' : undefined}
+      style={[styles.container, { backgroundColor: colors.background }]}
+      behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
       keyboardVerticalOffset={Platform.OS === 'ios' ? 90 : 0}
     >
-      <View style={styles.header}>
-        <TouchableOpacity onPress={() => navigation.goBack()} style={styles.backButton}>
+      <View style={[styles.header, { backgroundColor: colors.background }]}>
+        <TouchableOpacity style={styles.backButton} onPress={() => navigation.goBack()}>
           <Ionicons name="arrow-back" size={24} color={colors.text} />
         </TouchableOpacity>
         <View style={styles.headerContent}>
-          <Text style={styles.headerTitle}>{otherUser.displayName}</Text>
-          {item && <Text style={styles.headerSubtitle}>{item.title}</Text>}
-          {otherUserTyping && <Text style={styles.typingIndicator}>typing...</Text>}
+          <Text style={[styles.headerTitle, { color: colors.text }]}>
+            {otherUser?.name || 'Chat'}
+          </Text>
+          {item && (
+            <Text style={[styles.headerSubtitle, { color: colors.secondary }]}>{item.title}</Text>
+          )}
         </View>
       </View>
 
-      {loading ? (
-        <View style={styles.loadingContainer}>
-          <ActivityIndicator size="large" color={colors.primary} />
-        </View>
-      ) : (
-        <FlatList
-          ref={flatListRef}
-          data={messages}
-          renderItem={renderMessage}
-          keyExtractor={item => item._id}
-          contentContainerStyle={styles.messagesList}
-          onContentSizeChange={() => flatListRef.current?.scrollToEnd()}
-        />
-      )}
+      <FlatList
+        ref={flatListRef}
+        data={messages}
+        renderItem={renderMessage}
+        keyExtractor={item => item.id}
+        contentContainerStyle={styles.messagesList}
+        onContentSizeChange={scrollToBottom}
+        onLayout={scrollToBottom}
+      />
 
-      <View style={styles.inputContainer}>
+      <View
+        style={[
+          styles.inputContainer,
+          { backgroundColor: colors.card, borderTopColor: colors.border },
+        ]}
+      >
         <TextInput
-          style={styles.input}
-          value={newMessage}
-          onChangeText={text => {
-            setNewMessage(text);
-            handleTyping();
-          }}
+          style={[styles.input, { color: colors.text }]}
           placeholder="Type a message..."
-          placeholderTextColor={colors.gray}
+          placeholderTextColor={colors.secondary}
+          value={newMessage}
+          onChangeText={setNewMessage}
           multiline
         />
         <TouchableOpacity
-          style={[styles.sendButton, !newMessage.trim() && styles.sendButtonDisabled]}
+          style={[
+            styles.sendButton,
+            { backgroundColor: newMessage.trim() ? colors.primary : colors.secondary },
+          ]}
           onPress={handleSendMessage}
-          disabled={!newMessage.trim() || !isConnected}
+          disabled={!newMessage.trim()}
         >
-          <Ionicons name="send" size={24} color={colors.background} />
+          <Ionicons name="send" size={24} color={newMessage.trim() ? '#FFFFFF' : colors.text} />
         </TouchableOpacity>
       </View>
-
-      <ClaimCompletionPopup
-        visible={showClaimPopup}
-        onYes={() => handleClaimCompletion(true)}
-        onNo={() => handleClaimCompletion(false)}
-        onClose={() => setShowClaimPopup(false)}
-      />
     </KeyboardAvoidingView>
   );
 };
 
 const styles = StyleSheet.create({
+  backButton: {
+    marginRight: 8,
+    padding: 8,
+  },
   container: {
     flex: 1,
-    backgroundColor: colors.background,
+  },
+  errorText: {
+    fontSize: 16,
+    margin: 20,
+    textAlign: 'center',
   },
   header: {
-    flexDirection: 'row',
     alignItems: 'center',
-    padding: 16,
     borderBottomWidth: 1,
-    borderBottomColor: colors.lightGray,
-  },
-  backButton: {
-    marginRight: 16,
+    flexDirection: 'row',
+    paddingBottom: 16,
+    paddingHorizontal: 16,
+    paddingTop: 60,
   },
   headerContent: {
     flex: 1,
   },
-  headerTitle: {
-    fontSize: 18,
-    fontWeight: 'bold',
-    color: colors.text,
-  },
   headerSubtitle: {
     fontSize: 14,
-    color: colors.gray,
+    marginTop: 4,
   },
-  typingIndicator: {
-    fontSize: 12,
-    color: colors.gray,
-    fontStyle: 'italic',
+  headerTitle: {
+    fontSize: 18,
+    fontWeight: '600',
   },
-  loadingContainer: {
+  input: {
+    borderRadius: 20,
     flex: 1,
-    justifyContent: 'center',
+    fontSize: 16,
+    marginRight: 8,
+    maxHeight: 100,
+    padding: 12,
+  },
+  inputContainer: {
     alignItems: 'center',
+    borderTopWidth: 1,
+    flexDirection: 'row',
+    padding: 16,
+  },
+  messageBubble: {
+    borderRadius: 16,
+    elevation: 2,
+    maxWidth: '80%',
+    padding: 12,
+    shadowColor: '#000',
+    shadowOffset: {
+      width: 0,
+      height: 1,
+    },
+    shadowOpacity: 0.1,
+    shadowRadius: 2,
+  },
+  messageContainer: {
+    marginBottom: 16,
+  },
+  messageText: {
+    fontSize: 16,
+    marginBottom: 4,
+  },
+  messageTime: {
+    alignSelf: 'flex-end',
+    fontSize: 12,
   },
   messagesList: {
     padding: 16,
   },
-  messageContainer: {
-    flexDirection: 'row',
-    marginBottom: 16,
-    maxWidth: '80%',
+  otherMessage: {
+    alignItems: 'flex-start',
   },
   ownMessage: {
-    alignSelf: 'flex-end',
-  },
-  otherMessage: {
-    alignSelf: 'flex-start',
-  },
-  avatar: {
-    width: 40,
-    height: 40,
-    borderRadius: 20,
-    marginRight: 8,
-  },
-  messageContent: {
-    padding: 12,
-    borderRadius: 16,
-  },
-  ownMessageContent: {
-    backgroundColor: colors.primary,
-  },
-  otherMessageContent: {
-    backgroundColor: colors.lightGray,
-  },
-  messageText: {
-    color: colors.text,
-    fontSize: 16,
-  },
-  messageTime: {
-    fontSize: 12,
-    color: colors.gray,
-    marginTop: 4,
-    flexDirection: 'row',
-    alignItems: 'center',
-  },
-  readIcon: {
-    marginLeft: 4,
-  },
-  inputContainer: {
-    flexDirection: 'row',
-    padding: 16,
-    borderTopWidth: 1,
-    borderTopColor: colors.lightGray,
-  },
-  input: {
-    flex: 1,
-    backgroundColor: colors.lightGray,
-    borderRadius: 20,
-    paddingHorizontal: 16,
-    paddingVertical: 8,
-    marginRight: 8,
-    maxHeight: 100,
+    alignItems: 'flex-end',
   },
   sendButton: {
-    width: 40,
-    height: 40,
-    borderRadius: 20,
-    backgroundColor: colors.primary,
-    justifyContent: 'center',
     alignItems: 'center',
+    borderRadius: 20,
+    height: 40,
+    justifyContent: 'center',
+    width: 40,
   },
-  sendButtonDisabled: {
-    backgroundColor: colors.gray,
-  },
-}); 
+});
+
+export default ChatScreen;

@@ -12,7 +12,7 @@ export const login = async (req, res) => {
     }
 
     const token = jwt.sign({ userId: user._id }, process.env.JWT_SECRET, {
-      expiresIn: '30d'
+      expiresIn: '30d',
     });
 
     res.json({
@@ -21,8 +21,8 @@ export const login = async (req, res) => {
         _id: user._id,
         name: user.name,
         email: user.email,
-        avatar: user.avatar
-      }
+        avatar: user.avatar,
+      },
     });
   } catch (error) {
     res.status(500).json({ message: error.message });
@@ -41,13 +41,13 @@ export const register = async (req, res) => {
     const user = new User({
       name,
       email,
-      password: hashedPassword
+      password: hashedPassword,
     });
 
     await user.save();
 
     const token = jwt.sign({ userId: user._id }, process.env.JWT_SECRET, {
-      expiresIn: '30d'
+      expiresIn: '30d',
     });
 
     res.status(201).json({
@@ -56,8 +56,8 @@ export const register = async (req, res) => {
         _id: user._id,
         name: user.name,
         email: user.email,
-        avatar: user.avatar
-      }
+        avatar: user.avatar,
+      },
     });
   } catch (error) {
     res.status(500).json({ message: error.message });
@@ -95,9 +95,9 @@ export const updateProfile = async (req, res) => {
       _id: user._id,
       name: user.name,
       email: user.email,
-      avatar: user.avatar
+      avatar: user.avatar,
     });
   } catch (error) {
     res.status(500).json({ message: error.message });
   }
-}; 
+};

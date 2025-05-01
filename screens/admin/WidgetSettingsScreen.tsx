@@ -42,8 +42,8 @@ const WidgetSettingsScreen = () => {
   const toggleSetting = (id: string) => {
     setSettings(prevSettings =>
       prevSettings.map(setting =>
-        setting.id === id ? { ...setting, enabled: !setting.enabled } : setting
-      )
+        setting.id === id ? { ...setting, enabled: !setting.enabled } : setting,
+      ),
     );
   };
 
@@ -58,15 +58,10 @@ const WidgetSettingsScreen = () => {
 
       <View style={styles.settingsList}>
         {settings.map(setting => (
-          <TouchableOpacity
-            key={setting.id}
-            onPress={() => toggleSetting(setting.id)}
-          >
+          <TouchableOpacity key={setting.id} onPress={() => toggleSetting(setting.id)}>
             <View style={[styles.settingItem, { backgroundColor: colors.card }]}>
               <View style={styles.settingInfo}>
-                <Text style={[styles.settingName, { color: colors.text }]}>
-                  {setting.name}
-                </Text>
+                <Text style={[styles.settingName, { color: colors.text }]}>{setting.name}</Text>
                 <Text style={[styles.settingDescription, { color: colors.secondary }]}>
                   {setting.description}
                 </Text>
@@ -100,57 +95,57 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   header: {
-    padding: 20,
-    borderBottomWidth: 1,
     borderBottomColor: '#eee',
-  },
-  title: {
-    fontSize: 24,
-    fontWeight: 'bold',
-    marginBottom: 8,
-  },
-  subtitle: {
-    fontSize: 16,
-  },
-  settingsList: {
+    borderBottomWidth: 1,
     padding: 20,
-  },
-  settingItem: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    padding: 16,
-    borderRadius: 12,
-    marginBottom: 12,
-    elevation: 2,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.1,
-    shadowRadius: 4,
-  },
-  settingInfo: {
-    flex: 1,
-    marginRight: 16,
-  },
-  settingName: {
-    fontSize: 16,
-    fontWeight: '600',
-    marginBottom: 4,
-  },
-  settingDescription: {
-    fontSize: 14,
   },
   saveButton: {
+    alignItems: 'center',
+    borderRadius: 12,
     margin: 20,
     padding: 16,
-    borderRadius: 12,
-    alignItems: 'center',
   },
   saveButtonText: {
     color: '#fff',
     fontSize: 16,
     fontWeight: '600',
   },
+  settingDescription: {
+    fontSize: 14,
+  },
+  settingInfo: {
+    flex: 1,
+    marginRight: 16,
+  },
+  settingItem: {
+    alignItems: 'center',
+    borderRadius: 12,
+    elevation: 2,
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    marginBottom: 12,
+    padding: 16,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.1,
+    shadowRadius: 4,
+  },
+  settingName: {
+    fontSize: 16,
+    fontWeight: '600',
+    marginBottom: 4,
+  },
+  settingsList: {
+    padding: 20,
+  },
+  subtitle: {
+    fontSize: 16,
+  },
+  title: {
+    fontSize: 24,
+    fontWeight: 'bold',
+    marginBottom: 8,
+  },
 });
 
-export default WidgetSettingsScreen; 
+export default WidgetSettingsScreen;

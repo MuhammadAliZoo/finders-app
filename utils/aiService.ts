@@ -64,4 +64,4 @@ export const processImageWithAI = async (imageUri: string): Promise<string> => {
     console.error('AI processing error:', error);
     throw error;
   }
-}; 
+};

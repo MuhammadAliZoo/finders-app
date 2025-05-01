@@ -16,18 +16,11 @@ export const ClaimCompletionPopup: React.FC<ClaimCompletionPopupProps> = ({
   onClose,
 }) => {
   return (
-    <Modal
-      visible={visible}
-      transparent
-      animationType="fade"
-      onRequestClose={onClose}
-    >
+    <Modal visible={visible} transparent animationType="fade" onRequestClose={onClose}>
       <View style={styles.overlay}>
         <View style={styles.container}>
           <Text style={styles.title}>Complete Claim?</Text>
-          <Text style={styles.message}>
-            Has this item been successfully claimed?
-          </Text>
+          <Text style={styles.message}>Has this item been successfully claimed?</Text>
           <View style={styles.buttonContainer}>
             <TouchableOpacity style={[styles.button, styles.noButton]} onPress={onNo}>
               <Text style={styles.buttonText}>No</Text>
@@ -43,55 +36,55 @@ export const ClaimCompletionPopup: React.FC<ClaimCompletionPopupProps> = ({
 };
 
 const styles = StyleSheet.create({
-  overlay: {
+  button: {
+    borderRadius: 8,
     flex: 1,
-    backgroundColor: 'rgba(0, 0, 0, 0.5)',
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  container: {
-    backgroundColor: colors.background,
-    borderRadius: 16,
-    padding: 24,
-    width: '80%',
-    maxWidth: 400,
-  },
-  title: {
-    fontSize: 20,
-    fontWeight: 'bold',
-    color: colors.text,
-    marginBottom: 12,
-    textAlign: 'center',
-  },
-  message: {
-    fontSize: 16,
-    color: colors.gray,
-    marginBottom: 24,
-    textAlign: 'center',
+    marginHorizontal: 8,
+    paddingVertical: 12,
   },
   buttonContainer: {
     flexDirection: 'row',
     justifyContent: 'space-between',
   },
-  button: {
-    flex: 1,
-    paddingVertical: 12,
-    borderRadius: 8,
-    marginHorizontal: 8,
+  buttonText: {
+    color: colors.text,
+    fontSize: 16,
+    fontWeight: '600',
+    textAlign: 'center',
+  },
+  container: {
+    backgroundColor: colors.background,
+    borderRadius: 16,
+    maxWidth: 400,
+    padding: 24,
+    width: '80%',
+  },
+  message: {
+    color: colors.gray,
+    fontSize: 16,
+    marginBottom: 24,
+    textAlign: 'center',
   },
   noButton: {
     backgroundColor: colors.lightGray,
   },
+  overlay: {
+    alignItems: 'center',
+    backgroundColor: 'rgba(0, 0, 0, 0.5)',
+    flex: 1,
+    justifyContent: 'center',
+  },
+  title: {
+    color: colors.text,
+    fontSize: 20,
+    fontWeight: 'bold',
+    marginBottom: 12,
+    textAlign: 'center',
+  },
   yesButton: {
     backgroundColor: colors.primary,
-  },
-  buttonText: {
-    fontSize: 16,
-    fontWeight: '600',
-    textAlign: 'center',
-    color: colors.text,
   },
   yesButtonText: {
     color: colors.background,
   },
-}); 
+});

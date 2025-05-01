@@ -29,7 +29,7 @@ export const PermissionsProvider: React.FC<{ children: React.ReactNode }> = ({ c
   const checkPermissions = async () => {
     try {
       setState(prev => ({ ...prev, loading: true, error: null }));
-      
+
       const foregroundStatus = await Location.getForegroundPermissionsAsync();
       const backgroundStatus = await Location.getBackgroundPermissionsAsync();
 
@@ -58,7 +58,7 @@ export const PermissionsProvider: React.FC<{ children: React.ReactNode }> = ({ c
         Alert.alert(
           'Location Permission Required',
           'Please enable location services to use this feature.',
-          [{ text: 'OK' }]
+          [{ text: 'OK' }],
         );
         return;
       }
@@ -69,7 +69,7 @@ export const PermissionsProvider: React.FC<{ children: React.ReactNode }> = ({ c
         Alert.alert(
           'Background Location',
           'Background location access was not granted. Some features may be limited.',
-          [{ text: 'OK' }]
+          [{ text: 'OK' }],
         );
       }
 
@@ -100,11 +100,7 @@ export const PermissionsProvider: React.FC<{ children: React.ReactNode }> = ({ c
     requestPermissions,
   };
 
-  return (
-    <PermissionsContext.Provider value={value}>
-      {children}
-    </PermissionsContext.Provider>
-  );
+  return <PermissionsContext.Provider value={value}>{children}</PermissionsContext.Provider>;
 };
 
 export const usePermissions = () => {
@@ -113,4 +109,4 @@ export const usePermissions = () => {
     throw new Error('usePermissions must be used within a PermissionsProvider');
   }
   return context;
-}; 
+};

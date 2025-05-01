@@ -1,1 +1,1 @@
-router.post('/:itemId/complete', auth, itemController.completeItemClaim); 
+router.post('/:itemId/complete', auth, itemController.completeItemClaim);

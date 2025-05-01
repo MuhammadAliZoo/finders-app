@@ -55,9 +55,9 @@ A React Native mobile application built with Expo for connecting people who have
 
 - **Authentication & Storage**
 
-  - Firebase Authentication
-  - Firebase Storage
-  - Firebase Firestore
+  - Supabase Authentication
+  - Supabase Storage
+  - Supabase Database
 
 - **Other Tools**
   - Google Maps API
@@ -90,6 +90,8 @@ A React Native mobile application built with Expo for connecting people who have
      ```
      EXPO_PUBLIC_API_URL=your_api_url
      EXPO_PUBLIC_GOOGLE_MAPS_API_KEY=your_google_maps_api_key
+     EXPO_PUBLIC_SUPABASE_URL=your_supabase_url
+     EXPO_PUBLIC_SUPABASE_ANON_KEY=your_supabase_anon_key
      ```
 
 4. **Start the development server**
@@ -99,13 +101,13 @@ A React Native mobile application built with Expo for connecting people who have
 
 ## 🔧 Configuration
 
-### Firebase Setup
+### Supabase Setup
 
-1. Create a Firebase project
-2. Add your Firebase configuration in `app/utils/firebase.ts`
-3. Enable Authentication methods in Firebase Console
-4. Set up Firestore rules
-5. Configure Storage rules
+1. Create a Supabase project at [supabase.com](https://supabase.com)
+2. Get your Supabase URL and anon key from Project Settings > API
+3. Add your Supabase credentials to your `.env` file as shown above
+4. Set up authentication, storage buckets, and database tables in the Supabase dashboard
+5. Configure storage and RLS policies as needed
 
 ### Google Maps Setup
 
@@ -133,52 +135,59 @@ For support, email [your-email@example.com] or open an issue in the repository.
 - [ ] Multi-language support
 - [ ] Reward system for finders
 
+## 🔄 Recent Changes (As of March 2024)
+
+### Environment and Configuration Updates
+
+- Added polyfills for Node.js built-in modules compatibility
+- Updated Supabase client configuration with improved error handling
+- Added debug logging for environment variables
+- Implemented Expo Go specific error handling for Supabase operations
+
+### Supabase Integration Improvements
+
+- Enhanced Supabase client initialization with proper WebSocket configuration
+- Added comprehensive error handling for storage, auth, and realtime operations
+- Implemented connection testing with timeout handling
+- Added platform-specific adaptations for React Native environment
+
+### Development Environment
+
+- Added `react-native-url-polyfill` for URL compatibility
+- Implemented `react-native-get-random-values` for crypto operations
+- Added WebSocket constructor configuration for React Native
+- Enhanced AsyncStorage integration with Supabase client
+
 ## 🚧 Current Implementation Challenges
 
-### Firebase Integration Issues
+### Supabase Integration Issues
 
-- Firebase native modules (`@react-native-firebase/*`) compatibility issues with Expo Go
-- Version conflicts between Firebase packages (current version 18.7.3) and other dependencies
-- Need to implement custom development client for native Firebase functionality
-- Configuration issues with `google-services.json` and `GoogleService-Info.plist`
+- [GraphQL] Invalid UUID appId errors occurring during realtime connections
+- WebSocket connection stability issues in development environment
+- Environment variable loading inconsistencies between development and production
+- Realtime subscription timeout issues in Expo Go environment
 
-### Expo Configuration Challenges
+### Known Issues and Workarounds
 
-- Conflicts between Expo managed workflow and native module requirements
-- Navigation types need updates to include new screens (e.g., FirebaseTest screen)
-- Issues with Expo prebuild process when including native modules
-- Environment variable loading errors affecting configuration
+1. **[GraphQL] Invalid UUID appId Issue**
 
-### Development Environment Setup
+   - **Description**: Error occurs during realtime connections with Supabase
+   - **Current Status**: Under investigation
+   - **Temporary Workaround**:
+     - Implemented timeout handling for realtime connections
+     - Added fallback mechanism to continue app initialization even if realtime connection fails
 
-- Native module integration requiring custom development client
-- Build process failing due to plugin configuration errors
-- Package version mismatches between Expo SDK 52 and React Native dependencies
-- Pod installation issues in iOS development environment
+2. **Environment Variable Loading**
 
-### Potential Solutions Being Explored
+   - **Description**: Inconsistent loading of SUPABASE_URL and SUPABASE_ANON_KEY
+   - **Solution**:
+     - Added debug logging for environment variables
+     - Implemented proper error messages for missing configuration
+     - Using EXPO*PUBLIC* prefix for all environment variables
 
-1. **Firebase Integration**
-
-   - Consider switching to Expo's Firebase SDK
-   - Implement proper version management for Firebase packages
-   - Complete native module setup with development client
-
-2. **Expo Configuration**
-
-   - Update navigation types and configurations
-   - Resolve prebuild process issues
-   - Implement proper environment variable handling
-
-3. **Development Setup**
-   - Configure proper development client setup
-   - Resolve pod installation issues
-   - Align package versions with Expo SDK requirements
-
-### Next Steps
-
-1. Resolve Firebase configuration issues
-2. Complete native module setup
-3. Fix navigation type definitions
-4. Implement proper environment variable handling
-5. Resolve pod installation and build process issues
+3. **WebSocket Connection Issues**
+   - **Description**: Unstable WebSocket connections in React Native environment
+   - **Solution**:
+     - Implemented custom WebSocket constructor for React Native
+     - Added connection status logging
+     - Implemented automatic reconnection handling

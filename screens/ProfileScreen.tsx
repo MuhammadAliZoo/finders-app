@@ -1,57 +1,81 @@
-"use client"
+'use client';
 
 import React, { useState } from 'react';
-import { View, Text, StyleSheet, Image, TouchableOpacity, ScrollView, Switch, Alert, ViewStyle, ActivityIndicator } from "react-native"
-import { Ionicons } from "@expo/vector-icons"
-import { useTheme } from "../theme/ThemeContext"
-import { useNavigation } from "@react-navigation/native"
-import { NativeStackNavigationProp } from "@react-navigation/native-stack"
-import { CompositeNavigationProp } from '@react-navigation/native'
-import { BottomTabNavigationProp } from '@react-navigation/bottom-tabs'
-import { MainStackParamList, TabParamList } from "../navigation/types"
-import * as ImagePicker from 'expo-image-picker'
-import type { ThemeColors } from '../types'
-import { useAuth } from "../context/AuthContext"
-import auth from '@react-native-firebase/auth'
-import { User } from '../types/user'
-import ImageUpload from '../components/ImageUpload'
+import {
+  View,
+  Text,
+  StyleSheet,
+  Image,
+  TouchableOpacity,
+  ScrollView,
+  Switch,
+  Alert,
+  ViewStyle,
+  ActivityIndicator,
+  Button,
+  TextInput,
+} from 'react-native';
+import { Ionicons } from '@expo/vector-icons';
+import { useTheme } from '../theme/ThemeContext';
+import { useNavigation } from '@react-navigation/native';
+import { NativeStackNavigationProp } from '@react-navigation/native-stack';
+import { CompositeNavigationProp } from '@react-navigation/native';
+import { BottomTabNavigationProp } from '@react-navigation/bottom-tabs';
+import { MainStackParamList, TabParamList, RootStackParamList } from '../navigation/types';
+import * as ImagePicker from 'expo-image-picker';
+import type { ThemeColors } from '../types';
+import { useAuth } from '../context/AuthContext';
+import ImageUpload from '../components/ImageUpload';
+import { uploadImage } from '../utils/storage';
+import { supabase } from '../config/supabase';
 
 type ProfileScreenNavigationProp = CompositeNavigationProp<
   BottomTabNavigationProp<TabParamList, 'ProfileTab'>,
-  NativeStackNavigationProp<MainStackParamList>
+  NativeStackNavigationProp<RootStackParamList>
 >;
 
 const ProfileScreen = () => {
   const navigation = useNavigation<ProfileScreenNavigationProp>();
   const { colors, isDark, toggleTheme } = useTheme();
-  const { user, updateUserProfile } = useAuth();
+  const { user, loading, updateUserProfile, signOut } = useAuth();
   const [notificationsEnabled, setNotificationsEnabled] = useState(true);
   const [locationEnabled, setLocationEnabled] = useState(true);
-  const [loading, setLoading] = useState(false);
+  const [isEditing, setIsEditing] = useState(false);
+  const [displayName, setDisplayName] = useState(user?.displayName || '');
+  const [phoneNumber, setPhoneNumber] = useState(user?.phoneNumber || '');
+  const [isUpdating, setIsUpdating] = useState(false);
 
-  const updateProfilePicture = async (photoURL: string) => {
+  const handleProfilePictureUpload = async (uri: string) => {
     try {
-      setLoading(true);
-      await updateUserProfile({ photoURL });
-      Alert.alert('Success', 'Profile picture updated successfully!');
-    } catch (error) {
-      console.error('Error updating profile picture:', error);
-      Alert.alert('Error', 'Failed to update profile picture');
-    } finally {
-      setLoading(false);
+      if (!user) throw new Error('User not logged in');
+      const url = await uploadImage(uri, user.id);
+      await updateUserProfile({
+        photoURL: url,
+      });
+      Alert.alert('Success', 'Profile picture updated!');
+    } catch (error: any) {
+      Alert.alert('Error', error.message || 'Failed to update profile picture');
     }
   };
 
-  const removeProfilePicture = async () => {
+  const handleUpdateProfile = async () => {
+    if (!displayName) {
+      Alert.alert('Error', 'Display name is required');
+      return;
+    }
+
+    setIsUpdating(true);
     try {
-      setLoading(true);
-      await updateUserProfile({ photoURL: null });
-      Alert.alert('Success', 'Profile picture removed successfully!');
-    } catch (error) {
-      console.error('Error removing profile picture:', error);
-      Alert.alert('Error', 'Failed to remove profile picture');
+      await updateUserProfile({
+        displayName,
+        phoneNumber,
+      });
+      Alert.alert('Success', 'Profile updated successfully');
+      setIsEditing(false);
+    } catch (error: any) {
+      Alert.alert('Error', error.message || 'Failed to update profile');
     } finally {
-      setLoading(false);
+      setIsUpdating(false);
     }
   };
 
@@ -67,13 +91,12 @@ const ProfileScreen = () => {
     navigation.navigate('PrivacySecurity');
   };
 
-  const handleLogout = async () => {
+  const handleSignOut = async () => {
     try {
-      await auth().signOut();
-      navigation.navigate('Login');
-    } catch (error) {
-      console.error('Error signing out:', error);
-      Alert.alert('Error', 'Failed to sign out');
+      await signOut();
+      // Navigation will be handled by the auth state listener
+    } catch (error: any) {
+      Alert.alert('Error', error.message || 'Failed to sign out');
     }
   };
 
@@ -94,41 +117,92 @@ const ProfileScreen = () => {
   }
 
   return (
-    <ScrollView 
+    <ScrollView
       style={[styles.container, { backgroundColor: colors.background }]}
       testID="profile-screen"
       showsVerticalScrollIndicator={false}
     >
-      {/* Profile Header */}
-      <View style={[styles.profileHeader, { backgroundColor: colors.card }]}>
-        <View style={styles.profileImageContainer}>
-          <ImageUpload
-            path={`users/profile-pictures/${user.id}`}
-            onImageUploaded={updateProfilePicture}
-            onImageRemoved={removeProfilePicture}
-            initialImage={user.photoURL || undefined}
-          />
-        </View>
-        <Text style={[styles.profileName, { color: colors.text }]}>{user.displayName || 'No Name'}</Text>
-        <View style={styles.contactInfo}>
-          <View style={styles.contactItem}>
-            <Ionicons name="mail-outline" size={16} color={colors.secondary} />
-            <Text style={[styles.contactText, { color: colors.secondary }]}>{user.email}</Text>
-          </View>
-          {user.phoneNumber && (
-            <View style={styles.contactItem}>
-              <Ionicons name="call-outline" size={16} color={colors.secondary} />
-              <Text style={[styles.contactText, { color: colors.secondary }]}>{user.phoneNumber}</Text>
+      <View style={styles.header}>
+        <View style={styles.avatarContainer}>
+          {user?.photoURL ? (
+            <Image source={{ uri: user.photoURL }} style={styles.avatar} />
+          ) : (
+            <View style={[styles.avatarPlaceholder, { backgroundColor: colors.primary }]}>
+              <Text style={styles.avatarText}>
+                {user?.displayName?.[0]?.toUpperCase() || user?.email?.[0]?.toUpperCase()}
+              </Text>
             </View>
           )}
         </View>
-        <TouchableOpacity 
-          style={[styles.editProfileButton, { borderColor: colors.primary }]}
-          onPress={handleEditProfile}
-          testID="edit-profile-button"
-        >
-          <Text style={[styles.editProfileText, { color: colors.primary }]}>Edit Profile</Text>
-        </TouchableOpacity>
+        <Text style={[styles.email, { color: colors.secondary }]}>{user?.email}</Text>
+      </View>
+
+      <View style={styles.section}>
+        <Text style={[styles.sectionTitle, { color: colors.text }]}>Profile Information</Text>
+
+        <View style={styles.inputGroup}>
+          <Text style={[styles.inputLabel, { color: colors.text }]}>Display Name</Text>
+          <View style={[styles.inputContainer, { backgroundColor: colors.card }]}>
+            <Ionicons
+              name="person-outline"
+              size={20}
+              color={colors.secondary}
+              style={styles.inputIcon}
+            />
+            <TextInput
+              style={[styles.input, { color: colors.text }]}
+              value={displayName}
+              onChangeText={setDisplayName}
+              editable={isEditing}
+              placeholder="Enter your display name"
+              placeholderTextColor={colors.secondary}
+            />
+          </View>
+        </View>
+
+        <View style={styles.inputGroup}>
+          <Text style={[styles.inputLabel, { color: colors.text }]}>Phone Number</Text>
+          <View style={[styles.inputContainer, { backgroundColor: colors.card }]}>
+            <Ionicons
+              name="call-outline"
+              size={20}
+              color={colors.secondary}
+              style={styles.inputIcon}
+            />
+            <TextInput
+              style={[styles.input, { color: colors.text }]}
+              value={phoneNumber}
+              onChangeText={setPhoneNumber}
+              editable={isEditing}
+              placeholder="Enter your phone number"
+              placeholderTextColor={colors.secondary}
+              keyboardType="phone-pad"
+            />
+          </View>
+        </View>
+
+        <View style={styles.buttonContainer}>
+          {isEditing ? (
+            <TouchableOpacity
+              style={[styles.button, { backgroundColor: colors.primary }]}
+              onPress={handleUpdateProfile}
+              disabled={isUpdating}
+            >
+              {isUpdating ? (
+                <ActivityIndicator color="#FFFFFF" size="small" />
+              ) : (
+                <Text style={styles.buttonText}>Save Changes</Text>
+              )}
+            </TouchableOpacity>
+          ) : (
+            <TouchableOpacity
+              style={[styles.button, { backgroundColor: colors.primary }]}
+              onPress={() => setIsEditing(true)}
+            >
+              <Text style={styles.buttonText}>Edit Profile</Text>
+            </TouchableOpacity>
+          )}
+        </View>
       </View>
 
       {/* Settings */}
@@ -143,8 +217,8 @@ const ProfileScreen = () => {
           <Switch
             value={notificationsEnabled}
             onValueChange={setNotificationsEnabled}
-            trackColor={{ false: "#767577", true: colors.primary + "70" }}
-            thumbColor={notificationsEnabled ? colors.primary : "#f4f3f4"}
+            trackColor={{ false: '#767577', true: colors.primary + '70' }}
+            thumbColor={notificationsEnabled ? colors.primary : '#f4f3f4'}
             testID="notifications-switch"
           />
         </View>
@@ -157,8 +231,8 @@ const ProfileScreen = () => {
           <Switch
             value={locationEnabled}
             onValueChange={setLocationEnabled}
-            trackColor={{ false: "#767577", true: colors.primary + "70" }}
-            thumbColor={locationEnabled ? colors.primary : "#f4f3f4"}
+            trackColor={{ false: '#767577', true: colors.primary + '70' }}
+            thumbColor={locationEnabled ? colors.primary : '#f4f3f4'}
             testID="location-switch"
           />
         </View>
@@ -171,8 +245,8 @@ const ProfileScreen = () => {
           <Switch
             value={isDark}
             onValueChange={toggleTheme}
-            trackColor={{ false: "#767577", true: colors.primary + "70" }}
-            thumbColor={isDark ? colors.primary : "#f4f3f4"}
+            trackColor={{ false: '#767577', true: colors.primary + '70' }}
+            thumbColor={isDark ? colors.primary : '#f4f3f4'}
             testID="theme-switch"
           />
         </View>
@@ -180,7 +254,7 @@ const ProfileScreen = () => {
 
       {/* Account Actions */}
       <View style={styles.accountActions}>
-        <TouchableOpacity 
+        <TouchableOpacity
           style={[styles.actionButton, { backgroundColor: colors.card }]}
           onPress={handleHelpSupport}
           testID="help-support-button"
@@ -189,7 +263,7 @@ const ProfileScreen = () => {
           <Text style={[styles.actionText, { color: colors.text }]}>Help & Support</Text>
         </TouchableOpacity>
 
-        <TouchableOpacity 
+        <TouchableOpacity
           style={[styles.actionButton, { backgroundColor: colors.card }]}
           onPress={handlePrivacySecurity}
           testID="privacy-security-button"
@@ -198,9 +272,9 @@ const ProfileScreen = () => {
           <Text style={[styles.actionText, { color: colors.text }]}>Privacy & Security</Text>
         </TouchableOpacity>
 
-        <TouchableOpacity 
-          style={[styles.actionButton, { backgroundColor: colors.error + "20" }]}
-          onPress={handleLogout}
+        <TouchableOpacity
+          style={[styles.actionButton, { backgroundColor: colors.error + '20' }]}
+          onPress={handleSignOut}
           testID="logout-button"
         >
           <Ionicons name="log-out-outline" size={24} color={colors.error} />
@@ -212,189 +286,117 @@ const ProfileScreen = () => {
 };
 
 const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-  },
-  profileHeader: {
-    alignItems: "center",
-    padding: 24,
-    margin: 16,
-    borderRadius: 12,
-  },
-  profileImageContainer: {
-    position: "relative",
-    marginBottom: 16,
-  },
-  profileImage: {
-    width: 100,
-    height: 100,
-    borderRadius: 50,
-  },
-  editImageButton: {
-    position: "absolute",
-    bottom: 0,
-    right: 0,
-    width: 32,
-    height: 32,
-    borderRadius: 16,
-    justifyContent: "center",
-    alignItems: "center",
-  },
-  profileName: {
-    fontSize: 24,
-    fontWeight: "bold",
-    marginBottom: 8,
-  },
-  contactInfo: {
-    marginBottom: 16,
-  },
-  contactItem: {
-    flexDirection: "row",
-    alignItems: "center",
-    marginBottom: 4,
-  },
-  contactText: {
-    fontSize: 14,
-    marginLeft: 8,
-  },
-  editProfileButton: {
-    paddingHorizontal: 16,
-    paddingVertical: 8,
-    borderRadius: 20,
-    borderWidth: 1,
-  },
-  editProfileText: {
-    fontSize: 14,
-    fontWeight: "500",
-  },
-  sectionHeaderContainer: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    marginBottom: 20,
-    paddingHorizontal: 4,
-  },
-  statsContainer: {
-    padding: 20,
-    margin: 16,
-    marginTop: 0,
-    borderRadius: 16,
-    elevation: 2,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.1,
-    shadowRadius: 8,
-  },
-  statsGrid: {
-    flexDirection: 'row',
-    flexWrap: 'wrap',
-    justifyContent: 'space-between',
-    gap: 16,
-  },
-  statItemContainer: {
-    flexBasis: '47%',
-    backgroundColor: 'transparent',
-  },
-  statItem: {
-    alignItems: 'center',
-    padding: 16,
-    borderRadius: 12,
-  },
-  statIconContainer: {
-    width: 40,
-    height: 40,
-    borderRadius: 20,
-    justifyContent: 'center',
-    alignItems: 'center',
-    marginBottom: 12,
-  },
-  statValue: {
-    fontSize: 28,
-    fontWeight: '600',
-    marginBottom: 4,
-  },
-  statLabel: {
-    fontSize: 13,
-    fontWeight: '500',
-    textAlign: 'center',
-    textTransform: 'uppercase',
-    letterSpacing: 0.5,
-  },
-  sectionTitle: {
-    fontSize: 20,
-    fontWeight: '600',
-    marginLeft: 8,
-  },
-  badgesContainer: {
-    padding: 16,
-    margin: 16,
-    marginTop: 0,
-    borderRadius: 12,
-  },
-  badgesScroll: {
-    flexDirection: "row",
-  },
-  badgeItem: {
-    alignItems: "center",
-    padding: 16,
-    borderRadius: 12,
-    marginRight: 12,
-    width: 120,
-  },
-  badgeIcon: {
-    width: 60,
-    height: 60,
-    borderRadius: 30,
-    justifyContent: "center",
-    alignItems: "center",
-    marginBottom: 8,
-  },
-  badgeName: {
-    fontSize: 14,
-    fontWeight: "500",
-    textAlign: "center",
-    marginBottom: 4,
-  },
-  badgeCount: {
-    fontSize: 12,
-  },
-  settingsContainer: {
-    padding: 16,
-    margin: 16,
-    marginTop: 0,
-    borderRadius: 12,
-  },
-  settingItem: {
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "space-between",
-    paddingVertical: 12,
-    borderBottomWidth: 1,
-    borderBottomColor: "#333333",
-  },
-  settingInfo: {
-    flexDirection: "row",
-    alignItems: "center",
-  },
-  settingText: {
-    fontSize: 16,
-    marginLeft: 12,
-  },
   accountActions: {
-    padding: 16,
     marginBottom: 24,
+    padding: 16,
   },
   actionButton: {
-    flexDirection: "row",
-    alignItems: "center",
-    padding: 16,
+    alignItems: 'center',
     borderRadius: 12,
+    flexDirection: 'row',
     marginBottom: 12,
+    padding: 16,
   },
   actionText: {
     fontSize: 16,
     marginLeft: 12,
   },
+  avatar: {
+    borderRadius: 50,
+    height: 100,
+    width: 100,
+  },
+  avatarContainer: {
+    marginBottom: 16,
+  },
+  avatarPlaceholder: {
+    alignItems: 'center',
+    borderRadius: 50,
+    height: 100,
+    justifyContent: 'center',
+    width: 100,
+  },
+  avatarText: {
+    color: '#FFFFFF',
+    fontSize: 40,
+    fontWeight: 'bold',
+  },
+  button: {
+    alignItems: 'center',
+    borderRadius: 8,
+    height: 48,
+    justifyContent: 'center',
+  },
+  buttonContainer: {
+    marginTop: 20,
+  },
+  buttonText: {
+    color: '#FFFFFF',
+    fontSize: 16,
+    fontWeight: 'bold',
+  },
+  container: {
+    flex: 1,
+  },
+  email: {
+    fontSize: 16,
+    marginTop: 8,
+  },
+  header: {
+    alignItems: 'center',
+    padding: 20,
+  },
+  input: {
+    flex: 1,
+    fontSize: 16,
+    height: 48,
+  },
+  inputContainer: {
+    alignItems: 'center',
+    borderRadius: 8,
+    flexDirection: 'row',
+    paddingHorizontal: 12,
+  },
+  inputGroup: {
+    marginBottom: 16,
+  },
+  inputIcon: {
+    marginRight: 12,
+  },
+  inputLabel: {
+    fontSize: 16,
+    marginBottom: 8,
+  },
+  section: {
+    padding: 20,
+  },
+  sectionTitle: {
+    fontSize: 20,
+    fontWeight: 'bold',
+    marginBottom: 20,
+  },
+  settingInfo: {
+    alignItems: 'center',
+    flexDirection: 'row',
+  },
+  settingItem: {
+    alignItems: 'center',
+    borderBottomColor: '#333333',
+    borderBottomWidth: 1,
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    paddingVertical: 12,
+  },
+  settingText: {
+    fontSize: 16,
+    marginLeft: 12,
+  },
+  settingsContainer: {
+    borderRadius: 12,
+    margin: 16,
+    marginTop: 0,
+    padding: 16,
+  },
 });
 
 export default ProfileScreen;
-

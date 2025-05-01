@@ -11,12 +11,7 @@ type DisputeCardProps = {
   onCall: () => void;
 };
 
-const DisputeCard: React.FC<DisputeCardProps> = ({
-  dispute,
-  onPress,
-  onQuickView,
-  onCall,
-}) => {
+const DisputeCard: React.FC<DisputeCardProps> = ({ dispute, onPress, onQuickView, onCall }) => {
   const { colors } = useTheme();
 
   const getStatusColor = (status: string) => {
@@ -58,24 +53,20 @@ const DisputeCard: React.FC<DisputeCardProps> = ({
         <View style={styles.idContainer}>
           <Text style={[styles.id, { color: colors.secondary }]}>#{dispute.id}</Text>
           <View
-            style={[
-              styles.statusBadge,
-              { backgroundColor: getStatusColor(dispute.status) + '20' },
-            ]}
+            style={[styles.statusBadge, { backgroundColor: getStatusColor(dispute.status) + '20' }]}
           >
             <Text style={[styles.statusText, { color: getStatusColor(dispute.status) }]}>
               {getStatusLabel(dispute.status)}
             </Text>
           </View>
         </View>
-        <Text style={[styles.date, { color: colors.secondary }]}>{new Date(dispute.createdAt).toLocaleDateString()}</Text>
+        <Text style={[styles.date, { color: colors.secondary }]}>
+          {new Date(dispute.createdAt).toLocaleDateString()}
+        </Text>
       </View>
 
       <Text style={[styles.title, { color: colors.text }]}>{dispute.itemTitle}</Text>
-      <Text
-        style={[styles.description, { color: colors.secondary }]}
-        numberOfLines={2}
-      >
+      <Text style={[styles.description, { color: colors.secondary }]} numberOfLines={2}>
         {`${dispute.requesterName} vs ${dispute.finderName}`}
       </Text>
 
@@ -97,41 +88,26 @@ const DisputeCard: React.FC<DisputeCardProps> = ({
 };
 
 const styles = StyleSheet.create({
-  container: {
-    padding: 16,
-    borderRadius: 12,
-    marginBottom: 12,
-  },
-  header: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
+  actionButton: {
     alignItems: 'center',
-    marginBottom: 12,
-  },
-  idContainer: {
     flexDirection: 'row',
-    alignItems: 'center',
+    gap: 4,
   },
-  id: {
-    fontSize: 14,
-    marginRight: 8,
-  },
-  statusBadge: {
-    paddingHorizontal: 8,
-    paddingVertical: 4,
-    borderRadius: 12,
-  },
-  statusText: {
+  actionText: {
     fontSize: 12,
-    fontWeight: '600',
+    fontWeight: '500',
+  },
+  actions: {
+    flexDirection: 'row',
+    gap: 12,
+  },
+  container: {
+    borderRadius: 12,
+    marginBottom: 12,
+    padding: 16,
   },
   date: {
     fontSize: 12,
-  },
-  title: {
-    fontSize: 16,
-    fontWeight: '600',
-    marginBottom: 8,
   },
   description: {
     fontSize: 14,
@@ -139,23 +115,38 @@ const styles = StyleSheet.create({
     marginBottom: 12,
   },
   footer: {
+    alignItems: 'center',
     flexDirection: 'row',
     justifyContent: 'space-between',
+  },
+  header: {
     alignItems: 'center',
-  },
-  actions: {
     flexDirection: 'row',
-    gap: 12,
+    justifyContent: 'space-between',
+    marginBottom: 12,
   },
-  actionButton: {
-    flexDirection: 'row',
+  id: {
+    fontSize: 14,
+    marginRight: 8,
+  },
+  idContainer: {
     alignItems: 'center',
-    gap: 4,
+    flexDirection: 'row',
   },
-  actionText: {
+  statusBadge: {
+    borderRadius: 12,
+    paddingHorizontal: 8,
+    paddingVertical: 4,
+  },
+  statusText: {
     fontSize: 12,
-    fontWeight: '500',
+    fontWeight: '600',
+  },
+  title: {
+    fontSize: 16,
+    fontWeight: '600',
+    marginBottom: 8,
   },
 });
 
-export default DisputeCard; 
+export default DisputeCard;
