@@ -3,43 +3,30 @@ module.exports = function (api) {
   return {
     presets: ['babel-preset-expo'],
     plugins: [
-      'react-native-reanimated/plugin',
-      '@babel/plugin-transform-export-namespace-from',
       ['module-resolver', {
-        root: ['.'],
+        root: ['./'],
         alias: {
-          '@': '.',
-          'buffer': '@craftzdog/react-native-buffer',
-          'http': './polyfills/empty.js',
-          'https': './polyfills/empty.js',
-          'net': './polyfills/empty.js',
-          'tls': './polyfills/empty.js',
-          'fs': './polyfills/empty.js',
-          'path': './polyfills/empty.js',
-          'zlib': './polyfills/empty.js'
+          '@': './',
+          '@components': './components',
+          '@screens': './screens',
+          '@utils': './utils',
         },
-        extensions: [
-          '.ios.ts',
-          '.android.ts',
-          '.ts',
-          '.ios.tsx',
-          '.android.tsx',
-          '.tsx',
-          '.jsx',
-          '.js',
-          '.json',
-          '.cjs',
-          '.mjs'
-        ],
       }],
       ["module:react-native-dotenv", {
         "moduleName": "@env",
         "path": ".env",
-        "blacklist": null,
-        "whitelist": null,
+        "blocklist": null,
+        "allowlist": null,
         "safe": false,
-        "allowUndefined": true
-      }]
+        "allowUndefined": true,
+        "verbose": false
+      }],
+      'react-native-reanimated/plugin'
     ],
+    env: {
+      production: {
+        plugins: ['transform-remove-console'],
+      },
+    }
   };
 }; 

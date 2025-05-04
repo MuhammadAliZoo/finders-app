@@ -1,19 +1,23 @@
-import 'react-native-url-polyfill/auto';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { createClient } from '@supabase/supabase-js';
 import { isExpoGo } from '../utils/expoCompatibility';
 import { Platform } from 'react-native';
-import { RealtimeClientOptions } from '@supabase/supabase-js';
-import 'react-native-get-random-values'; // Required for crypto operations
+import Constants from 'expo-constants';
 
-// Configure WebSocket for React Native
-const websocketConstructor = Platform.OS === 'web' ? undefined : require('react-native-websocket').default;
+// Get environment variables from Expo config
+const supabaseUrl = Constants.expoConfig?.extra?.supabaseUrl || process.env.EXPO_PUBLIC_SUPABASE_URL || '';
+const supabaseAnonKey = Constants.expoConfig?.extra?.supabaseAnonKey || process.env.EXPO_PUBLIC_SUPABASE_ANON_KEY || '';
 
-const supabaseUrl = process.env.EXPO_PUBLIC_SUPABASE_URL || '';
-const supabaseAnonKey = process.env.EXPO_PUBLIC_SUPABASE_ANON_KEY || '';
+console.log('[Supabase Config] Environment check:');
+console.log('[Supabase Config] EXPO_PUBLIC_SUPABASE_URL exists:', !!process.env.EXPO_PUBLIC_SUPABASE_URL);
+console.log('[Supabase Config] EXPO_PUBLIC_SUPABASE_ANON_KEY exists:', !!process.env.EXPO_PUBLIC_SUPABASE_ANON_KEY);
+console.log('[Supabase Config] Expo Config supabaseUrl exists:', !!Constants.expoConfig?.extra?.supabaseUrl);
+console.log('[Supabase Config] Expo Config supabaseAnonKey exists:', !!Constants.expoConfig?.extra?.supabaseAnonKey);
+console.log('[Supabase Config] Final supabaseUrl length:', supabaseUrl.length);
+console.log('[Supabase Config] Final supabaseAnonKey length:', supabaseAnonKey.length);
 
 if (!supabaseUrl || !supabaseAnonKey) {
-  throw new Error('Missing Supabase URL or Anon Key');
+  throw new Error('Missing Supabase URL or Anon Key. Please check your environment variables.');
 }
 
 // Configure Supabase client options
@@ -25,7 +29,6 @@ const supabaseOptions = {
     detectSessionInUrl: false
   },
   realtime: {
-    transport: websocketConstructor,
     params: {
       eventsPerSecond: 10
     }
@@ -37,6 +40,7 @@ export const supabase = createClient(supabaseUrl, supabaseAnonKey, supabaseOptio
 
 // Add Expo Go specific error handling
 if (isExpoGo) {
+  console.log('Running in Expo Go - using Expo-specific configuration');
   // Override storage operations
   const originalStorage = supabase.storage;
   Object.defineProperty(supabase, 'storage', {
@@ -70,58 +74,6 @@ if (isExpoGo) {
       },
     }),
   });
-
-  // Override auth operations
-  const originalAuth = supabase.auth;
-  Object.defineProperty(supabase, 'auth', {
-    get: () => ({
-      ...originalAuth,
-      signInWithPassword: async (credentials: any) => {
-        try {
-          return await originalAuth.signInWithPassword(credentials);
-        } catch (error) {
-          console.error('Auth sign in error in Expo Go:', error);
-          throw new Error(
-            'Authentication failed in Expo Go. Please try again or use a development build.',
-          );
-        }
-      },
-      signUp: async (credentials: any) => {
-        try {
-          return await originalAuth.signUp(credentials);
-        } catch (error) {
-          console.error('Auth sign up error in Expo Go:', error);
-          throw new Error(
-            'Authentication failed in Expo Go. Please try again or use a development build.',
-          );
-        }
-      },
-    }),
-  });
-
-  // Override realtime operations
-  const originalRealtime = supabase.realtime;
-  Object.defineProperty(supabase, 'realtime', {
-    get: () => ({
-      ...originalRealtime,
-      channel: (channelName: string) => {
-        const channel = originalRealtime.channel(channelName);
-        return {
-          ...channel,
-          subscribe: async (callback: (payload: any) => void) => {
-            try {
-              return await channel.subscribe(callback);
-            } catch (error) {
-              console.error('Realtime subscription error in Expo Go:', error);
-              throw new Error(
-                'Realtime subscription failed in Expo Go. Please try again or use a development build.',
-              );
-            }
-          },
-        };
-      },
-    }),
-  });
 }
 
 // Export commonly used modules
@@ -131,8 +83,15 @@ export const auth = supabase.auth;
 // Helper function to check Supabase connection
 export const checkSupabaseConnection = async () => {
   try {
+    console.log('Checking Supabase connection...');
     const { data, error } = await supabase.from('profiles').select('count').limit(1);
-    if (error) throw error;
+    
+    if (error) {
+      console.error('Supabase query error:', error);
+      throw error;
+    }
+    
+    console.log('Supabase connection successful');
     return true;
   } catch (error) {
     console.error('Supabase connection error:', error);
@@ -142,46 +101,25 @@ export const checkSupabaseConnection = async () => {
 
 // Initialize Supabase connection
 export const initializeSupabase = async () => {
-  if (isExpoGo) {
-    console.log('Running in Expo Go - using Expo-specific configuration');
-  }
-
   try {
-    console.log('Attempting to connect to Supabase...');
+    console.log('Initializing Supabase...');
+    
+    // First, try to get the session to verify auth is working
+    const { data: { session }, error: sessionError } = await supabase.auth.getSession();
+    if (sessionError) {
+      console.error('Session error:', sessionError);
+      throw sessionError;
+    }
+    console.log('Auth session check passed');
+
+    // Then check the database connection
     const isConnected = await checkSupabaseConnection();
     if (!isConnected) {
-      console.error('Failed to establish connection with Supabase');
-      throw new Error('Failed to connect to Supabase');
+      throw new Error('Failed to connect to Supabase database');
     }
     
-    // Test realtime connection with timeout
-    console.log('Testing realtime connection...');
-    const channel = supabase.channel('connection_test');
-    
-    // Create a promise that resolves when the connection is established or rejects after timeout
-    const connectionPromise = new Promise((resolve, reject) => {
-      const timeout = setTimeout(() => {
-        channel.unsubscribe();
-        resolve(false); // Resolve with false instead of rejecting to continue app initialization
-      }, 5000); // 5 second timeout
-
-      channel.subscribe((status) => {
-        console.log('Realtime connection status:', status);
-        if (status === 'SUBSCRIBED') {
-          clearTimeout(timeout);
-          console.log('Realtime connection established successfully');
-          channel.unsubscribe();
-          resolve(true);
-        }
-      });
-    });
-
-    const realtimeConnected = await connectionPromise;
-    if (!realtimeConnected) {
-      console.warn('Realtime connection timed out, but continuing with app initialization');
-    }
-
-    console.log('Supabase initialization completed');
+    console.log('Supabase initialization completed successfully');
+    return true;
   } catch (error) {
     console.error('Supabase initialization error:', error);
     throw error;

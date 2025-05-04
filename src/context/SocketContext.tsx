@@ -29,17 +29,17 @@ export const SocketProvider: React.FC<{ children: React.ReactNode }> = ({ childr
     setSocket(ws);
 
     ws.onopen = () => {
-      setIsConnected(true);
-      setError(null);
+        setIsConnected(true);
+        setError(null);
     };
 
     ws.onclose = () => {
-      setIsConnected(false);
+        setIsConnected(false);
     };
 
     ws.onerror = (e: any) => {
       setError(new Error(e?.message || 'WebSocket error'));
-      setIsConnected(false);
+        setIsConnected(false);
     };
 
     // Optionally handle ws.onmessage here if you want to expose messages

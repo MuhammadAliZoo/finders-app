@@ -29,32 +29,74 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
   useEffect(() => {
     const initializeAuth = async () => {
-      const { data } = await supabase.auth.getSession();
-      if (data.session) {
-        await fetchProfile(data.session.user.id);
+      try {
+        console.log('[AuthProvider] Checking session...');
+        const { data: { session }, error: sessionError } = await supabase.auth.getSession();
+        
+        if (sessionError) {
+          console.error('[AuthProvider] getSession error:', sessionError);
+          setUser(null);
+          setLoading(false);
+          return;
+        }
+
+        if (session?.user) {
+          console.log('[AuthProvider] Session found, fetching profile for user:', session.user.id);
+          await fetchProfile(session.user.id);
+        } else {
+          console.log('[AuthProvider] No session found.');
+          setUser(null);
+        }
+      } catch (e) {
+        console.error('[AuthProvider] Error in initializeAuth:', e);
+        setUser(null);
+      } finally {
+        setLoading(false);
+        console.log('[AuthProvider] Loading set to false (initializeAuth)');
       }
-      setLoading(false);
     };
 
     initializeAuth();
 
-    const { data: listener } = supabase.auth.onAuthStateChange((_event, session) => {
+    const { data: { subscription } } = supabase.auth.onAuthStateChange(async (event, session) => {
+      console.log('[AuthProvider] onAuthStateChange event:', event, 'Session exists:', !!session);
+      
       if (session?.user) {
-        fetchProfile(session.user.id);
+        console.log('[AuthProvider] User authenticated, fetching profile...');
+        await fetchProfile(session.user.id);
       } else {
+        console.log('[AuthProvider] No user in session, clearing user state');
         setUser(null);
       }
+      setLoading(false);
     });
 
     return () => {
-      listener?.subscription.unsubscribe();
+      subscription.unsubscribe();
     };
   }, []);
 
   const fetchProfile = async (userId: string) => {
-    const { data, error } = await supabase.from('profiles').select('*').eq('id', userId).single();
-    if (!error && data) {
-      setUser(data);
+    try {
+      console.log('[AuthProvider] Fetching profile for user:', userId);
+      const { data, error } = await supabase.from('profiles').select('*').eq('id', userId).single();
+      
+      if (error) {
+        console.error('[AuthProvider] Error fetching profile:', error);
+        setUser(null);
+        return;
+      }
+
+      if (data) {
+        console.log('[AuthProvider] Profile fetched successfully:', data);
+        setUser(data);
+      } else {
+        console.log('[AuthProvider] No profile found for user');
+        setUser(null);
+      }
+    } catch (e) {
+      console.error('[AuthProvider] Exception in fetchProfile:', e);
+      setUser(null);
     }
   };
 

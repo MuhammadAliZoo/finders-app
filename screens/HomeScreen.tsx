@@ -18,13 +18,12 @@ import {
 import { useNavigation } from '@react-navigation/native';
 import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { Ionicons } from '@expo/vector-icons';
-import { useTheme } from '../theme/ThemeContext';
+import { useTheme } from '../context/ThemeContext';
 import { ItemCard } from '../components/ItemCard';
 import MapView, { PROVIDER_GOOGLE } from 'react-native-maps';
 import { MainStackParamList, TabParamList } from '../navigation/types';
 import * as ImagePicker from 'expo-image-picker';
 import { manipulateAsync, SaveFormat } from 'expo-image-manipulator';
-import { check, PERMISSIONS, request, RESULTS } from 'react-native-permissions';
 import { processImageWithAI } from '../utils/ai';
 import { Item } from '../types/item';
 import * as Location from 'expo-location';

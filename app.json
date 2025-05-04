@@ -16,9 +16,14 @@
     ],
     "jsEngine": "hermes",
     "newArchEnabled": true,
+    "experiments": {
+      "tsconfigPaths": true,
+      "typedRoutes": true
+    },
     "ios": {
       "supportsTablet": true,
       "bundleIdentifier": "com.findersapp",
+      "jsEngine": "hermes",
       "config": {
         "googleMapsApiKey": "AIzaSyAt8lR5GgTa3pKEMSJCxMggfJLhimvSwbg"
       },
@@ -44,6 +49,7 @@
     },
     "android": {
       "package": "com.findersapp",
+      "jsEngine": "hermes",
       "config": {
         "googleMaps": {
           "apiKey": "AIzaSyAt8lR5GgTa3pKEMSJCxMggfJLhimvSwbg"
@@ -83,7 +89,9 @@
     "extra": {
       "eas": {
         "projectId": "finders-app"
-      }
+      },
+      "EXPO_PUBLIC_SUPABASE_URL": "https://ocfdrtfawmtbqypbw.supabase.com",
+      "EXPO_PUBLIC_SUPABASE_ANON_KEY": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im9jaGZkcnRmZWF3bXRieXF2cGJ3Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NDU2MzU3MDQsImV4cCI6MjA2MTIxMTcwNH0.eOo-MHpTh2f12rdijb1S-fjOly920hcQ1QAmNOC22qc"
     },
     "owner": "muhammadali",
     "runtimeVersion": {

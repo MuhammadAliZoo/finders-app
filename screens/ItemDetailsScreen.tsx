@@ -14,7 +14,7 @@ import {
 } from 'react-native';
 import { RouteProp } from '@react-navigation/native';
 import { useNavigation, NavigationProp } from '@react-navigation/native';
-import { useTheme } from '../theme/ThemeContext';
+import { useTheme } from '../context/ThemeContext';
 import { MainStackParamList } from '../navigation/types';
 import { Ionicons } from '@expo/vector-icons';
 import { Item } from '../types/item';

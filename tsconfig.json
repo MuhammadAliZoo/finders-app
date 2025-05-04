@@ -1,13 +1,17 @@
 {
+  "extends": "expo/tsconfig.base",
   "compilerOptions": {
+    "strict": true,
     "target": "esnext",
-    "module": "commonjs",
-    "lib": ["es2017", "dom"],
+    "module": "esnext",
+    "lib": [
+      "es2020",
+      "dom"
+    ],
     "allowJs": true,
     "jsx": "react-native",
     "noEmit": true,
     "isolatedModules": true,
-    "strict": true,
     "moduleResolution": "node",
     "allowSyntheticDefaultImports": true,
     "esModuleInterop": true,
@@ -15,8 +19,13 @@
     "resolveJsonModule": true,
     "baseUrl": ".",
     "paths": {
-      "@/*": ["./src/*"]
-    }
+      "@/*": [
+        "./*"
+      ]
+    },
+    "types": [
+      "react-native"
+    ]
   },
   "exclude": [
     "node_modules",
@@ -27,6 +36,5 @@
   "include": [
     "**/*.ts",
     "**/*.tsx"
-  ],
-  "extends": "expo/tsconfig.base"
+  ]
 }

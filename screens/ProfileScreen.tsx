@@ -16,7 +16,7 @@ import {
   TextInput,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
-import { useTheme } from '../theme/ThemeContext';
+import { useTheme } from '../context/ThemeContext';
 import { useNavigation } from '@react-navigation/native';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { CompositeNavigationProp } from '@react-navigation/native';
@@ -36,22 +36,21 @@ type ProfileScreenNavigationProp = CompositeNavigationProp<
 
 const ProfileScreen = () => {
   const navigation = useNavigation<ProfileScreenNavigationProp>();
-  const { colors, isDark, toggleTheme } = useTheme();
-  const { user, loading, updateUserProfile, signOut } = useAuth();
+  const { colors, theme, toggleTheme } = useTheme();
+  const { user, loading, signOut, refreshProfile } = useAuth();
   const [notificationsEnabled, setNotificationsEnabled] = useState(true);
   const [locationEnabled, setLocationEnabled] = useState(true);
   const [isEditing, setIsEditing] = useState(false);
-  const [displayName, setDisplayName] = useState(user?.displayName || '');
-  const [phoneNumber, setPhoneNumber] = useState(user?.phoneNumber || '');
+  const [fullName, setFullName] = useState(user?.full_name || '');
+  const [phone, setPhone] = useState('');
   const [isUpdating, setIsUpdating] = useState(false);
 
   const handleProfilePictureUpload = async (uri: string) => {
     try {
       if (!user) throw new Error('User not logged in');
       const url = await uploadImage(uri, user.id);
-      await updateUserProfile({
-        photoURL: url,
-      });
+      await supabase.from('profiles').update({ avatar_url: url }).eq('id', user.id);
+      await refreshProfile();
       Alert.alert('Success', 'Profile picture updated!');
     } catch (error: any) {
       Alert.alert('Error', error.message || 'Failed to update profile picture');
@@ -59,17 +58,14 @@ const ProfileScreen = () => {
   };
 
   const handleUpdateProfile = async () => {
-    if (!displayName) {
-      Alert.alert('Error', 'Display name is required');
+    if (!fullName) {
+      Alert.alert('Error', 'Full name is required');
       return;
     }
-
     setIsUpdating(true);
     try {
-      await updateUserProfile({
-        displayName,
-        phoneNumber,
-      });
+      await supabase.from('profiles').update({ full_name: fullName, phone }).eq('id', user?.id);
+      await refreshProfile();
       Alert.alert('Success', 'Profile updated successfully');
       setIsEditing(false);
     } catch (error: any) {
@@ -124,12 +120,12 @@ const ProfileScreen = () => {
     >
       <View style={styles.header}>
         <View style={styles.avatarContainer}>
-          {user?.photoURL ? (
-            <Image source={{ uri: user.photoURL }} style={styles.avatar} />
+          {user?.avatar_url ? (
+            <Image source={{ uri: user.avatar_url }} style={styles.avatar} />
           ) : (
             <View style={[styles.avatarPlaceholder, { backgroundColor: colors.primary }]}>
               <Text style={styles.avatarText}>
-                {user?.displayName?.[0]?.toUpperCase() || user?.email?.[0]?.toUpperCase()}
+                {user?.full_name?.[0]?.toUpperCase() || user?.email?.[0]?.toUpperCase()}
               </Text>
             </View>
           )}
@@ -141,7 +137,7 @@ const ProfileScreen = () => {
         <Text style={[styles.sectionTitle, { color: colors.text }]}>Profile Information</Text>
 
         <View style={styles.inputGroup}>
-          <Text style={[styles.inputLabel, { color: colors.text }]}>Display Name</Text>
+          <Text style={[styles.inputLabel, { color: colors.text }]}>Full Name</Text>
           <View style={[styles.inputContainer, { backgroundColor: colors.card }]}>
             <Ionicons
               name="person-outline"
@@ -151,10 +147,10 @@ const ProfileScreen = () => {
             />
             <TextInput
               style={[styles.input, { color: colors.text }]}
-              value={displayName}
-              onChangeText={setDisplayName}
+              value={fullName}
+              onChangeText={setFullName}
               editable={isEditing}
-              placeholder="Enter your display name"
+              placeholder="Enter your full name"
               placeholderTextColor={colors.secondary}
             />
           </View>
@@ -171,8 +167,8 @@ const ProfileScreen = () => {
             />
             <TextInput
               style={[styles.input, { color: colors.text }]}
-              value={phoneNumber}
-              onChangeText={setPhoneNumber}
+              value={phone}
+              onChangeText={setPhone}
               editable={isEditing}
               placeholder="Enter your phone number"
               placeholderTextColor={colors.secondary}
@@ -243,10 +239,10 @@ const ProfileScreen = () => {
             <Text style={[styles.settingText, { color: colors.text }]}>Dark Mode</Text>
           </View>
           <Switch
-            value={isDark}
+            value={theme === 'dark'}
             onValueChange={toggleTheme}
             trackColor={{ false: '#767577', true: colors.primary + '70' }}
-            thumbColor={isDark ? colors.primary : '#f4f3f4'}
+            thumbColor={theme === 'dark' ? colors.primary : '#f4f3f4'}
             testID="theme-switch"
           />
         </View>
