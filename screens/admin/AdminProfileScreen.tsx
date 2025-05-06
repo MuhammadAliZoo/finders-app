@@ -9,7 +9,11 @@ import {
   FlatList,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
-import { useTheme, type ThemeColors } from '../../theme/ThemeContext';
+import { useTheme, type ThemeColors } from '../../context/ThemeContext';
+import { useAuth } from '../../context/AuthContext';
+import AdminHeader from '../../components/admin/AdminHeader';
+import type { DrawerNavigationProp } from '@react-navigation/drawer';
+import { RootStackParamList } from '../../navigation/types';
 
 type ActionItem = {
   id: string;
@@ -31,8 +35,13 @@ const ActionItem = ({ action, colors }: { action: ActionItem; colors: ThemeColor
   </View>
 );
 
-const AdminProfileScreen = () => {
+type AdminProfileScreenProps = {
+  navigation: DrawerNavigationProp<RootStackParamList, 'AdminProfile'>;
+};
+
+const AdminProfileScreen = ({ navigation }: AdminProfileScreenProps) => {
   const { colors } = useTheme();
+  const { signOut } = useAuth();
 
   // Mock admin data
   const adminData = {
@@ -47,6 +56,14 @@ const AdminProfileScreen = () => {
     ] as ActionItem[],
   };
 
+  const handleLogout = async () => {
+    try {
+      await signOut();
+    } catch (error) {
+      console.error('Logout failed:', error);
+    }
+  };
+
   const renderActionItem = ({ item }: RenderItemProps) => (
     <View style={styles.actionItem}>
       <Ionicons name="time-outline" size={16} color={colors.secondary} />
@@ -58,53 +75,54 @@ const AdminProfileScreen = () => {
   );
 
   return (
-    <ScrollView style={[styles.container, { backgroundColor: colors.background }]}>
-      <View style={[styles.header, { backgroundColor: colors.card }]}>
-        <View style={styles.profileImageContainer}>
-          <Image source={{ uri: 'https://via.placeholder.com/150' }} style={styles.profileImage} />
-        </View>
-        <Text style={[styles.name, { color: colors.text }]}>{adminData.name}</Text>
-        <Text style={[styles.role, { color: colors.secondary }]}>{adminData.role}</Text>
-      </View>
-
-      <View style={styles.section}>
-        <Text style={[styles.sectionTitle, { color: colors.text }]}>Contact Information</Text>
-        <View style={[styles.card, { backgroundColor: colors.card }]}>
-          <View style={styles.infoRow}>
-            <Ionicons name="mail-outline" size={20} color={colors.secondary} />
-            <Text style={[styles.infoText, { color: colors.text }]}>{adminData.email}</Text>
+    <View style={[styles.container, { backgroundColor: colors.background }]}>
+      <AdminHeader title="Admin Profile" navigation={navigation} />
+      <ScrollView style={[styles.container, { backgroundColor: colors.background }]}>
+        <View style={[styles.header, { backgroundColor: colors.card }]}>
+          <View style={styles.profileImageContainer}>
+            <Image source={{ uri: 'https://via.placeholder.com/150' }} style={styles.profileImage} />
           </View>
-          <View style={styles.infoRow}>
-            <Ionicons name="calendar-outline" size={20} color={colors.secondary} />
-            <Text style={[styles.infoText, { color: colors.text }]}>
-              Joined {adminData.joinDate}
-            </Text>
+          <Text style={[styles.name, { color: colors.text }]}>{adminData.name}</Text>
+          <Text style={[styles.role, { color: colors.secondary }]}>{adminData.role}</Text>
+        </View>
+
+        <View style={styles.section}>
+          <Text style={[styles.sectionTitle, { color: colors.text }]}>Contact Information</Text>
+          <View style={[styles.card, { backgroundColor: colors.card }]}>
+            <View style={styles.infoRow}>
+              <Ionicons name="mail-outline" size={20} color={colors.secondary} />
+              <Text style={[styles.infoText, { color: colors.text }]}>{adminData.email}</Text>
+            </View>
+            <View style={styles.infoRow}>
+              <Ionicons name="calendar-outline" size={20} color={colors.secondary} />
+              <Text style={[styles.infoText, { color: colors.text }]}>
+                Joined {adminData.joinDate}
+              </Text>
+            </View>
           </View>
         </View>
-      </View>
 
-      <View style={styles.section}>
-        <Text style={[styles.sectionTitle, { color: colors.text }]}>Recent Actions</Text>
-        <View style={[styles.card, { backgroundColor: colors.card }]}>
-          <FlatList
-            data={adminData.recentActions}
-            renderItem={renderActionItem}
-            keyExtractor={(item: ActionItem) => item.id}
-            scrollEnabled={false}
-          />
+        <View style={styles.section}>
+          <Text style={[styles.sectionTitle, { color: colors.text }]}>Recent Actions</Text>
+          <View style={[styles.card, { backgroundColor: colors.card }]}>
+            <FlatList
+              data={adminData.recentActions}
+              renderItem={renderActionItem}
+              keyExtractor={(item: ActionItem) => item.id}
+              scrollEnabled={false}
+            />
+          </View>
         </View>
-      </View>
 
-      <TouchableOpacity
-        style={[styles.logoutButton, { backgroundColor: colors.primary }]}
-        onPress={() => {
-          /* Handle logout */
-        }}
-      >
-        <Ionicons name="log-out-outline" size={20} color="#FFFFFF" />
-        <Text style={styles.logoutText}>Logout</Text>
-      </TouchableOpacity>
-    </ScrollView>
+        <TouchableOpacity
+          style={[styles.logoutButton, { backgroundColor: colors.primary }]}
+          onPress={handleLogout}
+        >
+          <Ionicons name="log-out-outline" size={20} color="#FFFFFF" />
+          <Text style={styles.logoutText}>Logout</Text>
+        </TouchableOpacity>
+      </ScrollView>
+    </View>
   );
 };
 

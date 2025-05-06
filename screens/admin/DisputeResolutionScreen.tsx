@@ -13,7 +13,7 @@ import {
   ScrollView,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
-import { useTheme } from '../../theme/ThemeContext';
+import { useTheme } from '../../context/ThemeContext';
 import { adminApi } from '../../api/admin';
 import DisputeCard from '../../components/admin/DisputeCard';
 import FilterChip from '../../components/admin/FilterChip';
@@ -21,9 +21,141 @@ import DisputeTimeline from '../../components/admin/DisputeTimeline';
 import AIRecommendation from '../../components/admin/AIRecommendation';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { RootStackParamList } from '../../navigation/types';
+import AdminHeader from '../../components/admin/AdminHeader';
 
 type DisputeStatus = 'all' | 'open' | 'in_progress' | 'escalated' | 'resolved';
 type SortBy = 'date' | 'priority' | 'response_time';
+
+const mockDisputes: Dispute[] = [
+  {
+    id: "DSP-2024-001",
+    status: "open",
+    createdAt: "2024-03-15T10:30:00Z",
+    itemTitle: "Lost iPhone 14 Pro - Central Park",
+    requesterName: "John Smith",
+    finderName: "Sarah Johnson",
+    priority: "high",
+    description: "Dispute regarding the condition of the found item and reward amount",
+    timeline: [
+      {
+        id: "TL001",
+        type: "message",
+        timestamp: "2024-03-15T10:30:00Z",
+        actor: "John Smith",
+        action: "Dispute Created",
+        details: "Initial dispute filed regarding item condition"
+      },
+      {
+        id: "TL002",
+        type: "action",
+        timestamp: "2024-03-15T11:45:00Z",
+        actor: "Sarah Johnson",
+        action: "Response Received",
+        details: "Finder provided evidence of item condition at time of discovery"
+      },
+      {
+        id: "TL003",
+        type: "status_change",
+        timestamp: "2024-03-15T14:20:00Z",
+        actor: "Admin System",
+        action: "Auto-Assignment",
+        details: "Dispute assigned to resolution team"
+      }
+    ]
+  },
+  {
+    id: "DSP-2024-002",
+    status: "in_progress",
+    createdAt: "2024-03-14T15:45:00Z",
+    itemTitle: "Designer Handbag - Shopping Mall",
+    requesterName: "Emma Davis",
+    finderName: "Michael Wilson",
+    priority: "medium",
+    description: "Disagreement over reward payment method",
+    timeline: [
+      {
+        id: "TL001",
+        type: "message",
+        timestamp: "2024-03-14T15:45:00Z",
+        actor: "Emma Davis",
+        action: "Dispute Created",
+        details: "Dispute filed regarding reward payment"
+      },
+      {
+        id: "TL002",
+        type: "status_change",
+        timestamp: "2024-03-14T16:30:00Z",
+        actor: "Support Team",
+        action: "Mediation Started",
+        details: "Initial contact made with both parties"
+      }
+    ]
+  },
+  {
+    id: "DSP-2024-003",
+    status: "escalated",
+    createdAt: "2024-03-13T09:15:00Z",
+    itemTitle: "Laptop - Coffee Shop",
+    requesterName: "David Brown",
+    finderName: "Lisa Anderson",
+    priority: "high",
+    description: "Dispute over item authenticity and ownership verification",
+    timeline: [
+      {
+        id: "TL001",
+        type: "message",
+        timestamp: "2024-03-13T09:15:00Z",
+        actor: "David Brown",
+        action: "Dispute Created",
+        details: "Ownership verification dispute initiated"
+      },
+      {
+        id: "TL002",
+        type: "status_change",
+        timestamp: "2024-03-13T11:30:00Z",
+        actor: "Support Team",
+        action: "Case Escalated",
+        details: "Escalated to senior resolution team due to complexity"
+      }
+    ]
+  },
+  {
+    id: "DSP-2024-004",
+    status: "resolved",
+    createdAt: "2024-03-12T13:20:00Z",
+    itemTitle: "Gold Watch - Gym",
+    requesterName: "Patricia Lee",
+    finderName: "Robert Taylor",
+    priority: "medium",
+    description: "Successfully resolved dispute about meeting location",
+    timeline: [
+      {
+        id: "TL001",
+        type: "message",
+        timestamp: "2024-03-12T13:20:00Z",
+        actor: "Patricia Lee",
+        action: "Dispute Created",
+        details: "Meeting location dispute filed"
+      },
+      {
+        id: "TL002",
+        type: "status_change",
+        timestamp: "2024-03-12T15:45:00Z",
+        actor: "Support Team",
+        action: "Resolution Reached",
+        details: "Agreed on neutral meeting location with security presence"
+      },
+      {
+        id: "TL003",
+        type: "resolution",
+        timestamp: "2024-03-12T18:00:00Z",
+        actor: "System",
+        action: "Case Closed",
+        details: "Successful item handover confirmed by both parties"
+      }
+    ]
+  }
+];
 
 export interface Dispute {
   id: string;
@@ -32,7 +164,16 @@ export interface Dispute {
   itemTitle: string;
   requesterName: string;
   finderName: string;
-  timeline: any[];
+  priority: 'low' | 'medium' | 'high';
+  description: string;
+  timeline: Array<{
+    id: string;
+    type: 'message' | 'status_change' | 'action' | 'resolution';
+    timestamp: string;
+    actor: string;
+    action: string;
+    details: string;
+  }>;
 }
 
 interface AIRecommendationData {
@@ -61,25 +202,39 @@ const DisputeResolutionScreen = ({ navigation }: DisputeResolutionScreenProps) =
   const [loadingRecommendation, setLoadingRecommendation] = useState(false);
 
   useEffect(() => {
-    fetchDisputes();
-  }, [filterStatus, sortBy]);
+    setLoading(true);
+    setTimeout(() => {
+      let filteredDisputes = [...mockDisputes];
+      
+      if (filterStatus !== 'all') {
+        filteredDisputes = filteredDisputes.filter(
+          d => d.status.toLowerCase() === filterStatus
+        );
+      }
 
-  const fetchDisputes = async () => {
-    try {
-      setLoading(true);
-      const data = await adminApi.getDisputes(filterStatus, sortBy);
-      setDisputes(data);
-    } catch (error) {
-      console.error('Failed to fetch disputes', error);
-    } finally {
+      filteredDisputes.sort((a, b) => {
+        switch (sortBy) {
+          case 'date':
+            return new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime();
+          case 'priority':
+            const priorityOrder = { high: 3, medium: 2, low: 1 };
+            return priorityOrder[b.priority] - priorityOrder[a.priority];
+          case 'response_time':
+            return new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime();
+          default:
+            return 0;
+        }
+      });
+
+      setDisputes(filteredDisputes);
       setLoading(false);
       setRefreshing(false);
-    }
-  };
+    }, 1000);
+  }, [filterStatus, sortBy]);
 
   const onRefresh = () => {
     setRefreshing(true);
-    fetchDisputes();
+    setFilterStatus(filterStatus);
   };
 
   const handleSearch = (text: string) => {
@@ -291,7 +446,7 @@ const DisputeResolutionScreen = ({ navigation }: DisputeResolutionScreenProps) =
 
               <View style={[styles.disputeSection, { borderBottomColor: colors.border }]}>
                 <Text style={[styles.disputeSectionTitle, { color: colors.text }]}>Timeline</Text>
-                <DisputeTimeline events={selectedDispute.timeline} />
+                <DisputeTimeline events={transformTimelineEvents(selectedDispute.timeline)} />
               </View>
 
               <View style={styles.disputeSection}>
@@ -369,95 +524,108 @@ const DisputeResolutionScreen = ({ navigation }: DisputeResolutionScreenProps) =
     }
   };
 
+  const transformTimelineEvents = (events: Dispute['timeline']) => {
+    return events.map(event => ({
+      id: event.id,
+      title: event.action,
+      description: event.details,
+      date: event.timestamp,
+      type: event.type as 'message' | 'status_change' | 'action' | 'resolution',
+      actor: event.actor
+    }));
+  };
+
   return (
     <View style={[styles.container, { backgroundColor: colors.background }]}>
-      <View style={styles.actionBar}>
-        <View style={[styles.searchContainer, { backgroundColor: colors.card }]}>
-          <Ionicons name="search-outline" size={20} color={colors.secondary} />
-          <TextInput
-            style={[styles.searchInput, { color: colors.text }]}
-            placeholder="Search disputes..."
-            placeholderTextColor={colors.secondary}
-            value={searchQuery}
-            onChangeText={handleSearch}
-          />
-          {searchQuery ? (
-            <TouchableOpacity onPress={() => setSearchQuery('')}>
-              <Ionicons name="close-circle" size={20} color={colors.secondary} />
-            </TouchableOpacity>
-          ) : null}
+      <View style={styles.content}>
+        <View style={styles.actionBar}>
+          <View style={[styles.searchContainer, { backgroundColor: colors.card }]}>
+            <Ionicons name="search-outline" size={20} color={colors.secondary} />
+            <TextInput
+              style={[styles.searchInput, { color: colors.text }]}
+              placeholder="Search disputes..."
+              placeholderTextColor={colors.secondary}
+              value={searchQuery}
+              onChangeText={handleSearch}
+            />
+            {searchQuery ? (
+              <TouchableOpacity onPress={() => setSearchQuery('')}>
+                <Ionicons name="close-circle" size={20} color={colors.secondary} />
+              </TouchableOpacity>
+            ) : null}
+          </View>
+
+          <TouchableOpacity
+            style={[styles.filterButton, { backgroundColor: colors.card }]}
+            onPress={() => setShowFilterModal(true)}
+          >
+            <Ionicons name="options-outline" size={20} color={colors.secondary} />
+          </TouchableOpacity>
         </View>
 
-        <TouchableOpacity
-          style={[styles.filterButton, { backgroundColor: colors.card }]}
-          onPress={() => setShowFilterModal(true)}
-        >
-          <Ionicons name="options-outline" size={20} color={colors.secondary} />
-        </TouchableOpacity>
-      </View>
-
-      <View style={styles.statusFilters}>
-        <ScrollView horizontal showsHorizontalScrollIndicator={false}>
-          <FilterChip
-            label="All"
-            isSelected={filterStatus === 'all'}
-            onPress={() => setFilterStatus('all')}
-            count={0}
-          />
-          <FilterChip
-            label="Open"
-            isSelected={filterStatus === 'open'}
-            onPress={() => setFilterStatus('open')}
-            count={disputes.filter(d => d.status.toLowerCase() === 'open').length}
-          />
-          <FilterChip
-            label="In Progress"
-            isSelected={filterStatus === 'in_progress'}
-            onPress={() => setFilterStatus('in_progress')}
-            count={disputes.filter(d => d.status.toLowerCase() === 'in_progress').length}
-          />
-          <FilterChip
-            label="Escalated"
-            isSelected={filterStatus === 'escalated'}
-            onPress={() => setFilterStatus('escalated')}
-            count={disputes.filter(d => d.status.toLowerCase() === 'escalated').length}
-          />
-          <FilterChip
-            label="Resolved"
-            isSelected={filterStatus === 'resolved'}
-            onPress={() => setFilterStatus('resolved')}
-            count={disputes.filter(d => d.status.toLowerCase() === 'resolved').length}
-          />
-        </ScrollView>
-      </View>
-
-      {loading && !refreshing ? (
-        <View style={styles.loadingContainer}>
-          <ActivityIndicator size="large" color={colors.primary} />
-          <Text style={[styles.loadingText, { color: colors.secondary }]}>Loading disputes...</Text>
+        <View style={styles.statusFilters}>
+          <ScrollView horizontal showsHorizontalScrollIndicator={false}>
+            <FilterChip
+              label="All"
+              isSelected={filterStatus === 'all'}
+              onPress={() => setFilterStatus('all')}
+              count={0}
+            />
+            <FilterChip
+              label="Open"
+              isSelected={filterStatus === 'open'}
+              onPress={() => setFilterStatus('open')}
+              count={disputes.filter(d => d.status.toLowerCase() === 'open').length}
+            />
+            <FilterChip
+              label="In Progress"
+              isSelected={filterStatus === 'in_progress'}
+              onPress={() => setFilterStatus('in_progress')}
+              count={disputes.filter(d => d.status.toLowerCase() === 'in_progress').length}
+            />
+            <FilterChip
+              label="Escalated"
+              isSelected={filterStatus === 'escalated'}
+              onPress={() => setFilterStatus('escalated')}
+              count={disputes.filter(d => d.status.toLowerCase() === 'escalated').length}
+            />
+            <FilterChip
+              label="Resolved"
+              isSelected={filterStatus === 'resolved'}
+              onPress={() => setFilterStatus('resolved')}
+              count={disputes.filter(d => d.status.toLowerCase() === 'resolved').length}
+            />
+          </ScrollView>
         </View>
-      ) : (
-        <FlatList
-          data={disputes}
-          renderItem={renderItem}
-          keyExtractor={item => item.id.toString()}
-          contentContainerStyle={styles.listContent}
-          onRefresh={onRefresh}
-          refreshing={refreshing}
-          ListEmptyComponent={
-            <View style={styles.emptyContainer}>
-              <Ionicons name="shield-checkmark-outline" size={64} color={colors.secondary} />
-              <Text style={[styles.emptyText, { color: colors.text }]}>No disputes found</Text>
-              <Text style={[styles.emptySubtext, { color: colors.secondary }]}>
-                There are no disputes matching your current filters.
-              </Text>
-            </View>
-          }
-        />
-      )}
 
-      {renderFilterModal()}
-      {renderDisputeModal()}
+        {loading && !refreshing ? (
+          <View style={styles.loadingContainer}>
+            <ActivityIndicator size="large" color={colors.primary} />
+            <Text style={[styles.loadingText, { color: colors.secondary }]}>Loading disputes...</Text>
+          </View>
+        ) : (
+          <FlatList
+            data={disputes}
+            renderItem={renderItem}
+            keyExtractor={item => item.id.toString()}
+            contentContainerStyle={styles.listContent}
+            onRefresh={onRefresh}
+            refreshing={refreshing}
+            ListEmptyComponent={
+              <View style={styles.emptyContainer}>
+                <Ionicons name="shield-checkmark-outline" size={64} color={colors.secondary} />
+                <Text style={[styles.emptyText, { color: colors.text }]}>No disputes found</Text>
+                <Text style={[styles.emptySubtext, { color: colors.secondary }]}>
+                  There are no disputes matching your current filters.
+                </Text>
+              </View>
+            }
+          />
+        )}
+
+        {renderFilterModal()}
+        {renderDisputeModal()}
+      </View>
     </View>
   );
 };
@@ -495,6 +663,9 @@ const styles = StyleSheet.create({
     fontWeight: 'bold',
   },
   container: {
+    flex: 1,
+  },
+  content: {
     flex: 1,
   },
   disputeInfo: {

@@ -36,7 +36,7 @@ type ProfileScreenNavigationProp = CompositeNavigationProp<
 
 const ProfileScreen = () => {
   const navigation = useNavigation<ProfileScreenNavigationProp>();
-  const { colors, theme, toggleTheme } = useTheme();
+  const { colors, isDark, toggleTheme } = useTheme();
   const { user, loading, signOut, refreshProfile } = useAuth();
   const [notificationsEnabled, setNotificationsEnabled] = useState(true);
   const [locationEnabled, setLocationEnabled] = useState(true);
@@ -88,12 +88,35 @@ const ProfileScreen = () => {
   };
 
   const handleSignOut = async () => {
-    try {
-      await signOut();
-      // Navigation will be handled by the auth state listener
-    } catch (error: any) {
-      Alert.alert('Error', error.message || 'Failed to sign out');
-    }
+    Alert.alert(
+      'Sign Out',
+      'Are you sure you want to sign out?',
+      [
+        {
+          text: 'Cancel',
+          style: 'cancel',
+        },
+        {
+          text: 'Sign Out',
+          style: 'destructive',
+          onPress: async () => {
+            try {
+              const { error } = await supabase.auth.signOut();
+              if (error) throw error;
+              
+              // Clear any local storage or state if needed
+              await signOut(); // This is from useAuth context
+              
+              // Navigate to the Auth stack
+              navigation.navigate('Auth');
+            } catch (error: any) {
+              Alert.alert('Error', error.message || 'Failed to sign out');
+            }
+          },
+        },
+      ],
+      { cancelable: true }
+    );
   };
 
   if (loading) {
@@ -239,10 +262,10 @@ const ProfileScreen = () => {
             <Text style={[styles.settingText, { color: colors.text }]}>Dark Mode</Text>
           </View>
           <Switch
-            value={theme === 'dark'}
+            value={isDark}
             onValueChange={toggleTheme}
             trackColor={{ false: '#767577', true: colors.primary + '70' }}
-            thumbColor={theme === 'dark' ? colors.primary : '#f4f3f4'}
+            thumbColor={isDark ? colors.primary : '#f4f3f4'}
             testID="theme-switch"
           />
         </View>

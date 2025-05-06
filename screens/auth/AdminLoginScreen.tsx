@@ -25,7 +25,7 @@ type AdminLoginScreenNavigationProp = NativeStackNavigationProp<RootStackParamLi
 const AdminLoginScreen = () => {
   const navigation = useNavigation<AdminLoginScreenNavigationProp>();
   const { colors } = useTheme();
-  const { signIn } = useAuth();
+  const { adminSignIn } = useAuth();
 
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
@@ -44,8 +44,8 @@ const AdminLoginScreen = () => {
     setLoading(true);
 
     try {
-      await signIn(email, password);
-      // Navigation will be handled by the AuthContext
+      await adminSignIn(email, password, adminCode);
+      // Navigation will be handled by the AuthContext and AppNavigator
     } catch (err: any) {
       setError(err.message || 'Failed to login. Please try again.');
     } finally {

@@ -18,7 +18,7 @@ import { AIAssistantScreen } from '../screens/AIAssistantScreen';
 import { AllTrendingItemsScreen } from '../screens/AllTrendingItemsScreen';
 
 import LogoTitle from '../components/LogoTitle';
-import { useTheme } from '../theme/ThemeContext';
+import { useTheme } from '../context/ThemeContext';
 import { MainStackParamList, TabParamList } from './types';
 
 const Stack = createNativeStackNavigator<MainStackParamList>();
@@ -80,7 +80,7 @@ const TabNavigator = () => {
         }} 
       />
       <Tab.Screen name="FinderTab" component={FinderScreen} options={{ title: 'Finder' }} />
-      <Tab.Screen name="RequesterTab" component={RequesterScreen} options={{ title: 'Submit' }} />
+      <Tab.Screen name="RequesterTab" component={RequesterScreen} options={{ title: 'Requester' }} />
       <Tab.Screen
         name="NotificationsTab"
         component={NotificationScreen}

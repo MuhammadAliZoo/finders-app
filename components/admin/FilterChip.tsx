@@ -1,7 +1,7 @@
 'use client';
 
 import { TouchableOpacity, Text, StyleSheet, View } from 'react-native';
-import { useTheme } from '../../theme/ThemeContext';
+import { useTheme } from '../../context/ThemeContext';
 
 interface FilterChipProps {
   label: string;

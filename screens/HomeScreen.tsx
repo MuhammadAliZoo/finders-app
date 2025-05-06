@@ -331,7 +331,7 @@ export const HomeScreen = () => {
           {/* Trending Items Section */}
           <View style={styles.section}>
             <View style={styles.sectionHeader}>
-              <Text style={[styles.sectionTitle, { color: colors.text }]}>Trending Items</Text>
+              <Text style={[styles.sectionTitle, { color: colors.text }]}>Trending Lost Items</Text>
               <TouchableOpacity style={styles.seeAllButton} onPress={handleSeeAll}>
                 <Text style={[styles.seeAllText, { color: colors.primary }]}>See All</Text>
                 <Ionicons name="chevron-forward" size={16} color={colors.primary} />

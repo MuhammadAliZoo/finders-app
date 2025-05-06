@@ -13,7 +13,7 @@ import {
   ViewProps,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
-import { useTheme } from '../../theme/ThemeContext';
+import { useTheme } from '../../context/ThemeContext';
 import { useAuth } from '../../context/AuthContext';
 import { adminApi } from '../../api/admin';
 import AdminHeader from '../../components/admin/AdminHeader';
@@ -32,7 +32,7 @@ const { width } = Dimensions.get('window');
 type WidgetType = 'recentActivity' | 'pendingApprovals' | 'criticalIssues' | 'performanceMetrics';
 
 type AdminDashboardScreenProps = {
-  navigation: DrawerNavigationProp<RootStackParamList, 'AdminHome'>;
+  navigation: DrawerNavigationProp<RootStackParamList, 'AdminDashboard'>;
 };
 
 interface AdminWidgetProps {
@@ -50,29 +50,29 @@ interface MetricCardProps {
 const metricsData: MetricData[] = [
   {
     title: 'Total Users',
-    value: 2478,
-    change: 12.5,
+    value: 1,
+    change: 100,
     icon: 'people-outline',
     color: '#4CAF50',
   },
   {
     title: 'Active Items',
-    value: 1234,
-    change: 8.2,
+    value: 7,
+    change: 100,
     icon: 'cube-outline',
     color: '#2196F3',
   },
   {
     title: 'Matches Made',
-    value: 567,
-    change: -2.4,
+    value: 2,
+    change: 100,
     icon: 'git-network-outline',
     color: '#9C27B0',
   },
   {
     title: 'Open Disputes',
-    value: 23,
-    change: 5.6,
+    value: 3,
+    change: 100,
     icon: 'warning-outline',
     color: '#FF9800',
   },
@@ -439,29 +439,13 @@ const AdminDashboardScreen: React.FC<AdminDashboardScreenProps> = ({ navigation 
 
   return (
     <View style={styles.container}>
-      <View style={styles.header}>
-        <View style={styles.headerLeft}>
-          <TouchableOpacity style={styles.menuButton} onPress={() => navigation.openDrawer()}>
-            <Ionicons name="menu" size={24} color={colors.text} />
-          </TouchableOpacity>
-          <Text style={styles.headerTitle}>Dashboard</Text>
-        </View>
-        <View style={styles.headerRight}>
-          <TouchableOpacity style={styles.notificationButton}>
-            <Ionicons name="notifications-outline" size={24} color={colors.text} />
-            {(dashboardData?.notifications?.length ?? 0) > 0 && (
-              <View style={styles.badge}>
-                <Text style={styles.badgeText}>{dashboardData?.notifications?.length ?? 0}</Text>
-              </View>
-            )}
-          </TouchableOpacity>
-          <TouchableOpacity style={styles.avatar}>
-            <Text style={styles.avatarText}>{user?.email?.[0]?.toUpperCase() || 'A'}</Text>
-          </TouchableOpacity>
-        </View>
-      </View>
-
-      <ScrollView style={styles.scrollContent} showsVerticalScrollIndicator={false}>
+      <AdminHeader title="Dashboard" navigation={navigation} />
+      <ScrollView
+        style={styles.scrollContent}
+        refreshControl={
+          <RefreshControl refreshing={refreshing} onRefresh={onRefresh} />
+        }
+      >
         <View style={styles.welcomeSection}>
           <Text style={styles.welcomeText}>
             Welcome back,{'\n'}
@@ -600,7 +584,10 @@ const AdminDashboardScreen: React.FC<AdminDashboardScreenProps> = ({ navigation 
             {activeWidgets.includes('recentActivity') && (
               <TouchableOpacity
                 style={[styles.widget, { backgroundColor: colors.primary + '10' }]}
-                onPress={() => navigation.navigate('ContentModeration')}
+                onPress={() => {
+                  console.log('[DEBUG] Opening Content Moderation via drawer');
+                  navigation.jumpTo('ContentModeration');
+                }}
               >
                 <View style={[styles.widgetIcon, { backgroundColor: colors.primary + '20' }]}>
                   <Ionicons name="time-outline" size={24} color={colors.primary} />
@@ -630,7 +617,10 @@ const AdminDashboardScreen: React.FC<AdminDashboardScreenProps> = ({ navigation 
             {activeWidgets.includes('criticalIssues') && (
               <TouchableOpacity
                 style={[styles.widget, { backgroundColor: colors.error + '10' }]}
-                onPress={() => navigation.navigate('DisputeResolution')}
+                onPress={() => {
+                  console.log('[DEBUG] Opening Dispute Resolution via drawer');
+                  navigation.jumpTo('DisputeResolution');
+                }}
               >
                 <View style={[styles.widgetIcon, { backgroundColor: colors.error + '20' }]}>
                   <Ionicons name="alert-circle-outline" size={24} color={colors.error} />

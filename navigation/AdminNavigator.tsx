@@ -2,13 +2,14 @@
 import { createDrawerNavigator } from '@react-navigation/drawer';
 import { createNativeStackNavigator } from '@react-navigation/native-stack';
 import { Ionicons } from '@expo/vector-icons';
-import { useTheme } from '../theme/ThemeContext';
+import { useTheme } from '../context/ThemeContext';
 import type {
   DrawerNavigationOptions,
   DrawerContentComponentProps,
 } from '@react-navigation/drawer';
 import type { NativeStackNavigationOptions } from '@react-navigation/native-stack';
 import { ReactNode } from 'react';
+import { RootStackParamList } from './types';
 
 import AdminDashboardScreen from '../screens/admin/AdminDashboardScreen';
 import ContentModerationScreen from '../screens/admin/ContentModerationScreen';
@@ -21,19 +22,6 @@ import CollaborativeWorkspaceScreen from '../screens/admin/CollaborativeWorkspac
 import WidgetSettingsScreen from '../screens/admin/WidgetSettingsScreen';
 import AdminDrawerContent from '../components/admin/AdminDrawerContent';
 
-type RootStackParamList = {
-  DashboardHome: undefined;
-  AdminHome: undefined;
-  GenerateReport: undefined;
-  CollaborativeWorkspace: undefined;
-  WidgetSettings: undefined;
-  ContentModeration: undefined;
-  ItemModeration: undefined;
-  DisputeResolution: undefined;
-  DisputeDetails: undefined;
-  AdminProfile: undefined;
-};
-
 const Drawer = createDrawerNavigator<RootStackParamList>();
 const Stack = createNativeStackNavigator<RootStackParamList>();
 
@@ -45,7 +33,7 @@ const DashboardStack = () => {
   return (
     <Stack.Navigator>
       <Stack.Screen
-        name="DashboardHome"
+        name="AdminDashboard"
         component={AdminDashboardScreen}
         options={stackScreenOptions}
       />
@@ -103,11 +91,7 @@ const DisputeStack = () => {
 };
 
 const AdminNavigator = () => {
-  const { colors, isInitialized } = useTheme();
-
-  if (!isInitialized) {
-    return null;
-  }
+  const { colors } = useTheme();
 
   const drawerScreenOptions: DrawerNavigationOptions = {
     headerStyle: {
@@ -124,7 +108,7 @@ const AdminNavigator = () => {
   return (
     <Drawer.Navigator drawerContent={props => <AdminDrawerContent {...props} />}>
       <Drawer.Screen
-        name="AdminHome"
+        name="AdminDashboard"
         component={DashboardStack}
         options={{
           ...drawerScreenOptions,

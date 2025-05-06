@@ -31,77 +31,95 @@ type Notification = {
 };
 
 // Mock data
-const notifications: Notification[] = [
+const mockNotifications: Notification[] = [
   {
     id: '1',
     type: 'match',
-    title: 'Potential Match Found',
-    message: 'We found a potential match for your lost Gold Watch',
-    time: '2 hours ago',
+    title: 'New Match Found!',
+    message: 'Someone found a MacBook Pro that matches your lost item description. Check it out!',
+    time: '10 minutes ago',
     read: false,
     itemId: '1',
     image: 'https://via.placeholder.com/100',
   },
   {
     id: '2',
-    type: 'message',
-    title: 'New Message',
-    message: 'Michael Rodriguez: Is the watch still available?',
-    time: '5 hours ago',
-    read: true,
+    type: 'status',
+    title: 'Item Status Updated',
+    message: 'Your lost Blue Backpack has been marked as "Found". Please verify the match.',
+    time: '1 hour ago',
+    read: false,
     itemId: '2',
     image: 'https://via.placeholder.com/100',
   },
   {
     id: '3',
-    type: 'status',
-    title: 'Status Update',
-    message: 'Your claim for Black Wallet has been approved',
-    time: '1 day ago',
+    type: 'message',
+    title: 'Message from Finder',
+    message: 'Hi, I found your AirPods Pro at the University Gym. They match your description...',
+    time: '3 hours ago',
     read: true,
     itemId: '3',
     image: 'https://via.placeholder.com/100',
   },
   {
     id: '4',
+    type: 'match',
+    title: 'Multiple Matches Found',
+    message: 'We found 3 potential matches for your Student ID Card. View them now!',
+    time: '5 hours ago',
+    read: true,
+    itemId: '4',
+    image: 'https://via.placeholder.com/100',
+  },
+  {
+    id: '5',
+    type: 'status',
+    title: 'Verification Required',
+    message: 'Please verify your identity to claim your found Car Keys',
+    time: '1 day ago',
+    read: true,
+    itemId: '5',
+    image: 'https://via.placeholder.com/100',
+  },
+  {
+    id: '6',
     type: 'reminder',
-    title: 'Reminder',
-    message: "Don't forget to update your lost item description",
+    title: 'Update Your Request',
+    message: 'Your lost item request is 7 days old. Would you like to update its status?',
     time: '2 days ago',
     read: true,
     itemId: null,
     image: null,
   },
+  {
+    id: '7',
+    type: 'message',
+    title: 'New Message',
+    message: 'Campus Security: We have your item in the lost and found office. Please come to collect it.',
+    time: '2 days ago',
+    read: true,
+    itemId: '2',
+    image: 'https://via.placeholder.com/100',
+  },
+  {
+    id: '8',
+    type: 'match',
+    title: 'Similar Item Found',
+    message: 'A similar laptop charger was just reported. It might be yours!',
+    time: '3 days ago',
+    read: true,
+    itemId: '6',
+    image: 'https://via.placeholder.com/100',
+  }
 ];
 
 const NotificationScreen = () => {
   const navigation = useNavigation<NativeStackNavigationProp<MainStackParamList>>();
   const { colors } = useTheme();
-  const [notifications, setNotifications] = useState<Notification[]>([]);
-  const [loading, setLoading] = useState(true);
+  const [notifications, setNotifications] = useState<Notification[]>(mockNotifications);
+  const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
-
-  useEffect(() => {
-    const fetchNotifications = async () => {
-      setLoading(true);
-      setError(null);
-      try {
-        const { data, error } = await supabase
-          .from('notifications')
-          .select('*')
-          .order('created_at', { ascending: false });
-
-        if (error) throw error;
-        setNotifications(data || []);
-      } catch (err: any) {
-        setError(err.message || 'Failed to fetch notifications');
-      } finally {
-        setLoading(false);
-      }
-    };
-
-    fetchNotifications();
-  }, []);
 
   const handleNavigateToSearchResults = useCallback(
     (itemId: string) => {

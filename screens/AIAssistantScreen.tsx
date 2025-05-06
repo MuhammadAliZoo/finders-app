@@ -13,7 +13,7 @@ import {
   Keyboard,
   Animated,
 } from 'react-native';
-import { useTheme } from '../theme/ThemeContext';
+import { useTheme } from '../context/ThemeContext';
 import { Ionicons } from '@expo/vector-icons';
 import { useNavigation } from '@react-navigation/native';
 import { MainStackParamList } from '../navigation/types';

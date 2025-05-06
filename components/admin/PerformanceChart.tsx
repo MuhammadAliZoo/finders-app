@@ -1,7 +1,7 @@
 'use client';
 import React from 'react';
 import { View, Text, StyleSheet, Dimensions } from 'react-native';
-import { useTheme } from '../../theme/ThemeContext';
+import { useTheme } from '../../context/ThemeContext';
 
 type PerformanceChartProps = {
   data: {

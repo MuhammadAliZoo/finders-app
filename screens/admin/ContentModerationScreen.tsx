@@ -14,13 +14,14 @@ import {
   Alert,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
-import { useTheme } from '../../theme/ThemeContext';
+import { useTheme } from '../../context/ThemeContext';
 import { adminApi } from '../../api/admin';
 import ModerateItemCard from '../../components/admin/ModerateItemCard';
 import FilterChip from '../../components/admin/FilterChip';
 import AdminChat from '../../components/admin/AdminChat';
 import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { RootStackParamList, ModerationItem } from '../../navigation/types';
+import AdminHeader from '../../components/admin/AdminHeader';
 
 interface ModerationRule {
   id: number;
@@ -48,7 +49,94 @@ interface ModerateItemCardProps {
   onChatPress: () => void;
 }
 
-const ContentModerationScreen: React.FC<ContentModerationScreenProps> = ({ navigation }) => {
+const mockModerationItems: ModerationItem[] = [
+  {
+    id: "MOD001",
+    title: "Suspicious Listing",
+    content: "High-end electronics at unusually low prices",
+    type: "listing",
+    status: "pending",
+    reportCount: 5,
+    priority: "high",
+    createdAt: "2024-03-15T08:30:00Z",
+    updatedAt: "2024-03-15T10:15:00Z",
+    reporter: {
+      id: "USR001",
+      name: "John Smith",
+      avatar: "https://ui-avatars.com/api/?name=John+Smith"
+    },
+    category: "Suspicious Activity",
+    images: ["https://picsum.photos/400/300", "https://picsum.photos/400/300"],
+    aiFlags: ["price_mismatch", "multiple_reports"]
+  },
+  {
+    id: "MOD002",
+    title: "Inappropriate Content",
+    content: "Profile description contains inappropriate language",
+    type: "profile",
+    status: "pending",
+    reportCount: 3,
+    priority: "medium",
+    createdAt: "2024-03-15T09:45:00Z",
+    updatedAt: "2024-03-15T11:20:00Z",
+    reporter: {
+      id: "USR002",
+      name: "Sarah Johnson",
+      avatar: "https://ui-avatars.com/api/?name=Sarah+Johnson"
+    },
+    category: "Inappropriate Content",
+    images: ["https://picsum.photos/400/300"],
+    aiFlags: ["inappropriate_language"]
+  },
+  {
+    id: "MOD003",
+    title: "Counterfeit Item",
+    content: "Suspected counterfeit luxury brand item",
+    type: "listing",
+    status: "flagged",
+    reportCount: 7,
+    priority: "high",
+    createdAt: "2024-03-14T15:20:00Z",
+    updatedAt: "2024-03-15T13:10:00Z",
+    reporter: {
+      id: "USR003",
+      name: "Mike Brown",
+      avatar: "https://ui-avatars.com/api/?name=Mike+Brown"
+    },
+    category: "Counterfeit Goods",
+    images: ["https://picsum.photos/400/300", "https://picsum.photos/400/300"],
+    aiFlags: ["brand_similarity", "price_anomaly"]
+  }
+];
+
+const mockModerationRules: ModerationRule[] = [
+  {
+    id: 1,
+    name: "Inappropriate Content Filter",
+    description: "Automatically flags content containing inappropriate language or images",
+    active: true
+  },
+  {
+    id: 2,
+    name: "Price Anomaly Detection",
+    description: "Flags listings with prices significantly below market average",
+    active: true
+  },
+  {
+    id: 3,
+    name: "Multiple Report Threshold",
+    description: "Automatically flags items that receive more than 3 reports",
+    active: true
+  },
+  {
+    id: 4,
+    name: "Counterfeit Detection",
+    description: "Uses AI to detect potential counterfeit items based on images and descriptions",
+    active: true
+  }
+];
+
+const ContentModerationScreen = ({ navigation }: ContentModerationScreenProps) => {
   const { colors } = useTheme();
   const [items, setItems] = useState<ModerationItem[]>([]);
   const [loading, setLoading] = useState(true);
@@ -66,35 +154,18 @@ const ContentModerationScreen: React.FC<ContentModerationScreenProps> = ({ navig
   const chatRef = useRef(null);
 
   useEffect(() => {
-    fetchItems();
-    fetchModerationRules();
-  }, [filterStatus, sortBy]);
-
-  const fetchItems = async () => {
-    try {
-      setLoading(true);
-      const data = await adminApi.getItemsForModeration(filterStatus, sortBy);
-      setItems(data);
-    } catch (error) {
-      console.error('Failed to fetch items for moderation', error);
-    } finally {
+    // Simulate API call with mock data
+    setLoading(true);
+    setTimeout(() => {
+      setItems(mockModerationItems);
+      setModerationRules(mockModerationRules);
       setLoading(false);
-      setRefreshing(false);
-    }
-  };
-
-  const fetchModerationRules = async () => {
-    try {
-      const rules = await adminApi.getModerationRules();
-      setModerationRules(rules);
-    } catch (error) {
-      console.error('Failed to fetch moderation rules', error);
-    }
-  };
+    }, 1000);
+  }, [filterStatus, sortBy]);
 
   const onRefresh = () => {
     setRefreshing(true);
-    fetchItems();
+    // fetchItems();
   };
 
   const handleSearch = (text: string) => {
@@ -121,7 +192,7 @@ const ContentModerationScreen: React.FC<ContentModerationScreenProps> = ({ navig
     try {
       setLoading(true);
       await adminApi.batchModerateItems(selectedItems, action);
-      fetchItems();
+      // fetchItems();
       setSelectedItems([]);
       Alert.alert(
         'Success',
@@ -202,9 +273,9 @@ const ContentModerationScreen: React.FC<ContentModerationScreenProps> = ({ navig
               count: items.filter(i => i.status === 'flagged').length,
             })}
             {renderFilterChip({
-              label: 'AI Flagged',
-              value: 'ai_flagged',
-              count: items.filter(i => i.status === 'ai_flagged').length,
+              label: 'AI Review',
+              value: 'flagged',
+              count: items.filter(i => i.status === 'flagged' && i.aiFlags.length > 0).length,
             })}
           </View>
 
@@ -686,112 +757,117 @@ const ContentModerationScreen: React.FC<ContentModerationScreenProps> = ({ navig
       fontSize: 12,
       fontWeight: '500',
     },
+    content: {
+      flex: 1,
+    },
   });
 
   return (
-    <View style={styles.container}>
-      <View style={styles.actionBar}>
-        <View style={styles.searchContainer}>
-          <Ionicons name="search-outline" size={20} color={colors.secondary} />
-          <TextInput
-            style={styles.searchInput}
-            placeholder="Search items..."
-            placeholderTextColor={colors.secondary}
-            value={searchQuery}
-            onChangeText={handleSearch}
-          />
-          {searchQuery ? (
-            <TouchableOpacity onPress={() => setSearchQuery('')}>
-              <Ionicons name="close-circle" size={20} color={colors.secondary} />
-            </TouchableOpacity>
-          ) : null}
-        </View>
+    <View style={[styles.container, { backgroundColor: colors.background }]}>
+      <View style={styles.content}>
+        <View style={styles.actionBar}>
+          <View style={styles.searchContainer}>
+            <Ionicons name="search-outline" size={20} color={colors.secondary} />
+            <TextInput
+              style={styles.searchInput}
+              placeholder="Search items..."
+              placeholderTextColor={colors.secondary}
+              value={searchQuery}
+              onChangeText={handleSearch}
+            />
+            {searchQuery ? (
+              <TouchableOpacity onPress={() => setSearchQuery('')}>
+                <Ionicons name="close-circle" size={20} color={colors.secondary} />
+              </TouchableOpacity>
+            ) : null}
+          </View>
 
-        <TouchableOpacity style={styles.filterButton} onPress={() => setShowFilterModal(true)}>
-          <Text style={styles.filterButtonText}>Filter</Text>
-        </TouchableOpacity>
-
-        <TouchableOpacity
-          style={[styles.rulesButton, { backgroundColor: colors.card }]}
-          onPress={() => setShowRulesModal(true)}
-        >
-          <Ionicons name="list-outline" size={20} color={colors.secondary} />
-        </TouchableOpacity>
-      </View>
-
-      <View style={styles.batchActionBar}>
-        <TouchableOpacity style={styles.selectAllButton} onPress={selectAllItems}>
-          <Ionicons
-            name={selectedItems.length === items.length ? 'checkbox' : 'square-outline'}
-            size={20}
-            color={colors.primary}
-          />
-          <Text style={[styles.selectAllText, { color: colors.text }]}>
-            {selectedItems.length === items.length ? 'Deselect All' : 'Select All'}
-          </Text>
-        </TouchableOpacity>
-
-        <View style={styles.batchButtons}>
-          <TouchableOpacity
-            style={[
-              styles.batchButton,
-              { backgroundColor: colors.primary + '20' },
-              selectedItems.length === 0 && styles.disabledButton,
-            ]}
-            onPress={() => handleBatchAction('approve')}
-            disabled={selectedItems.length === 0}
-          >
-            <Ionicons name="checkmark" size={20} color={colors.primary} />
-            <Text style={[styles.batchButtonText, { color: colors.primary }]}>
-              Approve ({selectedItems.length})
-            </Text>
+          <TouchableOpacity style={styles.filterButton} onPress={() => setShowFilterModal(true)}>
+            <Text style={styles.filterButtonText}>Filter</Text>
           </TouchableOpacity>
 
           <TouchableOpacity
-            style={[
-              styles.batchButton,
-              { backgroundColor: colors.error + '20' },
-              selectedItems.length === 0 && styles.disabledButton,
-            ]}
-            onPress={() => handleBatchAction('reject')}
-            disabled={selectedItems.length === 0}
+            style={[styles.rulesButton, { backgroundColor: colors.card }]}
+            onPress={() => setShowRulesModal(true)}
           >
-            <Ionicons name="close" size={20} color={colors.error} />
-            <Text style={[styles.batchButtonText, { color: colors.error }]}>
-              Reject ({selectedItems.length})
-            </Text>
+            <Ionicons name="list-outline" size={20} color={colors.secondary} />
           </TouchableOpacity>
         </View>
-      </View>
 
-      {loading && !refreshing ? (
-        <View style={styles.loadingContainer}>
-          <ActivityIndicator size="large" color={colors.primary} />
-          <Text style={[styles.loadingText, { color: colors.secondary }]}>Loading items...</Text>
-        </View>
-      ) : (
-        <FlatList
-          data={items}
-          renderItem={renderItem}
-          keyExtractor={item => item.id.toString()}
-          contentContainerStyle={styles.listContent}
-          onRefresh={onRefresh}
-          refreshing={refreshing}
-          ListEmptyComponent={
-            <View style={styles.emptyContainer}>
-              <Ionicons name="document-text-outline" size={64} color={colors.secondary} />
-              <Text style={[styles.emptyText, { color: colors.text }]}>No items to moderate</Text>
-              <Text style={[styles.emptySubtext, { color: colors.secondary }]}>
-                All caught up! Check back later for new items.
+        <View style={styles.batchActionBar}>
+          <TouchableOpacity style={styles.selectAllButton} onPress={selectAllItems}>
+            <Ionicons
+              name={selectedItems.length === items.length ? 'checkbox' : 'square-outline'}
+              size={20}
+              color={colors.primary}
+            />
+            <Text style={[styles.selectAllText, { color: colors.text }]}>
+              {selectedItems.length === items.length ? 'Deselect All' : 'Select All'}
+            </Text>
+          </TouchableOpacity>
+
+          <View style={styles.batchButtons}>
+            <TouchableOpacity
+              style={[
+                styles.batchButton,
+                { backgroundColor: colors.primary + '20' },
+                selectedItems.length === 0 && styles.disabledButton,
+              ]}
+              onPress={() => handleBatchAction('approve')}
+              disabled={selectedItems.length === 0}
+            >
+              <Ionicons name="checkmark" size={20} color={colors.primary} />
+              <Text style={[styles.batchButtonText, { color: colors.primary }]}>
+                Approve ({selectedItems.length})
               </Text>
-            </View>
-          }
-        />
-      )}
+            </TouchableOpacity>
 
-      {renderFilterModal()}
-      {renderRulesModal()}
-      {renderChatModal()}
+            <TouchableOpacity
+              style={[
+                styles.batchButton,
+                { backgroundColor: colors.error + '20' },
+                selectedItems.length === 0 && styles.disabledButton,
+              ]}
+              onPress={() => handleBatchAction('reject')}
+              disabled={selectedItems.length === 0}
+            >
+              <Ionicons name="close" size={20} color={colors.error} />
+              <Text style={[styles.batchButtonText, { color: colors.error }]}>
+                Reject ({selectedItems.length})
+              </Text>
+            </TouchableOpacity>
+          </View>
+        </View>
+
+        {loading && !refreshing ? (
+          <View style={styles.loadingContainer}>
+            <ActivityIndicator size="large" color={colors.primary} />
+            <Text style={[styles.loadingText, { color: colors.secondary }]}>Loading items...</Text>
+          </View>
+        ) : (
+          <FlatList
+            data={items}
+            renderItem={renderItem}
+            keyExtractor={item => item.id.toString()}
+            contentContainerStyle={styles.listContent}
+            onRefresh={onRefresh}
+            refreshing={refreshing}
+            ListEmptyComponent={
+              <View style={styles.emptyContainer}>
+                <Ionicons name="document-text-outline" size={64} color={colors.secondary} />
+                <Text style={[styles.emptyText, { color: colors.text }]}>No items to moderate</Text>
+                <Text style={[styles.emptySubtext, { color: colors.secondary }]}>
+                  All caught up! Check back later for new items.
+                </Text>
+              </View>
+            }
+          />
+        )}
+
+        {renderFilterModal()}
+        {renderRulesModal()}
+        {renderChatModal()}
+      </View>
     </View>
   );
 };

@@ -4,21 +4,28 @@ import React, { createContext, useContext, useState, useEffect } from 'react';
 import { supabase } from '../config/supabase';
 import { User as SupabaseUser, Session } from '@supabase/supabase-js';
 
-interface User {
+export interface User {
   id: string;
   email: string;
-  username?: string;
+  role: 'user' | 'admin';
+  name?: string;
+  profileImage?: string;
+  created_at?: string;
+  updated_at?: string;
   full_name?: string;
   avatar_url?: string;
+  phone?: string;
 }
 
-interface AuthContextType {
+export interface AuthContextType {
   user: User | null;
   loading: boolean;
   signIn: (email: string, password: string) => Promise<{ user: SupabaseUser | null; session: Session | null }>;
   signUp: (email: string, password: string) => Promise<{ user: SupabaseUser | null; session: Session | null }>;
   signOut: () => Promise<void>;
   refreshProfile: () => Promise<void>;
+  logout: () => Promise<void>;
+  adminSignIn: (email: string, password: string, adminCode: string) => Promise<{ user: SupabaseUser | null; session: Session | null }>;
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
@@ -124,8 +131,67 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     if (user?.id) await fetchProfile(user.id);
   };
 
+  const adminSignIn = async (email: string, password: string, adminCode: string) => {
+    try {
+      setLoading(true);
+      // Temporary hardcoded admin code - this should be moved to environment variables in production
+      const ADMIN_ACCESS_CODE = 'admin2025';
+      
+      // First verify the admin code
+      if (adminCode !== ADMIN_ACCESS_CODE) {
+        throw new Error('Invalid admin access code');
+      }
+
+      // Sign in with Supabase
+      const { data, error } = await supabase.auth.signInWithPassword({
+        email,
+        password,
+      });
+
+      if (error) throw error;
+
+      if (data.user) {
+        // Verify if the user has admin role
+        const { data: profileData, error: profileError } = await supabase
+          .from('profiles')
+          .select('role')
+          .eq('id', data.user.id)
+          .single();
+
+        if (profileError) throw profileError;
+
+        if (profileData.role !== 'admin') {
+          // If not admin, sign out and throw error
+          await signOut();
+          throw new Error('User is not authorized as admin');
+        }
+
+        // Fetch the complete profile
+        await fetchProfile(data.user.id);
+      }
+
+      return data;
+    } catch (error: any) {
+      console.error('Admin sign in error:', error);
+      throw error;
+    } finally {
+      setLoading(false);
+    }
+  };
+
   return (
-    <AuthContext.Provider value={{ user, loading, signIn, signUp, signOut, refreshProfile }}>
+    <AuthContext.Provider
+      value={{
+        user,
+        loading,
+        signIn,
+        signUp,
+        signOut,
+        refreshProfile,
+        logout: signOut,
+        adminSignIn
+      }}
+    >
       {children}
     </AuthContext.Provider>
   );

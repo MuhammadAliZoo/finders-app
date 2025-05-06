@@ -23,6 +23,13 @@ const AppNavigator = () => {
     );
   }
 
+  // Add debug logging
+  console.log('[AppNavigator] Navigation state:', {
+    userExists: !!user,
+    userRole: user?.role,
+    isAdmin: user?.role === 'admin'
+  });
+
   return (
     <Stack.Navigator screenOptions={{ headerShown: false }}>
       {!user ? (
@@ -31,6 +38,14 @@ const AppNavigator = () => {
           component={AuthNavigator}
           options={{
             animationTypeForReplace: !user ? 'pop' : 'push',
+          }}
+        />
+      ) : user.role === 'admin' ? (
+        <Stack.Screen 
+          name="AdminHome" 
+          component={AdminNavigator}
+          options={{
+            animation: 'fade'
           }}
         />
       ) : (

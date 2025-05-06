@@ -1,7 +1,7 @@
 'use client';
 import React from 'react';
 import { View, Text, Image, StyleSheet, TouchableOpacity, Dimensions } from 'react-native';
-import { useTheme } from '../theme/ThemeContext';
+import { useTheme } from '../context/ThemeContext';
 import { Item } from '../types/item';
 import { Ionicons } from '@expo/vector-icons';
 

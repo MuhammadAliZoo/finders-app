@@ -29,7 +29,7 @@ import type {
 import { useRoute, useNavigation } from '@react-navigation/native';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { Ionicons } from '@expo/vector-icons';
-import { useTheme } from '../theme/ThemeContext';
+import { useTheme } from '../context/ThemeContext';
 import { MainStackParamList } from '../navigation/types';
 import { useAuth } from '../context/AuthContext';
 import * as ImagePicker from 'expo-image-picker';
@@ -164,7 +164,7 @@ const SubmissionScreen = () => {
         uploadedImages.push(url);
       }
 
-      const formData = {
+      const baseData = {
         title,
         description,
         category,
@@ -180,14 +180,36 @@ const SubmissionScreen = () => {
         }),
         user_id: user?.id,
         created_at: new Date().toISOString(),
+        status: type === 'found' ? 'pending' : 'searching',
       };
 
-      // Insert item into Supabase 'items' table
-      const { error } = await supabase.from('items').insert([formData]);
-      if (error) throw error;
+      if (type === 'found') {
+        // Insert into items table for found items
+        const { error: itemError } = await supabase
+          .from('items')
+          .insert([{ ...baseData, type: 'found' }]);
+        
+        if (itemError) throw itemError;
+      } else {
+        // Insert into requests table for lost items
+        const { error: requestError } = await supabase
+          .from('requests')
+          .insert([{ ...baseData, type: 'lost' }]);
+        
+        if (requestError) throw requestError;
+      }
 
-      Alert.alert('Success', 'Submission created successfully!');
-      // navigation.navigate('Tabs', { screen: 'FinderTab' });
+      Alert.alert(
+        'Success', 
+        type === 'found' 
+          ? 'Found item reported successfully!' 
+          : 'Lost item request created successfully!'
+      );
+
+      // Navigate to the appropriate screen
+      navigation.navigate('Tabs', { 
+        screen: type === 'found' ? 'FinderTab' : 'RequesterTab'
+      });
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Failed to submit item');
       console.error('Submit error:', err);

@@ -17,9 +17,8 @@ export type RootStackParamList = {
   Main: NavigatorScreenParams<MainStackParamList>;
 
   // Admin Flow
-  AdminHome: undefined;
+  AdminDashboard: undefined;  // Primary admin route
   AdminProfile: undefined;
-  AdminDashboard: undefined;
   ContentModeration: undefined;
   ItemModeration: { item: ModerationItem };
   DisputeResolution: undefined;
@@ -79,10 +78,19 @@ export type TabScreenProps<T extends keyof TabParamList> = {
 export interface ModerationItem {
   id: string;
   title: string;
-  description: string;
+  content: string;
+  type: 'listing' | 'profile' | 'comment';
+  status: 'pending' | 'flagged' | 'approved' | 'rejected';
+  reportCount: number;
+  priority: 'low' | 'medium' | 'high';
+  createdAt: string;
+  updatedAt: string;
+  reporter: {
+    id: string;
+    name: string;
+    avatar: string;
+  };
+  category: string;
   images: string[];
-  status: string;
-  priority: number;
-  rating: number;
-  date: string;
+  aiFlags: string[];
 }

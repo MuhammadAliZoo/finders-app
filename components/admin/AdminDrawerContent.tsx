@@ -3,7 +3,7 @@
 import { View, Text, StyleSheet, Image, TouchableOpacity } from 'react-native';
 import { DrawerContentScrollView, DrawerItemList } from '@react-navigation/drawer';
 import { Ionicons } from '@expo/vector-icons';
-import { useTheme } from '../../theme/ThemeContext';
+import { useTheme } from '../../context/ThemeContext';
 import { useAuth } from '../../context/AuthContext';
 import type { DrawerContentComponentProps } from '@react-navigation/drawer';
 
@@ -46,7 +46,57 @@ const AdminDrawerContent = (props: DrawerContentComponentProps) => {
       </View>
 
       <View style={styles.drawerContent}>
-        <DrawerItemList {...props} />
+        <TouchableOpacity
+          style={styles.drawerItem}
+          onPress={() => props.navigation.navigate('AdminDashboard')}
+        >
+          <Ionicons
+            name="home-outline"
+            size={22}
+            color={colors.secondary}
+            style={styles.drawerIcon}
+          />
+          <Text style={[styles.drawerLabel, { color: colors.text }]}>Dashboard</Text>
+        </TouchableOpacity>
+
+        <TouchableOpacity
+          style={styles.drawerItem}
+          onPress={() => props.navigation.navigate('ContentModeration')}
+        >
+          <Ionicons
+            name="shield-checkmark-outline"
+            size={22}
+            color={colors.secondary}
+            style={styles.drawerIcon}
+          />
+          <Text style={[styles.drawerLabel, { color: colors.text }]}>Content Moderation</Text>
+        </TouchableOpacity>
+
+        <TouchableOpacity
+          style={styles.drawerItem}
+          onPress={() => props.navigation.navigate('DisputeResolution')}
+        >
+          <Ionicons
+            name="alert-circle-outline"
+            size={22}
+            color={colors.secondary}
+            style={styles.drawerIcon}
+          />
+          <Text style={[styles.drawerLabel, { color: colors.text }]}>Dispute Resolution</Text>
+        </TouchableOpacity>
+
+        <TouchableOpacity
+          style={styles.drawerItem}
+          onPress={() => props.navigation.navigate('AdminProfile')}
+        >
+          <Ionicons
+            name="person-outline"
+            size={22}
+            color={colors.secondary}
+            style={styles.drawerIcon}
+          />
+          <Text style={[styles.drawerLabel, { color: colors.text }]}>Profile</Text>
+        </TouchableOpacity>
 
         <View style={[styles.divider, { backgroundColor: colors.border }]} />
 

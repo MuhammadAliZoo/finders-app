@@ -9,7 +9,7 @@ import {
   Alert,
 } from 'react-native';
 import { supabase } from '../config/supabase';
-import { useTheme } from '../theme/ThemeContext';
+import { useTheme } from '../context/ThemeContext';
 
 interface User {
   id: string;
