@@ -3,6 +3,10 @@ import Item from '../models/Item.js';
 import Dispute from '../models/Dispute.js';
 import ModerationRule from '../models/ModerationRule.js';
 import asyncHandler from 'express-async-handler';
+import { Parser } from 'json2csv';
+import PDFDocument from 'pdfkit';
+import { supabaseClient } from '../lib/supabase.js';
+import SystemPerformance from '../models/SystemPerformance.js';
 
 // @desc    Get dashboard data
 // @route   GET /api/admin/dashboard
@@ -542,6 +546,7 @@ export const getAIRecommendation = asyncHandler(async (req, res) => {
 // @access  Private (Admin only)
 export const generateReport = asyncHandler(async (req, res) => {
   const { type, filters } = req.body;
+  const format = req.query.format;
 
   let report = {};
 
@@ -558,9 +563,63 @@ export const generateReport = asyncHandler(async (req, res) => {
     case 'disputes':
       report = await generateDisputeReport(filters);
       break;
+    case 'system_performance':
+      report = await generateSystemPerformanceReport(filters);
+      break;
     default:
       res.status(400);
       throw new Error('Invalid report type');
+  }
+
+  if (format === 'csv') {
+    // Convert report.details (or another array) to CSV
+    const details = report.details || [];
+    if (!Array.isArray(details) || details.length === 0) {
+      return res.status(400).json({ message: 'No data available for CSV export.' });
+    }
+    const fields = Object.keys(details[0]);
+    const json2csvParser = new Parser({ fields });
+    const csv = json2csvParser.parse(details);
+    res.header('Content-Type', 'text/csv');
+    res.attachment(`${report.title.replace(/ /g, '_')}_${Date.now()}.csv`);
+    return res.send(csv);
+  }
+
+  if (format === 'pdf') {
+    // Generate a simple PDF report
+    res.setHeader('Content-Type', 'application/pdf');
+    res.setHeader('Content-Disposition', `attachment; filename="${report.title.replace(/ /g, '_')}_${Date.now()}.pdf"`);
+    const doc = new PDFDocument();
+    doc.pipe(res);
+    doc.fontSize(20).text(report.title, { align: 'center' });
+    doc.moveDown();
+    doc.fontSize(12).text(`Generated At: ${new Date(report.generatedAt).toLocaleString()}`);
+    doc.moveDown();
+    if (report.summary) {
+      doc.fontSize(14).text('Summary:', { underline: true });
+      Object.entries(report.summary).forEach(([key, value]) => {
+        doc.text(`${key}: ${value}`);
+      });
+      doc.moveDown();
+    }
+    if (Array.isArray(report.details) && report.details.length > 0) {
+      doc.fontSize(14).text('Details:', { underline: true });
+      const fields = Object.keys(report.details[0]);
+      // Table header
+      doc.font('Helvetica-Bold');
+      fields.forEach(field => doc.text(field, { continued: true, width: 100 }));
+      doc.text('');
+      doc.font('Helvetica');
+      // Table rows
+      report.details.forEach(row => {
+        fields.forEach(field => doc.text(String(row[field]), { continued: true, width: 100 }));
+        doc.text('');
+      });
+    } else {
+      doc.text('No details available.');
+    }
+    doc.end();
+    return;
   }
 
   res.json(report);
@@ -568,43 +627,63 @@ export const generateReport = asyncHandler(async (req, res) => {
 
 // Helper function to generate user report
 const generateUserReport = async filters => {
-  // This would typically generate a detailed user report
-  // For now, returning mock data
+  // Fetch users from Supabase instead of MongoDB
+  const { data: users, error } = await supabaseClient.from('users').select('*');
+  if (error) {
+    throw new Error('Failed to fetch users from Supabase: ' + error.message);
+  }
   return {
     title: 'User Activity Report',
     generatedAt: new Date(),
     summary: {
-      totalUsers: 1250,
-      activeUsers: 875,
-      newUsers: 125,
-      retentionRate: '70%',
+      totalUsers: users.length,
+      activeUsers: users.filter(u => u.status === 'online').length,
+      newUsers: users.filter(u => {
+        const created = new Date(u.created_at);
+        const now = new Date();
+        return created.getMonth() === now.getMonth() && created.getFullYear() === now.getFullYear();
+      }).length,
+      // You can add more summary stats as needed
     },
-    charts: [
-      { type: 'line', title: 'User Growth', data: {} },
-      { type: 'pie', title: 'User Activity Distribution', data: {} },
-    ],
-    details: [],
+    charts: [],
+    details: users.map(u => ({
+      id: u.id,
+      name: u.name,
+      email: u.email,
+      role: u.role,
+      createdAt: u.created_at,
+      lastSeen: u.last_seen,
+      status: u.status,
+    })),
   };
 };
 
 // Helper function to generate item report
 const generateItemReport = async filters => {
-  // This would typically generate a detailed item report
-  // For now, returning mock data
+  // Fetch items from Supabase instead of returning mock data
+  const { data: items, error } = await supabaseClient.from('items').select('*');
+  if (error) {
+    throw new Error('Failed to fetch items from Supabase: ' + error.message);
+  }
   return {
     title: 'Item Activity Report',
     generatedAt: new Date(),
     summary: {
-      totalItems: 2500,
-      lostItems: 1500,
-      foundItems: 1000,
-      matchRate: '35%',
+      totalItems: items.length,
+      lostItems: items.filter(item => item.status === 'lost').length,
+      foundItems: items.filter(item => item.status === 'found').length,
+      matchRate: '35%', // This can be calculated based on your logic
     },
     charts: [
       { type: 'bar', title: 'Items by Category', data: {} },
       { type: 'line', title: 'Items Over Time', data: {} },
     ],
-    details: [],
+    details: items.map(item => ({
+      id: item.id,
+      title: item.title,
+      status: item.status,
+      createdAt: item.created_at,
+    })),
   };
 };
 
@@ -631,21 +710,51 @@ const generateMatchReport = async filters => {
 
 // Helper function to generate dispute report
 const generateDisputeReport = async filters => {
-  // This would typically generate a detailed dispute report
-  // For now, returning mock data
+  // Fetch disputes from MongoDB instead of Supabase
+  const disputes = await Dispute.find({}).lean();
   return {
     title: 'Dispute Resolution Report',
     generatedAt: new Date(),
     summary: {
-      totalDisputes: 150,
-      resolvedDisputes: 125,
-      averageResolutionTime: '2.3 days',
-      satisfactionRate: '85%',
+      totalDisputes: disputes.length,
+      resolvedDisputes: disputes.filter(dispute => dispute.status === 'resolved').length,
+      averageResolutionTime: '2.3 days', // This can be calculated based on your logic
+      satisfactionRate: '85%', // This can be calculated based on your logic
     },
     charts: [
       { type: 'bar', title: 'Disputes by Category', data: {} },
       { type: 'line', title: 'Resolution Time Trend', data: {} },
     ],
-    details: [],
+    details: disputes.map(dispute => ({
+      id: dispute._id,
+      title: dispute.title,
+      status: dispute.status,
+      createdAt: dispute.createdAt,
+    })),
+  };
+};
+
+// Helper function to generate system performance report
+const generateSystemPerformanceReport = async filters => {
+  // Fetch system performance data from MongoDB instead of returning mock data
+  const performanceData = await SystemPerformance.find({}).lean();
+  return {
+    title: 'System Performance Report',
+    generatedAt: new Date(),
+    summary: {
+      totalRequests: performanceData.reduce((sum, data) => sum + data.totalRequests, 0),
+      averageResponseTime: performanceData.reduce((sum, data) => sum + data.averageResponseTime, 0) / performanceData.length,
+      uptime: '99.9%', // This can be calculated based on your logic
+    },
+    charts: [
+      { type: 'line', title: 'Response Time Over Time', data: {} },
+      { type: 'bar', title: 'Requests by Endpoint', data: {} },
+    ],
+    details: performanceData.map(data => ({
+      id: data._id,
+      totalRequests: data.totalRequests,
+      averageResponseTime: data.averageResponseTime,
+      createdAt: data.createdAt,
+    })),
   };
 };

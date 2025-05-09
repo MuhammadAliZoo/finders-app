@@ -8,13 +8,13 @@ import {
   matchItems,
   moderateItem,
 } from '../controllers/items.js';
-import { protect, admin } from '../middleware/auth.js';
+import { protect, requireAdmin } from '../middleware/auth.js';
 
 const router = express.Router();
 
 router.route('/').get(getItems).post(protect, createItem);
 router.route('/:id').get(getItemById).put(protect, updateItem).delete(protect, deleteItem);
-router.route('/match').post(protect, admin, matchItems);
-router.route('/:id/moderate').put(protect, admin, moderateItem);
+router.route('/match').post(protect, requireAdmin, matchItems);
+router.route('/:id/moderate').put(protect, requireAdmin, moderateItem);
 
 export default router;

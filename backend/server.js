@@ -15,6 +15,7 @@ import http from 'http';
 import { Server } from 'socket.io';
 import mongoose from 'mongoose';
 import userRoutes from './routes/userRoutes.js';
+import SystemPerformance from './models/SystemPerformance.js';
 
 // Connect to database
 connectDB();
@@ -111,6 +112,12 @@ mongoose
   .then(() => console.log('Connected to MongoDB'))
   .catch(err => console.error('MongoDB connection error:', err));
 
-server.listen(PORT, () => {
+server.listen(PORT, '0.0.0.0', () => {
   console.log(`Server running in ${process.env.NODE_ENV} mode on port ${PORT}`);
+  console.log(`Server is listening on http://0.0.0.0:${PORT}`);
+  console.log('Available routes:');
+  console.log('- POST /api/admin/reports');
+  console.log('- GET /api/items');
+  console.log('- GET /api/disputes');
+  console.log('- GET /api/users');
 });

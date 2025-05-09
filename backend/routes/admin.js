@@ -12,13 +12,13 @@ import {
   getAIRecommendation,
   generateReport,
 } from '../controllers/admin.js';
-import { protect, admin } from '../middleware/auth.js';
+import { verifySupabaseToken, requireAdmin } from '../middleware/auth.js';
 
 const router = express.Router();
 
 // Apply middleware to all routes
-router.use(protect);
-router.use(admin);
+router.use(verifySupabaseToken);
+router.use(requireAdmin);
 
 // Dashboard routes
 router.get('/dashboard', getDashboardData);
