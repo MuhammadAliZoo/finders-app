@@ -15,6 +15,7 @@ export interface User {
   full_name?: string;
   avatar_url?: string;
   phone?: string;
+  username?: string;
 }
 
 export interface AuthContextType {

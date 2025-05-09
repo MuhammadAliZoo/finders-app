@@ -14,6 +14,8 @@ import { useAuth } from '../../context/AuthContext';
 import AdminHeader from '../../components/admin/AdminHeader';
 import type { DrawerNavigationProp } from '@react-navigation/drawer';
 import { RootStackParamList } from '../../navigation/types';
+import * as ImagePicker from 'expo-image-picker';
+import { supabase } from '../../config/supabase';
 
 type ActionItem = {
   id: string;
@@ -41,19 +43,16 @@ type AdminProfileScreenProps = {
 
 const AdminProfileScreen = ({ navigation }: AdminProfileScreenProps) => {
   const { colors } = useTheme();
-  const { signOut } = useAuth();
+  const { user, signOut } = useAuth();
 
-  // Mock admin data
+  // Use real admin data from Supabase
   const adminData = {
-    name: 'John Doe',
-    role: 'Senior Administrator',
-    email: 'john.doe@finders.com',
-    joinDate: 'January 2023',
-    recentActions: [
-      { id: '1', action: 'Resolved dispute #1234', date: '2 hours ago' },
-      { id: '2', action: 'Approved item moderation', date: '5 hours ago' },
-      { id: '3', action: 'Generated monthly report', date: '1 day ago' },
-    ] as ActionItem[],
+    name: user?.full_name || user?.name || 'Admin',
+    role: user?.role || 'admin',
+    email: user?.username || '',
+    joinDate: user?.created_at ? new Date(user.created_at).toLocaleDateString() : '',
+    profileImage: user?.avatar_url || 'https://cdn-icons-png.flaticon.com/512/616/616408.png', // Wolf head icon
+    recentActions: [], // You can fetch and display real actions if available
   };
 
   const handleLogout = async () => {
@@ -61,6 +60,41 @@ const AdminProfileScreen = ({ navigation }: AdminProfileScreenProps) => {
       await signOut();
     } catch (error) {
       console.error('Logout failed:', error);
+    }
+  };
+
+  const handleProfileImageChange = async () => {
+    try {
+      const permissionResult = await ImagePicker.requestMediaLibraryPermissionsAsync();
+      if (permissionResult.status !== 'granted') {
+        alert('Permission to access camera roll is required!');
+        return;
+      }
+      const pickerResult = await ImagePicker.launchImageLibraryAsync({
+        mediaTypes: ImagePicker.MediaTypeOptions.Images,
+        allowsEditing: true,
+        aspect: [1, 1],
+        quality: 0.7,
+      });
+      if (pickerResult.canceled) return;
+      const uri = pickerResult.assets && pickerResult.assets.length > 0 ? pickerResult.assets[0].uri : undefined;
+      if (!uri) return;
+      // Upload to Supabase Storage
+      const fileName = `avatars/${user?.id}_${Date.now()}.jpg`;
+      const response = await fetch(uri);
+      const blob = await response.blob();
+      const { error: uploadError } = await supabase.storage.from('avatars').upload(fileName, blob, { upsert: true });
+      if (uploadError) throw uploadError;
+      // Get public URL
+      const { data: publicUrlData } = supabase.storage.from('avatars').getPublicUrl(fileName);
+      const publicUrl = publicUrlData?.publicUrl;
+      if (!publicUrl) throw new Error('Failed to get public URL');
+      // Update profile in Supabase
+      const { error: updateError } = await supabase.from('profiles').update({ avatar_url: publicUrl }).eq('id', user?.id);
+      if (updateError) throw updateError;
+      alert('Profile picture updated!');
+    } catch (e: any) {
+      alert('Failed to update profile picture: ' + (e.message || e));
     }
   };
 
@@ -76,13 +110,21 @@ const AdminProfileScreen = ({ navigation }: AdminProfileScreenProps) => {
 
   return (
     <View style={[styles.container, { backgroundColor: colors.background }]}>
-      <AdminHeader title="Admin Profile" navigation={navigation} />
       <ScrollView style={[styles.container, { backgroundColor: colors.background }]}>
         <View style={[styles.header, { backgroundColor: colors.card }]}>
           <View style={styles.profileImageContainer}>
-            <Image source={{ uri: 'https://via.placeholder.com/150' }} style={styles.profileImage} />
+            <Image source={{ uri: adminData.profileImage }} style={styles.profileImage} />
+            <TouchableOpacity
+              style={styles.profileImageEdit}
+              onPress={handleProfileImageChange}
+            >
+              <Ionicons name="camera-outline" size={24} color={colors.primary} />
+            </TouchableOpacity>
           </View>
-          <Text style={[styles.name, { color: colors.text }]}>{adminData.name}</Text>
+          <View style={{ flexDirection: 'row', alignItems: 'center' }}>
+            <Text style={[styles.name, { color: colors.text }]}>{adminData.name}</Text>
+            <Ionicons name="location-outline" size={20} color={colors.primary} style={{ marginLeft: 8 }} />
+          </View>
           <Text style={[styles.role, { color: colors.secondary }]}>{adminData.role}</Text>
         </View>
 
@@ -116,7 +158,10 @@ const AdminProfileScreen = ({ navigation }: AdminProfileScreenProps) => {
 
         <TouchableOpacity
           style={[styles.logoutButton, { backgroundColor: colors.primary }]}
-          onPress={handleLogout}
+          onPress={async () => {
+            await signOut();
+            navigation.navigate('Login');
+          }}
         >
           <Ionicons name="log-out-outline" size={20} color="#FFFFFF" />
           <Text style={styles.logoutText}>Logout</Text>
@@ -194,6 +239,15 @@ const styles = StyleSheet.create({
     marginBottom: 16,
     overflow: 'hidden',
     width: 120,
+  },
+  profileImageEdit: {
+    position: 'absolute',
+    bottom: 8,
+    right: 8,
+    backgroundColor: '#fff',
+    borderRadius: 16,
+    padding: 4,
+    elevation: 2,
   },
   role: {
     fontSize: 16,

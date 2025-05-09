@@ -1,7 +1,9 @@
 import React, { useState } from 'react';
-import { View, Text, StyleSheet, ScrollView, TouchableOpacity, TextInput } from 'react-native';
+import { View, Text, StyleSheet, ScrollView, TouchableOpacity, TextInput, ActivityIndicator, Alert, Linking } from 'react-native';
 import { useTheme } from '../../context/ThemeContext';
 import { Ionicons } from '@expo/vector-icons';
+import { adminApi } from '../../api/admin';
+import Constants from 'expo-constants';
 
 interface ReportType {
   id: string;
@@ -40,14 +42,37 @@ const GenerateReportScreen = () => {
     endDate: '',
   });
   const [email, setEmail] = useState('');
+  const [loading, setLoading] = useState(false);
 
-  const handleGenerateReport = () => {
-    // TODO: Implement report generation
-    console.log('Generating report:', {
-      reportType: selectedReport,
-      dateRange,
-      email,
-    });
+  const handleGenerateReport = async () => {
+    setLoading(true);
+    try {
+      const filters = { startDate: dateRange.startDate, endDate: dateRange.endDate, email };
+      await adminApi.generateReport(selectedReport, filters);
+      Alert.alert('Success', 'Report generation requested. You will receive it by email.');
+    } catch (error: any) {
+      Alert.alert('Error', error.message || 'Failed to generate report.');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleDownload = async (format: 'csv' | 'pdf') => {
+    try {
+      // Build the download URL
+      const apiUrl = Constants.expoConfig?.extra?.EXPO_PUBLIC_API_URL || process.env.EXPO_PUBLIC_API_URL;
+      const url = `${apiUrl}/api/admin/reports?format=${format}`;
+      const body = JSON.stringify({
+        type: selectedReport,
+        filters: { startDate: dateRange.startDate, endDate: dateRange.endDate, email },
+      });
+      // Open the download URL in the browser (will prompt for download)
+      // Note: This works best if the user is already authenticated in the browser
+      // For a more robust solution, use a file downloader library and attach the auth token
+      Linking.openURL(url);
+    } catch (error: any) {
+      Alert.alert('Error', error.message || `Failed to download ${format.toUpperCase()} report.`);
+    }
   };
 
   return (
@@ -123,12 +148,32 @@ const GenerateReportScreen = () => {
       </View>
 
       <TouchableOpacity
-        style={[styles.generateButton, { backgroundColor: colors.primary }]}
+        style={[styles.generateButton, { backgroundColor: colors.primary, opacity: loading ? 0.7 : 1 }]}
         onPress={handleGenerateReport}
-        disabled={!selectedReport || !dateRange.startDate || !dateRange.endDate || !email}
+        disabled={!selectedReport || !dateRange.startDate || !dateRange.endDate || !email || loading}
       >
-        <Text style={styles.generateButtonText}>Generate Report</Text>
+        {loading ? (
+          <ActivityIndicator color="#fff" />
+        ) : (
+          <Text style={styles.generateButtonText}>Generate Report</Text>
+        )}
       </TouchableOpacity>
+      <View style={{ flexDirection: 'row', justifyContent: 'center', marginBottom: 24 }}>
+        <TouchableOpacity
+          style={[styles.generateButton, { backgroundColor: colors.success, marginRight: 8 }]}
+          onPress={() => handleDownload('csv')}
+          disabled={!selectedReport || !dateRange.startDate || !dateRange.endDate || !email}
+        >
+          <Text style={styles.generateButtonText}>Download as CSV</Text>
+        </TouchableOpacity>
+        <TouchableOpacity
+          style={[styles.generateButton, { backgroundColor: colors.error }]}
+          onPress={() => handleDownload('pdf')}
+          disabled={!selectedReport || !dateRange.startDate || !dateRange.endDate || !email}
+        >
+          <Text style={styles.generateButtonText}>Download as PDF</Text>
+        </TouchableOpacity>
+      </View>
     </ScrollView>
   );
 };

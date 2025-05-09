@@ -26,137 +26,6 @@ import AdminHeader from '../../components/admin/AdminHeader';
 type DisputeStatus = 'all' | 'open' | 'in_progress' | 'escalated' | 'resolved';
 type SortBy = 'date' | 'priority' | 'response_time';
 
-const mockDisputes: Dispute[] = [
-  {
-    id: "DSP-2024-001",
-    status: "open",
-    createdAt: "2024-03-15T10:30:00Z",
-    itemTitle: "Lost iPhone 14 Pro - Central Park",
-    requesterName: "John Smith",
-    finderName: "Sarah Johnson",
-    priority: "high",
-    description: "Dispute regarding the condition of the found item and reward amount",
-    timeline: [
-      {
-        id: "TL001",
-        type: "message",
-        timestamp: "2024-03-15T10:30:00Z",
-        actor: "John Smith",
-        action: "Dispute Created",
-        details: "Initial dispute filed regarding item condition"
-      },
-      {
-        id: "TL002",
-        type: "action",
-        timestamp: "2024-03-15T11:45:00Z",
-        actor: "Sarah Johnson",
-        action: "Response Received",
-        details: "Finder provided evidence of item condition at time of discovery"
-      },
-      {
-        id: "TL003",
-        type: "status_change",
-        timestamp: "2024-03-15T14:20:00Z",
-        actor: "Admin System",
-        action: "Auto-Assignment",
-        details: "Dispute assigned to resolution team"
-      }
-    ]
-  },
-  {
-    id: "DSP-2024-002",
-    status: "in_progress",
-    createdAt: "2024-03-14T15:45:00Z",
-    itemTitle: "Designer Handbag - Shopping Mall",
-    requesterName: "Emma Davis",
-    finderName: "Michael Wilson",
-    priority: "medium",
-    description: "Disagreement over reward payment method",
-    timeline: [
-      {
-        id: "TL001",
-        type: "message",
-        timestamp: "2024-03-14T15:45:00Z",
-        actor: "Emma Davis",
-        action: "Dispute Created",
-        details: "Dispute filed regarding reward payment"
-      },
-      {
-        id: "TL002",
-        type: "status_change",
-        timestamp: "2024-03-14T16:30:00Z",
-        actor: "Support Team",
-        action: "Mediation Started",
-        details: "Initial contact made with both parties"
-      }
-    ]
-  },
-  {
-    id: "DSP-2024-003",
-    status: "escalated",
-    createdAt: "2024-03-13T09:15:00Z",
-    itemTitle: "Laptop - Coffee Shop",
-    requesterName: "David Brown",
-    finderName: "Lisa Anderson",
-    priority: "high",
-    description: "Dispute over item authenticity and ownership verification",
-    timeline: [
-      {
-        id: "TL001",
-        type: "message",
-        timestamp: "2024-03-13T09:15:00Z",
-        actor: "David Brown",
-        action: "Dispute Created",
-        details: "Ownership verification dispute initiated"
-      },
-      {
-        id: "TL002",
-        type: "status_change",
-        timestamp: "2024-03-13T11:30:00Z",
-        actor: "Support Team",
-        action: "Case Escalated",
-        details: "Escalated to senior resolution team due to complexity"
-      }
-    ]
-  },
-  {
-    id: "DSP-2024-004",
-    status: "resolved",
-    createdAt: "2024-03-12T13:20:00Z",
-    itemTitle: "Gold Watch - Gym",
-    requesterName: "Patricia Lee",
-    finderName: "Robert Taylor",
-    priority: "medium",
-    description: "Successfully resolved dispute about meeting location",
-    timeline: [
-      {
-        id: "TL001",
-        type: "message",
-        timestamp: "2024-03-12T13:20:00Z",
-        actor: "Patricia Lee",
-        action: "Dispute Created",
-        details: "Meeting location dispute filed"
-      },
-      {
-        id: "TL002",
-        type: "status_change",
-        timestamp: "2024-03-12T15:45:00Z",
-        actor: "Support Team",
-        action: "Resolution Reached",
-        details: "Agreed on neutral meeting location with security presence"
-      },
-      {
-        id: "TL003",
-        type: "resolution",
-        timestamp: "2024-03-12T18:00:00Z",
-        actor: "System",
-        action: "Case Closed",
-        details: "Successful item handover confirmed by both parties"
-      }
-    ]
-  }
-];
-
 export interface Dispute {
   id: string;
   status: string;
@@ -200,46 +69,70 @@ const DisputeResolutionScreen = ({ navigation }: DisputeResolutionScreenProps) =
   const [showDisputeModal, setShowDisputeModal] = useState(false);
   const [aiRecommendation, setAiRecommendation] = useState<AIRecommendationData | null>(null);
   const [loadingRecommendation, setLoadingRecommendation] = useState(false);
+  const [error, setError] = useState<string | null>(null);
 
-  useEffect(() => {
-    setLoading(true);
-    setTimeout(() => {
-      let filteredDisputes = [...mockDisputes];
+  const fetchDisputes = async () => {
+    try {
+      setError(null);
+      const response = await adminApi.getDisputes(filterStatus, sortBy);
       
-      if (filterStatus !== 'all') {
-        filteredDisputes = filteredDisputes.filter(
-          d => d.status.toLowerCase() === filterStatus
-        );
-      }
+      // Transform the response data to match our Dispute interface
+      const transformedDisputes = response.map((dispute: any) => ({
+        id: dispute._id,
+        status: dispute.status,
+        createdAt: dispute.createdAt,
+        itemTitle: dispute.item?.title || 'Unknown Item',
+        requesterName: dispute.requester?.name || 'Unknown Requester',
+        finderName: dispute.finder?.name || 'Unknown Finder',
+        priority: dispute.priority,
+        description: dispute.reason,
+        timeline: dispute.timeline.map((event: any) => ({
+          id: event._id,
+          type: event.action.toLowerCase().includes('status') ? 'status_change' 
+            : event.action.toLowerCase().includes('message') ? 'message'
+            : event.action.toLowerCase().includes('resolved') ? 'resolution'
+            : 'action',
+          timestamp: event.timestamp,
+          actor: event.performedBy?.name || 'System',
+          action: event.action,
+          details: event.notes || ''
+        }))
+      }));
 
-      filteredDisputes.sort((a, b) => {
-        switch (sortBy) {
-          case 'date':
-            return new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime();
-          case 'priority':
-            const priorityOrder = { high: 3, medium: 2, low: 1 };
-            return priorityOrder[b.priority] - priorityOrder[a.priority];
-          case 'response_time':
-            return new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime();
-          default:
-            return 0;
-        }
-      });
-
-      setDisputes(filteredDisputes);
+      setDisputes(transformedDisputes);
+    } catch (err) {
+      console.error('Error fetching disputes:', err);
+      setError('Failed to fetch disputes. Please try again.');
+    } finally {
       setLoading(false);
       setRefreshing(false);
-    }, 1000);
+    }
+  };
+
+  useEffect(() => {
+    fetchDisputes();
   }, [filterStatus, sortBy]);
 
   const onRefresh = () => {
     setRefreshing(true);
-    setFilterStatus(filterStatus);
+    fetchDisputes();
   };
 
   const handleSearch = (text: string) => {
     setSearchQuery(text);
-    // Implement search functionality here
+    // Filter disputes locally based on search text
+    if (!text) {
+      fetchDisputes();
+      return;
+    }
+
+    const filtered = disputes.filter(dispute => 
+      dispute.itemTitle.toLowerCase().includes(text.toLowerCase()) ||
+      dispute.requesterName.toLowerCase().includes(text.toLowerCase()) ||
+      dispute.finderName.toLowerCase().includes(text.toLowerCase()) ||
+      dispute.description.toLowerCase().includes(text.toLowerCase())
+    );
+    setDisputes(filtered);
   };
 
   const openDisputeDetails = (dispute: Dispute) => {
@@ -598,7 +491,17 @@ const DisputeResolutionScreen = ({ navigation }: DisputeResolutionScreenProps) =
           </ScrollView>
         </View>
 
-        {loading && !refreshing ? (
+        {error ? (
+          <View style={styles.errorContainer}>
+            <Text style={[styles.errorText, { color: colors.error }]}>{error}</Text>
+            <TouchableOpacity 
+              style={[styles.retryButton, { backgroundColor: colors.primary }]}
+              onPress={fetchDisputes}
+            >
+              <Text style={styles.retryButtonText}>Retry</Text>
+            </TouchableOpacity>
+          </View>
+        ) : loading && !refreshing ? (
           <View style={styles.loadingContainer}>
             <ActivityIndicator size="large" color={colors.primary} />
             <Text style={[styles.loadingText, { color: colors.secondary }]}>Loading disputes...</Text>
@@ -607,7 +510,7 @@ const DisputeResolutionScreen = ({ navigation }: DisputeResolutionScreenProps) =
           <FlatList
             data={disputes}
             renderItem={renderItem}
-            keyExtractor={item => item.id.toString()}
+            keyExtractor={item => item.id}
             contentContainerStyle={styles.listContent}
             onRefresh={onRefresh}
             refreshing={refreshing}
@@ -839,6 +742,27 @@ const styles = StyleSheet.create({
   viewFullButton: {
     fontSize: 14,
     fontWeight: '500',
+  },
+  errorContainer: {
+    alignItems: 'center',
+    flex: 1,
+    justifyContent: 'center',
+    padding: 20,
+  },
+  errorText: {
+    fontSize: 16,
+    marginBottom: 16,
+    textAlign: 'center',
+  },
+  retryButton: {
+    borderRadius: 8,
+    paddingHorizontal: 20,
+    paddingVertical: 10,
+  },
+  retryButtonText: {
+    color: '#FFFFFF',
+    fontSize: 14,
+    fontWeight: '600',
   },
 });
 

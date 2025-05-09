@@ -11,19 +11,6 @@ import { initializeSupabase } from './config/supabase';
 // Keep the splash screen visible while we fetch resources
 SplashScreen.preventAutoHideAsync();
 
-// Debug info component
-const AuthDebugInfo = () => {
-  // Only use useAuth inside AuthProvider
-  const { user, loading } = require('./context/AuthContext').useAuth();
-  return (
-    <View style={{ position: 'absolute', bottom: 40, left: 10, right: 10, backgroundColor: '#eee', padding: 10, borderRadius: 8 }}>
-      <Text style={{ color: 'gray', fontSize: 12 }}>[DEBUG]</Text>
-      <Text style={{ color: 'gray', fontSize: 12 }}>Auth loading: {String(loading)}</Text>
-      <Text style={{ color: 'gray', fontSize: 12 }}>Auth user: {user ? JSON.stringify(user) : 'null'}</Text>
-    </View>
-  );
-};
-
 export default function App() {
   const [appIsReady, setAppIsReady] = React.useState(false);
   const [error, setError] = React.useState<Error | null>(null);
@@ -95,7 +82,6 @@ export default function App() {
           <View style={{ flex: 1 }} onLayout={onLayoutRootView}>
             <AppNavigator />
             <StatusBar style="auto" />
-            <AuthDebugInfo />
           </View>
         </ThemeProvider>
       </AuthProvider>

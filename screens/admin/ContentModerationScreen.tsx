@@ -154,18 +154,41 @@ const ContentModerationScreen = ({ navigation }: ContentModerationScreenProps) =
   const chatRef = useRef(null);
 
   useEffect(() => {
-    // Simulate API call with mock data
-    setLoading(true);
-    setTimeout(() => {
-      setItems(mockModerationItems);
-      setModerationRules(mockModerationRules);
-      setLoading(false);
-    }, 1000);
+    const fetchData = async () => {
+      setLoading(true);
+      try {
+        const [itemsData, rulesData] = await Promise.all([
+          adminApi.getItemsForModeration(filterStatus, sortBy),
+          adminApi.getModerationRules(),
+        ]);
+        setItems(itemsData);
+        setModerationRules(rulesData);
+      } catch (error: any) {
+        Alert.alert('Error', error.message || 'Failed to fetch moderation data');
+      } finally {
+        setLoading(false);
+        setRefreshing(false);
+      }
+    };
+    fetchData();
   }, [filterStatus, sortBy]);
 
   const onRefresh = () => {
     setRefreshing(true);
-    // fetchItems();
+    (async () => {
+      try {
+        const [itemsData, rulesData] = await Promise.all([
+          adminApi.getItemsForModeration(filterStatus, sortBy),
+          adminApi.getModerationRules(),
+        ]);
+        setItems(itemsData);
+        setModerationRules(rulesData);
+      } catch (error: any) {
+        Alert.alert('Error', error.message || 'Failed to refresh moderation data');
+      } finally {
+        setRefreshing(false);
+      }
+    })();
   };
 
   const handleSearch = (text: string) => {
@@ -192,12 +215,14 @@ const ContentModerationScreen = ({ navigation }: ContentModerationScreenProps) =
     try {
       setLoading(true);
       await adminApi.batchModerateItems(selectedItems, action);
-      // fetchItems();
       setSelectedItems([]);
       Alert.alert(
         'Success',
         `${selectedItems.length} items have been ${action === 'approve' ? 'approved' : 'rejected'}.`,
       );
+      // Refresh items after batch action
+      const itemsData = await adminApi.getItemsForModeration(filterStatus, sortBy);
+      setItems(itemsData);
     } catch (error) {
       console.error(`Failed to ${action} items`, error);
       Alert.alert('Error', `Failed to ${action} items. Please try again.`);
