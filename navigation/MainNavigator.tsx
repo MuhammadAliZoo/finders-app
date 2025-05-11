@@ -17,6 +17,8 @@ import ClaimTrackingScreen from '../screens/ClaimTrackingScreen';
 import { AIAssistantScreen } from '../screens/AIAssistantScreen';
 import { AllTrendingItemsScreen } from '../screens/AllTrendingItemsScreen';
 import { RareItemsMarketplaceScreen } from '../screens/RareItemsMarketplaceScreen';
+import { ChatScreen } from '../screens/ChatScreen';
+import ChatListScreen from '../screens/ChatListScreen';
 
 import LogoTitle from '../components/LogoTitle';
 import { useTheme } from '../context/ThemeContext';
@@ -161,6 +163,8 @@ const MainNavigator = () => {
         component={RareItemsMarketplaceScreen as React.ComponentType<any>}
         options={{ title: 'Rare Items Marketplace' }}
       />
+      <Stack.Screen name="Chat" component={ChatScreen} />
+      <Stack.Screen name="ChatList" component={ChatListScreen} options={{ title: 'Chats' }} />
     </Stack.Navigator>
   );
 };

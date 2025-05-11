@@ -378,82 +378,54 @@ const ClaimTrackingScreen = () => {
           </View>
 
           {/* Chat with Finder */}
-          <View style={styles.chatSection}>
-            <Text style={[styles.sectionTitle, { color: colors.text }]} numberOfLines={1}>
-              Chat with Finder
-            </Text>
-
-            <View style={[styles.finderCard, { backgroundColor: colors.card }]}>
-              <Image source={{ uri: claimDetails.finder.image }} style={styles.finderImage} />
-              <View style={styles.finderInfo}>
-                <Text style={[styles.finderName, { color: colors.text }]} numberOfLines={1}>
-                  {claimDetails.finder.name}
-                </Text>
-                <View style={styles.ratingContainer}>
-                  <Ionicons name="star" size={16} color={colors.warning} />
-                  <Text style={[styles.ratingText, { color: colors.secondary }]} numberOfLines={1}>
-                    {claimDetails.finder.rating}
-                  </Text>
-                </View>
-              </View>
-            </View>
-
-            <View style={[styles.chatContainer, { backgroundColor: colors.card }]}>
-              <View style={styles.messages}>
-                <View style={[styles.messageReceived, { backgroundColor: colors.background }]}>
-                  <Text style={[styles.messageText, { color: colors.text }]} numberOfLines={3}>
-                    Hello! I found a gold watch that might be yours. Can you describe any unique
-                    features?
-                  </Text>
-                  <Text style={[styles.messageTime, { color: colors.secondary }]} numberOfLines={1}>
-                    10:30 AM
-                  </Text>
-                </View>
-
-                <View style={[styles.messageSent, { backgroundColor: colors.primary }]}>
-                  <Text style={styles.messageText} numberOfLines={3}>
-                    Hi! Yes, my watch has my initials "JD" engraved on the back and has a small
-                    scratch on the face.
-                  </Text>
-                  <Text
-                    style={[styles.messageTime, { color: 'rgba(255,255,255,0.7)' }]}
-                    numberOfLines={1}
-                  >
-                    10:35 AM
-                  </Text>
-                </View>
-
-                <View style={[styles.messageReceived, { backgroundColor: colors.background }]}>
-                  <Text style={[styles.messageText, { color: colors.text }]} numberOfLines={3}>
-                    That matches the watch I found! I'll check for the initials and confirm.
-                  </Text>
-                  <Text style={[styles.messageTime, { color: colors.secondary }]} numberOfLines={1}>
-                    10:38 AM
-                  </Text>
-                </View>
-              </View>
-
-              <View style={styles.chatInputContainer}>
-                <TextInput
-                  style={[
-                    styles.chatInput,
-                    { backgroundColor: colors.background, color: colors.text },
-                  ]}
-                  placeholder="Type a message..."
-                  placeholderTextColor="#888888"
-                  value={message}
-                  onChangeText={setMessage}
-                />
-                <TouchableOpacity
-                  style={[styles.sendButton, { backgroundColor: colors.primary }]}
-                  onPress={handleSendMessage}
-                >
-                  <Ionicons name="send" size={20} color="#FFFFFF" />
-                </TouchableOpacity>
-              </View>
-            </View>
+          <View style={{ padding: 16 }}>
+            <TouchableOpacity
+              style={{
+                backgroundColor: colors.primary,
+                borderRadius: 10,
+                paddingVertical: 14,
+                alignItems: 'center',
+                justifyContent: 'center',
+                shadowColor: colors.primary,
+                shadowOffset: { width: 0, height: 4 },
+                shadowOpacity: 0.2,
+                shadowRadius: 8,
+                elevation: 6,
+                flexDirection: 'row',
+                marginBottom: 8,
+              }}
+              onPress={() => navigation.navigate('Chat', {
+                conversationId: `claim-${claimDetails.id}`,
+                otherUser: claimDetails.finder,
+                item: { id: claimDetails.id, title: claimDetails.itemTitle },
+              })}
+            >
+              <Ionicons name="chatbubble-ellipses" size={22} color="#fff" style={{ marginRight: 6 }} />
+              <Text style={{ color: '#fff', fontSize: 16, fontWeight: 'bold' }}>Chat with Finder</Text>
+            </TouchableOpacity>
           </View>
         </ScrollView>
+        {/* Dispute Claim Button */}
+        <View style={{ padding: 16 }}>
+          <TouchableOpacity
+            style={{
+              backgroundColor: '#EF4444',
+              borderRadius: 10,
+              paddingVertical: 14,
+              alignItems: 'center',
+              justifyContent: 'center',
+              shadowColor: '#EF4444',
+              shadowOffset: { width: 0, height: 4 },
+              shadowOpacity: 0.2,
+              shadowRadius: 8,
+              elevation: 6,
+            }}
+            onPress={() => alert('Dispute feature coming soon!')}
+          >
+            <Ionicons name="alert-circle" size={22} color="#fff" style={{ marginRight: 6 }} />
+            <Text style={{ color: '#fff', fontSize: 16, fontWeight: 'bold' }}>Dispute Claim</Text>
+          </TouchableOpacity>
+        </View>
       </Animated.View>
     </View>
   );

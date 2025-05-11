@@ -50,13 +50,23 @@ type ItemDetailsScreenNavigationProp = NavigationProp<MainStackParamList>;
 type Props = NativeStackScreenProps<MainStackParamList, 'ItemDetails'>;
 
 const fetchItemAndUser = async (itemId: string) => {
-  // Fetch item details
-  const { data: item, error: itemError } = await supabase
+  // Try to fetch from items table first
+  let { data: item, error: itemError } = await supabase
     .from('items')
     .select('*')
     .eq('id', itemId)
     .single();
-  if (itemError) throw itemError;
+
+  // If not found, try requests table
+  if (itemError || !item) {
+    const { data: reqItem, error: reqError } = await supabase
+      .from('requests')
+      .select('*')
+      .eq('id', itemId)
+      .single();
+    if (reqError) throw reqError;
+    item = reqItem;
+  }
 
   // Fetch user details
   let user = null;
@@ -161,6 +171,29 @@ export const ItemDetailsScreen: React.FC<Props> = ({ navigation, route }) => {
               : 'Not specified'}
           </Text>
         </View>
+      </View>
+
+      {/* Claim Item Button */}
+      <View style={{ padding: 16 }}>
+        <TouchableOpacity
+          style={{
+            backgroundColor: colors.primary,
+            borderRadius: 10,
+            paddingVertical: 14,
+            alignItems: 'center',
+            justifyContent: 'center',
+            shadowColor: colors.primary,
+            shadowOffset: { width: 0, height: 4 },
+            shadowOpacity: 0.2,
+            shadowRadius: 8,
+            elevation: 6,
+            flexDirection: 'row',
+          }}
+          onPress={() => navigation.navigate('ClaimTracking', { claimId: item.id })}
+        >
+          <Ionicons name="checkmark-done" size={22} color="#fff" style={{ marginRight: 6 }} />
+          <Text style={{ color: '#fff', fontSize: 16, fontWeight: 'bold' }}>Claim Item</Text>
+        </TouchableOpacity>
       </View>
     </ScrollView>
   );

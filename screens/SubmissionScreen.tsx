@@ -82,6 +82,7 @@ const SubmissionScreen = () => {
   const [imageUrl, setImageUrl] = useState<string | null>(null);
   const [descInputHeight, setDescInputHeight] = useState<number>(100);
   const [categoryModalVisible, setCategoryModalVisible] = useState(false);
+  const [priority, setPriority] = useState<string>('Medium');
   const categoryOptions = [
     { label: 'Electronics', value: 'electronics' },
     { label: 'Accessories', value: 'accessories' },
@@ -195,6 +196,7 @@ const SubmissionScreen = () => {
         images: uploadedImages,
         tags: suggestedTags,
         isRareItem,
+        priority,
         ...(isRareItem && {
           rarity,
           condition,
@@ -643,6 +645,41 @@ const SubmissionScreen = () => {
             <RNTouchableOpacity style={styles.inputActionButton}>
               <Ionicons name="calendar" size={20} color={colors.primary} />
             </RNTouchableOpacity>
+          </RNView>
+        </RNView>
+      </RNView>
+
+      {/* Priority Selection */}
+      <RNView style={[styles.section, styles.cardContainer, { backgroundColor: colors.card }]}>
+        <RNView style={styles.inputGroup}>
+          <RNText style={[styles.inputLabel, { color: colors.text, marginBottom: 8 }]}>Priority</RNText>
+          <RNView style={{ flexDirection: 'row', gap: 12 }}>
+            {[
+              { label: 'High', value: 'High', color: '#EF4444' }, // Red
+              { label: 'Medium', value: 'Medium', color: '#F59E42' }, // Amber
+              { label: 'Low', value: 'Low', color: '#22C55E' }, // Green
+            ].map(option => (
+              <RNTouchableOpacity
+                key={option.value}
+                style={[
+                  styles.chip,
+                  {
+                    backgroundColor:
+                      priority === option.value ? option.color : colors.card,
+                    borderWidth: priority === option.value ? 0 : 1,
+                    borderColor: colors.border,
+                    minWidth: 70,
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                  },
+                ]}
+                onPress={() => setPriority(option.value)}
+              >
+                <RNText style={{ color: priority === option.value ? '#fff' : colors.text, fontWeight: '600' }}>
+                  {option.label}
+                </RNText>
+              </RNTouchableOpacity>
+            ))}
           </RNView>
         </RNView>
       </RNView>

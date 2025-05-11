@@ -191,6 +191,17 @@ const FinderScreen = () => {
       )}
 
       {/* Add Button */}
+      {/* Message Button */}
+      <TouchableOpacity
+        style={[
+          styles.messageButton,
+          { backgroundColor: '#22C55E' }, // Green
+        ]}
+        onPress={() => navigation.navigate('ChatList')}
+        testID="open-chat-list-button"
+      >
+        <Ionicons name="chatbubble-ellipses" size={28} color="#FFFFFF" />
+      </TouchableOpacity>
       <TouchableOpacity
         style={[styles.addButton, { backgroundColor: colors.primary }]}
         onPress={handleAddNewItem}
@@ -311,6 +322,22 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     marginBottom: 16,
     paddingHorizontal: 16,
+  },
+  messageButton: {
+    alignItems: 'center',
+    borderRadius: 28,
+    bottom: 92,
+    elevation: 5,
+    height: 56,
+    justifyContent: 'center',
+    position: 'absolute',
+    right: 24,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.25,
+    shadowRadius: 3.84,
+    width: 56,
+    zIndex: 2,
   },
 });
 

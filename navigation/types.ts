@@ -55,6 +55,7 @@ export type MainStackParamList = {
   Settings: {
     section: 'profile' | 'help' | 'privacy';
   };
+  ChatList: undefined;
 };
 
 export type TabParamList = {
