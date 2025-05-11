@@ -100,12 +100,6 @@ const ChatListScreen: React.FC = () => {
           />
         )}
       </View>
-      <TouchableOpacity
-        style={styles.fab}
-        onPress={() => alert('Start a new chat (feature coming soon!)')}
-      >
-        <Ionicons name="add" size={28} color="#fff" />
-      </TouchableOpacity>
     </View>
   );
 };
@@ -181,23 +175,6 @@ const styles = StyleSheet.create({
     shadowOpacity: 0.10,
     shadowRadius: 8,
     flex: 1,
-  },
-  fab: {
-    position: 'absolute',
-    bottom: 32,
-    right: 24,
-    backgroundColor: '#2563eb',
-    width: 56,
-    height: 56,
-    borderRadius: 28,
-    alignItems: 'center',
-    justifyContent: 'center',
-    elevation: 6,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.18,
-    shadowRadius: 6,
-    zIndex: 10,
   },
 });
 

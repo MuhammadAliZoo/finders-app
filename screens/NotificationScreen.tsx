@@ -1,5 +1,5 @@
 'use client';
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState, useCallback, useMemo } from 'react';
 import {
   View,
   Text,
@@ -8,14 +8,18 @@ import {
   TouchableOpacity,
   Image,
   ActivityIndicator,
+  RefreshControl,
+  SectionList,
 } from 'react-native';
 import { useNavigation } from '@react-navigation/native';
 import { Ionicons } from '@expo/vector-icons';
 import { useTheme } from '../context/ThemeContext';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { MainStackParamList } from '../navigation/types';
-import { useCallback } from 'react';
 import { supabase } from '../config/supabase';
+import { useUser } from '@supabase/auth-helpers-react';
+import { formatDistanceToNow, isAfter, differenceInHours } from 'date-fns';
+import { User } from '@supabase/supabase-js';
 
 type NotificationType = 'match' | 'message' | 'status' | 'reminder';
 
@@ -28,98 +32,226 @@ type Notification = {
   read: boolean;
   itemId: string | null;
   image: string | null;
+  data: any;
+  related_item_id: string | null;
+  related_user_id: string | null;
+  created_at: string;
+  expire_at: string | null;
+  isExpired?: boolean;
+  expiresIn?: string;
 };
 
-// Mock data
-const mockNotifications: Notification[] = [
-  {
-    id: '1',
-    type: 'match',
-    title: 'New Match Found!',
-    message: 'Someone found a MacBook Pro that matches your lost item description. Check it out!',
-    time: '10 minutes ago',
-    read: false,
-    itemId: '1',
-    image: 'https://via.placeholder.com/100',
-  },
-  {
-    id: '2',
-    type: 'status',
-    title: 'Item Status Updated',
-    message: 'Your lost Blue Backpack has been marked as "Found". Please verify the match.',
-    time: '1 hour ago',
-    read: false,
-    itemId: '2',
-    image: 'https://via.placeholder.com/100',
-  },
-  {
-    id: '3',
-    type: 'message',
-    title: 'Message from Finder',
-    message: 'Hi, I found your AirPods Pro at the University Gym. They match your description...',
-    time: '3 hours ago',
-    read: true,
-    itemId: '3',
-    image: 'https://via.placeholder.com/100',
-  },
-  {
-    id: '4',
-    type: 'match',
-    title: 'Multiple Matches Found',
-    message: 'We found 3 potential matches for your Student ID Card. View them now!',
-    time: '5 hours ago',
-    read: true,
-    itemId: '4',
-    image: 'https://via.placeholder.com/100',
-  },
-  {
-    id: '5',
-    type: 'status',
-    title: 'Verification Required',
-    message: 'Please verify your identity to claim your found Car Keys',
-    time: '1 day ago',
-    read: true,
-    itemId: '5',
-    image: 'https://via.placeholder.com/100',
-  },
-  {
-    id: '6',
-    type: 'reminder',
-    title: 'Update Your Request',
-    message: 'Your lost item request is 7 days old. Would you like to update its status?',
-    time: '2 days ago',
-    read: true,
-    itemId: null,
-    image: null,
-  },
-  {
-    id: '7',
-    type: 'message',
-    title: 'New Message',
-    message: 'Campus Security: We have your item in the lost and found office. Please come to collect it.',
-    time: '2 days ago',
-    read: true,
-    itemId: '2',
-    image: 'https://via.placeholder.com/100',
-  },
-  {
-    id: '8',
-    type: 'match',
-    title: 'Similar Item Found',
-    message: 'A similar laptop charger was just reported. It might be yours!',
-    time: '3 days ago',
-    read: true,
-    itemId: '6',
-    image: 'https://via.placeholder.com/100',
-  }
-];
+type NotificationSection = {
+  title: string;
+  data: Notification[];
+  type: NotificationType;
+};
 
 const NotificationScreen = () => {
   const navigation = useNavigation<NativeStackNavigationProp<MainStackParamList>>();
   const { colors } = useTheme();
-  const [notifications, setNotifications] = useState<Notification[]>(mockNotifications);
-  const [loading, setLoading] = useState(false);
+  const user = useUser();
+  const [notifications, setNotifications] = useState<Notification[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [refreshing, setRefreshing] = useState(false);
   const [error, setError] = useState<string | null>(null);
+
+  const formatNotification = (notification: any): Notification => {
+    const now = new Date();
+    const expireDate = notification.expire_at ? new Date(notification.expire_at) : null;
+    const isExpired = expireDate ? isAfter(now, expireDate) : false;
+    const expiresIn = expireDate && !isExpired
+      ? formatDistanceToNow(expireDate, { addSuffix: true })
+      : undefined;
+
+    return {
+      ...notification,
+      read: notification.is_read,
+      time: formatDistanceToNow(new Date(notification.created_at), { addSuffix: true }),
+      itemId: notification.related_item_id,
+      image: notification.data?.image || null,
+      isExpired,
+      expiresIn,
+    };
+  };
+
+  const groupedNotifications = useMemo(() => {
+    const groups: { [key in NotificationType]: Notification[] } = {
+      match: [],
+      message: [],
+      status: [],
+      reminder: [],
+    };
+
+    notifications.forEach(notification => {
+      groups[notification.type].push(notification);
+    });
+
+    const sections: NotificationSection[] = [
+      {
+        title: 'Matches',
+        data: groups.match,
+        type: 'match',
+      },
+      {
+        title: 'Messages',
+        data: groups.message,
+        type: 'message',
+      },
+      {
+        title: 'Status Updates',
+        data: groups.status,
+        type: 'status',
+      },
+      {
+        title: 'Reminders',
+        data: groups.reminder,
+        type: 'reminder',
+      },
+    ];
+
+    return sections.filter(section => section.data.length > 0);
+  }, [notifications]);
+
+  const fetchNotifications = useCallback(async () => {
+    if (!user?.id) {
+      setLoading(false);
+      return;
+    }
+
+    try {
+      const now = new Date().toISOString();
+      const { data, error: fetchError } = await supabase
+        .from('notifications')
+        .select('*')
+        .eq('user_id', user.id)
+        .or(`expire_at.gt.${now},expire_at.is.null`)
+        .order('created_at', { ascending: false })
+        .limit(50);
+
+      if (fetchError) throw fetchError;
+
+      const formattedNotifications = data.map(formatNotification);
+      setNotifications(formattedNotifications);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Failed to fetch notifications');
+    } finally {
+      setLoading(false);
+      setRefreshing(false);
+    }
+  }, [user?.id]);
+
+  // Set up real-time subscription
+  useEffect(() => {
+    if (!user?.id) return;
+
+    // Initial fetch
+    fetchNotifications();
+
+    // Subscribe to new notifications
+    const subscription = supabase
+      .channel('notifications')
+      .on(
+        'postgres_changes',
+        {
+          event: '*',
+          schema: 'public',
+          table: 'notifications',
+          filter: `user_id=eq.${user.id}`,
+        },
+        async (payload) => {
+          console.log('Real-time notification update:', payload);
+
+          if (payload.eventType === 'INSERT') {
+            const newNotification = formatNotification(payload.new);
+            if (!newNotification.isExpired) {
+              setNotifications(prev => [newNotification, ...prev]);
+            }
+          } else if (payload.eventType === 'UPDATE') {
+            const updatedNotification = formatNotification(payload.new);
+            setNotifications(prev => {
+              if (updatedNotification.isExpired) {
+                return prev.filter(n => n.id !== updatedNotification.id);
+              }
+              return prev.map(notification =>
+                notification.id === updatedNotification.id
+                  ? updatedNotification
+                  : notification
+              );
+            });
+          } else if (payload.eventType === 'DELETE') {
+            setNotifications(prev =>
+              prev.filter(notification => notification.id !== payload.old.id)
+            );
+          }
+        }
+      )
+      .subscribe();
+
+    // Cleanup subscription
+    return () => {
+      subscription.unsubscribe();
+    };
+  }, [user?.id, fetchNotifications]);
+
+  // Check for expired notifications periodically
+  useEffect(() => {
+    const checkExpiredNotifications = () => {
+      setNotifications(prev => {
+        const updatedNotifications = prev.map(formatNotification);
+        return updatedNotifications.filter(n => !n.isExpired);
+      });
+    };
+
+    const interval = setInterval(checkExpiredNotifications, 60000); // Check every minute
+    return () => clearInterval(interval);
+  }, []);
+
+  const handleRefresh = useCallback(() => {
+    setRefreshing(true);
+    fetchNotifications();
+  }, [fetchNotifications]);
+
+  const markAsRead = useCallback(async (notificationId: string) => {
+    try {
+      const { error: updateError } = await supabase
+        .from('notifications')
+        .update({ is_read: true, updated_at: new Date().toISOString() })
+        .eq('id', notificationId);
+
+      if (updateError) throw updateError;
+
+      setNotifications(prev =>
+        prev.map(notification =>
+          notification.id === notificationId
+            ? { ...notification, read: true }
+            : notification
+        )
+      );
+    } catch (err) {
+      console.error('Error marking notification as read:', err);
+    }
+  }, []);
+
+  const markAllAsRead = useCallback(async () => {
+    if (!user) return;
+
+    try {
+      const { error: updateError } = await supabase
+        .from('notifications')
+        .update({ is_read: true, updated_at: new Date().toISOString() })
+        .eq('user_id', user.id)
+        .eq('is_read', false);
+
+      if (updateError) throw updateError;
+
+      setNotifications(prev =>
+        prev.map(notification => ({ ...notification, read: true }))
+      );
+    } catch (err) {
+      console.error('Error marking all notifications as read:', err);
+    }
+  }, [user]);
 
   const handleNavigateToSearchResults = useCallback(
     (itemId: string) => {
@@ -143,26 +275,91 @@ const NotificationScreen = () => {
     [navigation],
   );
 
+  const handleNavigateToChat = useCallback(
+    async (relatedUserId: string) => {
+      if (!relatedUserId || !user?.id) {
+        console.warn('Invalid relatedUserId or user not logged in');
+        return;
+      }
+
+      try {
+        // Fetch the other user's profile
+        const { data: otherUser, error: userError } = await supabase
+          .from('profiles')
+          .select('*')
+          .eq('id', relatedUserId)
+          .single();
+
+        if (userError) throw userError;
+
+        // Get or create conversation
+        const { data: conversation, error: convError } = await supabase
+          .from('conversations')
+          .select('*')
+          .or(`user1_id.eq.${user.id},user2_id.eq.${user.id}`)
+          .or(`user1_id.eq.${relatedUserId},user2_id.eq.${relatedUserId}`)
+          .single();
+
+        if (convError && convError.code !== 'PGRST116') throw convError;
+
+        let conversationId = conversation?.id;
+
+        // If no conversation exists, create one
+        if (!conversationId) {
+          const { data: newConversation, error: createError } = await supabase
+            .from('conversations')
+            .insert([
+              {
+                user1_id: user.id,
+                user2_id: relatedUserId,
+                created_at: new Date().toISOString(),
+              },
+            ])
+            .select()
+            .single();
+
+          if (createError) throw createError;
+          conversationId = newConversation.id;
+        }
+
+        navigation.navigate('Chat', {
+          conversationId,
+          otherUser,
+        });
+      } catch (err) {
+        console.error('Error navigating to chat:', err);
+      }
+    },
+    [navigation, user?.id],
+  );
+
   const handleNotificationPress = useCallback(
     (notification: Notification) => {
-      if (!notification.itemId) {
-        console.warn('No itemId associated with this notification');
-        return;
+      if (!notification.read) {
+        markAsRead(notification.id);
       }
 
       switch (notification.type) {
         case 'match':
-          handleNavigateToSearchResults(notification.itemId as string);
+          if (notification.itemId) {
+            handleNavigateToSearchResults(notification.itemId as string);
+          }
           break;
         case 'message':
+          if (notification.related_user_id) {
+            handleNavigateToChat(notification.related_user_id as string);
+          }
+          break;
         case 'status':
-          handleNavigateToItemDetails(notification.itemId as string);
+          if (notification.itemId) {
+            handleNavigateToItemDetails(notification.itemId);
+          }
           break;
         default:
           console.warn('No navigation action for this notification type');
       }
     },
-    [handleNavigateToSearchResults, handleNavigateToItemDetails],
+    [markAsRead, handleNavigateToSearchResults, handleNavigateToItemDetails, handleNavigateToChat],
   );
 
   const getNotificationIcon = (type: NotificationType) => {
@@ -180,11 +377,21 @@ const NotificationScreen = () => {
     }
   };
 
+  const renderSectionHeader = ({ section }: { section: NotificationSection }) => (
+    <View style={[styles.sectionHeader, { backgroundColor: colors.background }]}>
+      <Text style={[styles.sectionTitle, { color: colors.text }]}>{section.title}</Text>
+      <Text style={[styles.sectionCount, { color: colors.secondary }]}>
+        {section.data.length} {section.data.length === 1 ? 'item' : 'items'}
+      </Text>
+    </View>
+  );
+
   const renderNotificationItem = ({ item }: { item: Notification }) => (
     <TouchableOpacity
       style={[
         styles.notificationItem,
         { backgroundColor: item.read ? colors.background : colors.card },
+        item.isExpired && styles.expiredNotification,
       ]}
       onPress={() => handleNotificationPress(item)}
       testID={`notification-${item.id}`}
@@ -193,7 +400,14 @@ const NotificationScreen = () => {
       <View style={styles.notificationContent}>
         <View style={styles.notificationHeader}>
           <Text style={[styles.notificationTitle, { color: colors.text }]}>{item.title}</Text>
-          <Text style={[styles.notificationTime, { color: colors.secondary }]}>{item.time}</Text>
+          <View style={styles.timeContainer}>
+            {item.expiresIn && (
+              <Text style={[styles.expiresIn, { color: colors.warning }]}>
+                Expires {item.expiresIn}
+              </Text>
+            )}
+            <Text style={[styles.notificationTime, { color: colors.secondary }]}>{item.time}</Text>
+          </View>
         </View>
         <Text style={[styles.notificationMessage, { color: colors.text }]}>{item.message}</Text>
         {item.image && <Image source={{ uri: item.image }} style={styles.notificationImage} />}
@@ -208,11 +422,11 @@ const NotificationScreen = () => {
             </TouchableOpacity>
           </View>
         )}
-        {item.type === 'message' && item.itemId && (
+        {item.type === 'message' && item.related_user_id && (
           <View style={styles.actionButtons}>
             <TouchableOpacity
               style={[styles.actionButton, { backgroundColor: colors.primary }]}
-              onPress={() => handleNavigateToItemDetails(item.itemId as string)}
+              onPress={() => handleNavigateToChat(item.related_user_id as string)}
               testID={`reply-${item.id}`}
             >
               <Text style={styles.actionButtonText}>Reply</Text>
@@ -236,6 +450,12 @@ const NotificationScreen = () => {
     return (
       <View style={[styles.container, { backgroundColor: colors.background }]}>
         <Text style={[styles.errorText, { color: colors.error }]}>{error}</Text>
+        <TouchableOpacity
+          style={[styles.retryButton, { backgroundColor: colors.primary }]}
+          onPress={fetchNotifications}
+        >
+          <Text style={styles.retryButtonText}>Retry</Text>
+        </TouchableOpacity>
       </View>
     );
   }
@@ -246,17 +466,31 @@ const NotificationScreen = () => {
         <Text style={[styles.headerTitle, { color: colors.text }]} numberOfLines={1}>
           Notifications
         </Text>
-        <TouchableOpacity style={styles.markAllReadButton}>
-          <Text style={[styles.markAllRead, { color: colors.primary }]}>Mark all read</Text>
-        </TouchableOpacity>
+        {notifications.some(n => !n.read) && (
+          <TouchableOpacity
+            style={styles.markAllReadButton}
+            onPress={markAllAsRead}
+          >
+            <Text style={[styles.markAllRead, { color: colors.primary }]}>Mark all read</Text>
+          </TouchableOpacity>
+        )}
       </View>
 
-      <FlatList
-        data={notifications}
+      <SectionList
+        sections={groupedNotifications}
         renderItem={renderNotificationItem}
+        renderSectionHeader={renderSectionHeader}
         keyExtractor={item => item.id}
         contentContainerStyle={styles.notificationsList}
         showsVerticalScrollIndicator={false}
+        refreshControl={
+          <RefreshControl
+            refreshing={refreshing}
+            onRefresh={handleRefresh}
+            colors={[colors.primary]}
+            tintColor={colors.primary}
+          />
+        }
         ListEmptyComponent={
           <View style={styles.emptyState}>
             <Ionicons name="notifications-off-outline" size={48} color={colors.secondary} />
@@ -268,6 +502,7 @@ const NotificationScreen = () => {
             </Text>
           </View>
         }
+        stickySectionHeadersEnabled={true}
       />
     </View>
   );
@@ -408,6 +643,48 @@ const styles = StyleSheet.create({
     right: 18,
     top: 18,
     width: 10,
+  },
+  retryButton: {
+    alignItems: 'center',
+    borderRadius: 24,
+    justifyContent: 'center',
+    marginTop: 16,
+    paddingHorizontal: 20,
+    paddingVertical: 12,
+  },
+  retryButtonText: {
+    color: '#FFFFFF',
+    fontSize: 16,
+    fontWeight: '600',
+  },
+  expiredNotification: {
+    opacity: 0.6,
+  },
+  timeContainer: {
+    alignItems: 'flex-end',
+  },
+  expiresIn: {
+    fontSize: 12,
+    fontWeight: '500',
+    marginBottom: 4,
+  },
+  sectionHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    paddingHorizontal: 16,
+    paddingVertical: 12,
+    borderBottomWidth: 1,
+    borderBottomColor: 'rgba(0,0,0,0.05)',
+  },
+  sectionTitle: {
+    fontSize: 16,
+    fontWeight: '700',
+    letterSpacing: -0.3,
+  },
+  sectionCount: {
+    fontSize: 14,
+    fontWeight: '500',
   },
 });
 
