@@ -281,7 +281,7 @@ const CollaborativeWorkspaceScreen: React.FC<CollaborativeWorkspaceScreenProps> 
     return <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center', backgroundColor: '#fff' }}><ActivityIndicator color={colors.primary} size={32} /></View>;
   }
   if (!teams.length || showCreateTeam) {
-    return (
+  return (
       <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center', backgroundColor: '#fff', padding: 24 }}>
         <Text style={{ fontSize: 22, fontWeight: 'bold', color: '#222', marginBottom: 16 }}>Create a Team</Text>
         <TextInput

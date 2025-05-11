@@ -16,6 +16,7 @@ import SearchResultsScreen from '../screens/SearchResultsScreen';
 import ClaimTrackingScreen from '../screens/ClaimTrackingScreen';
 import { AIAssistantScreen } from '../screens/AIAssistantScreen';
 import { AllTrendingItemsScreen } from '../screens/AllTrendingItemsScreen';
+import { RareItemsMarketplaceScreen } from '../screens/RareItemsMarketplaceScreen';
 
 import LogoTitle from '../components/LogoTitle';
 import { useTheme } from '../context/ThemeContext';
@@ -154,6 +155,11 @@ const MainNavigator = () => {
         name="AllTrendingItems"
         component={AllTrendingItemsScreen as React.ComponentType<any>}
         options={{ title: 'All Trending Items' }}
+      />
+      <Stack.Screen
+        name="RareItemsMarketplace"
+        component={RareItemsMarketplaceScreen as React.ComponentType<any>}
+        options={{ title: 'Rare Items Marketplace' }}
       />
     </Stack.Navigator>
   );

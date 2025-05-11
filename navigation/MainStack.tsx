@@ -12,6 +12,7 @@ import ClaimTrackingScreen from '../screens/ClaimTrackingScreen';
 import { AllTrendingItemsScreen } from '../screens/AllTrendingItemsScreen';
 import { ChatScreen } from '../screens/ChatScreen';
 import SettingsScreen from '../screens/SettingsScreen';
+import { RareItemsMarketplaceScreen } from '../screens/RareItemsMarketplaceScreen';
 
 const Stack = createNativeStackNavigator<MainStackParamList>();
 
@@ -31,6 +32,11 @@ export function MainStack() {
       <Stack.Screen
         name="AllTrendingItems"
         component={AllTrendingItemsScreen as React.ComponentType<any>}
+      />
+      <Stack.Screen
+        name="RareItemsMarketplace"
+        component={RareItemsMarketplaceScreen as React.ComponentType<any>}
+        options={{ title: 'Rare Items Marketplace' }}
       />
       <Stack.Screen name="Chat" component={ChatScreen} />
       <Stack.Screen name="Settings" component={SettingsScreen} />

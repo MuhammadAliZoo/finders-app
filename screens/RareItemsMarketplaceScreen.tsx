@@ -67,12 +67,31 @@ export const RareItemsMarketplaceScreen: React.FC<Props> = ({ navigation, route 
       setLoading(true);
       setError(null);
       try {
-        const { data, error } = await supabase
-          .from('items')
-          .select('*')
-          .order('created_at', { ascending: false });
-        if (error) throw error;
-        setLocalItems(data || []);
+        // Fetch rare items from both requests and items tables
+        const [{ data: rareRequests, error: reqError }, { data: rareFoundItems, error: foundError }] = await Promise.all([
+          supabase
+            .from('requests')
+            .select('*')
+            .eq('isRareItem', true)
+            .order('created_at', { ascending: false }),
+          supabase
+            .from('items')
+            .select('*')
+            .eq('isRareItem', true)
+            .order('created_at', { ascending: false })
+        ]);
+        
+        if (reqError) throw reqError;
+        if (foundError) throw foundError;
+
+        // Merge and sort by created_at descending
+        const merged = [...(rareRequests || []), ...(rareFoundItems || [])].sort((a, b) => {
+          const aTime = new Date(a.created_at).getTime();
+          const bTime = new Date(b.created_at).getTime();
+          return bTime - aTime;
+        });
+
+        setLocalItems(merged);
       } catch (err: any) {
         setError(err.message || 'Failed to fetch items');
       } finally {
@@ -158,13 +177,12 @@ export const RareItemsMarketplaceScreen: React.FC<Props> = ({ navigation, route 
   return (
     <View style={[styles.container, { backgroundColor: colors.background }]}>
       <View style={[styles.header, { backgroundColor: colors.background }]}>
-        <TouchableOpacity style={styles.backButton} onPress={() => navigation.goBack()}>
-          <Ionicons name="arrow-back" size={24} color={colors.text} />
-        </TouchableOpacity>
-        <Text style={[styles.headerTitle, { color: colors.text }]} numberOfLines={1}>
-          Rare Items Marketplace
-        </Text>
-        <View style={styles.headerRight} />
+        <View style={{ flexDirection: 'row', alignItems: 'center', flex: 1 }}>
+          <Ionicons name="diamond-outline" size={28} color={colors.primary} style={{ marginRight: 8 }} />
+          <Text style={[styles.headerTitle, { color: colors.text }]} numberOfLines={1}>
+            Rare Items Marketplace
+          </Text>
+        </View>
       </View>
 
       <View style={styles.content}>

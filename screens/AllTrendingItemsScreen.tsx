@@ -119,13 +119,32 @@ export const AllTrendingItemsScreen: React.FC<AllTrendingItemsScreenProps> = ({
       setLoading(true);
       setError(null);
       try {
-        const { data, error } = await supabase
-          .from('items')
-          .select('*')
-          .eq('status', 'lost')
-          .order('created_at', { ascending: false });
-        if (error) throw error;
-        setItems((data && data.length > 0) ? data : mockLostItems);
+        // Fetch both found and lost items
+        const [{ data: foundItems, error: foundError }, { data: lostItems, error: lostError }] = await Promise.all([
+          supabase
+            .from('items')
+            .select('*')
+            .eq('isRareItem', false) // Only non-rare items
+            .order('created_at', { ascending: false }),
+          supabase
+            .from('requests')
+            .select('*')
+            .eq('isRareItem', false) // Only non-rare items
+            .eq('status', 'searching')
+            .order('created_at', { ascending: false })
+        ]);
+
+        if (foundError) throw foundError;
+        if (lostError) throw lostError;
+
+        // Merge and sort by created_at
+        const merged = [...(foundItems || []), ...(lostItems || [])].sort((a, b) => {
+          const aTime = new Date(a.created_at).getTime();
+          const bTime = new Date(b.created_at).getTime();
+          return bTime - aTime;
+        });
+
+        setItems(merged);
       } catch (err: any) {
         setError(err.message || 'Failed to fetch items');
       } finally {
@@ -176,12 +195,12 @@ export const AllTrendingItemsScreen: React.FC<AllTrendingItemsScreenProps> = ({
   if (error) return <Text style={{ color: colors.error, margin: 20 }}>{error}</Text>;
 
   return (
-    <View style={[styles.container, { backgroundColor: colors.background }]}> 
+    <View style={[styles.container, { backgroundColor: colors.background }]}>
       <StatusBar barStyle="light-content" />
-      <View style={[styles.header, { backgroundColor: colors.background }]}> 
+      <View style={[styles.header, { backgroundColor: colors.background }]}>
         <View style={{ flexDirection: 'row', alignItems: 'center', flex: 1 }}>
           <Ionicons name="storefront-outline" size={28} color={colors.primary} style={{ marginRight: 8 }} />
-          <Text style={[styles.title, { color: colors.text }]}>Trending Items</Text>
+        <Text style={[styles.title, { color: colors.text }]}>Trending Lost Items</Text>
         </View>
         <View style={styles.headerRight} />
       </View>

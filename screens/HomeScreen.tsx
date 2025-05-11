@@ -263,6 +263,11 @@ export const HomeScreen = () => {
     </View>
   );
 
+  // Handle see all for rare items
+  const handleSeeAllRare = useCallback(() => {
+    navigation.getParent()?.navigate('RareItemsMarketplace', { items: rareItems });
+  }, [navigation, rareItems]);
+
   return (
     <SafeAreaView style={[styles.container, { backgroundColor: colors.background }]}>
       <ScrollView
@@ -367,7 +372,7 @@ export const HomeScreen = () => {
             <View style={styles.sectionHeader}>
               <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
                 <Ionicons name="flame" size={22} color={colors.primary} style={{ marginRight: 4 }} />
-                <Text style={[styles.sectionTitle, { color: colors.text }]}>Hot Lost Items</Text>
+              <Text style={[styles.sectionTitle, { color: colors.text }]}>Hot Lost Items</Text>
               </View>
               <TouchableOpacity style={styles.seeAllButton} onPress={handleSeeAll}>
                 <Text style={[styles.seeAllText, { color: colors.primary }]}>See All</Text>
@@ -470,7 +475,7 @@ export const HomeScreen = () => {
               </View>
               <TouchableOpacity
                 style={styles.seeAllButton}
-                onPress={() => navigation.navigate('SearchResults', { searchQuery: 'rare' })}
+                onPress={handleSeeAllRare}
               >
                 <Text style={[styles.seeAllText, { color: colors.primary }]}>See All</Text>
                 <Ionicons name="chevron-forward" size={16} color={colors.primary} />

@@ -79,14 +79,14 @@ const AdminProfileScreen = ({ navigation }: AdminProfileScreenProps) => {
       if (pickerResult.canceled) return;
       const uri = pickerResult.assets && pickerResult.assets.length > 0 ? pickerResult.assets[0].uri : undefined;
       if (!uri) return;
-      // Upload to Supabase Storage
-      const fileName = `avatars/${user?.id}_${Date.now()}.jpg`;
+      // Upload to Supabase Storage bucket 'profile-pictures'
+      const fileName = `profile-pictures/${user?.id}_${Date.now()}.jpg`;
       const response = await fetch(uri);
       const blob = await response.blob();
-      const { error: uploadError } = await supabase.storage.from('avatars').upload(fileName, blob, { upsert: true });
+      const { error: uploadError } = await supabase.storage.from('profile-pictures').upload(fileName, blob, { upsert: true });
       if (uploadError) throw uploadError;
       // Get public URL
-      const { data: publicUrlData } = supabase.storage.from('avatars').getPublicUrl(fileName);
+      const { data: publicUrlData } = supabase.storage.from('profile-pictures').getPublicUrl(fileName);
       const publicUrl = publicUrlData?.publicUrl;
       if (!publicUrl) throw new Error('Failed to get public URL');
       // Update profile in Supabase

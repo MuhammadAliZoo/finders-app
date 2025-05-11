@@ -28,6 +28,7 @@ import { useAuth } from '../context/AuthContext';
 import ImageUpload from '../components/ImageUpload';
 import { uploadImage } from '../utils/storage';
 import { supabase } from '../config/supabase';
+import { LinearGradient } from 'expo-linear-gradient';
 
 type ProfileScreenNavigationProp = CompositeNavigationProp<
   BottomTabNavigationProp<TabParamList, 'ProfileTab'>,
@@ -42,14 +43,27 @@ const ProfileScreen = () => {
   const [locationEnabled, setLocationEnabled] = useState(true);
   const [isEditing, setIsEditing] = useState(false);
   const [fullName, setFullName] = useState(user?.full_name || '');
-  const [phone, setPhone] = useState('');
+  const [phone, setPhone] = useState(user?.phone || '');
   const [isUpdating, setIsUpdating] = useState(false);
+
+  // Debug: Log user object
+  console.log('ProfileScreen user:', user);
 
   const handleProfilePictureUpload = async (uri: string) => {
     try {
       if (!user) throw new Error('User not logged in');
-      const url = await uploadImage(uri, user.id);
-      await supabase.from('profiles').update({ avatar_url: url }).eq('id', user.id);
+      // Upload to Supabase Storage bucket 'profile-pictures'
+      const fileName = `profile-pictures/${user.id}_${Date.now()}.jpg`;
+      const response = await fetch(uri);
+      const blob = await response.blob();
+      const { error: uploadError } = await supabase.storage.from('profile-pictures').upload(fileName, blob, { upsert: true });
+      if (uploadError) throw uploadError;
+      // Get public URL
+      const { data: publicUrlData } = supabase.storage.from('profile-pictures').getPublicUrl(fileName);
+      const publicUrl = publicUrlData?.publicUrl;
+      if (!publicUrl) throw new Error('Failed to get public URL');
+      // Update profile in Supabase
+      await supabase.from('profiles').update({ avatar_url: publicUrl }).eq('id', user.id);
       await refreshProfile();
       Alert.alert('Success', 'Profile picture updated!');
     } catch (error: any) {
@@ -141,21 +155,61 @@ const ProfileScreen = () => {
       testID="profile-screen"
       showsVerticalScrollIndicator={false}
     >
-      <View style={styles.header}>
-        <View style={styles.avatarContainer}>
-          {user?.avatar_url ? (
-            <Image source={{ uri: user.avatar_url }} style={styles.avatar} />
-          ) : (
-            <View style={[styles.avatarPlaceholder, { backgroundColor: colors.primary }]}>
-              <Text style={styles.avatarText}>
-                {user?.full_name?.[0]?.toUpperCase() || user?.email?.[0]?.toUpperCase()}
-              </Text>
-            </View>
-          )}
+      <LinearGradient
+        colors={[colors.primary + '10', colors.card]}
+        style={styles.profileCard}
+        start={{ x: 0, y: 0 }}
+        end={{ x: 1, y: 1 }}
+      >
+        {/* Profile Picture or Placeholder */}
+        {user?.avatar_url ? (
+          <Image
+            source={{ uri: user.avatar_url }}
+            style={styles.profileImage}
+          />
+        ) : (
+          <View style={styles.profileImagePlaceholder}>
+            <Ionicons name="person" size={54} color={colors.primary} />
+          </View>
+        )}
+        <TouchableOpacity
+          style={styles.profilePicButton}
+          onPress={async () => {
+            const result = await ImagePicker.launchImageLibraryAsync({ mediaTypes: ImagePicker.MediaTypeOptions.Images, allowsEditing: true, aspect: [1, 1], quality: 0.7 });
+            if (!result.canceled && result.assets && result.assets.length > 0) {
+              await handleProfilePictureUpload(result.assets[0].uri);
+            }
+          }}
+        >
+          <Ionicons name="camera" size={24} color="#fff" style={{ marginRight: 8 }} />
+          <Text style={styles.profilePicButtonText}>
+            {user?.avatar_url ? 'Change Profile Picture' : 'Add Profile Picture'}
+          </Text>
+        </TouchableOpacity>
+        <View style={styles.infoRow}>
+          <Ionicons name="person-circle-outline" size={22} color={colors.primary} style={styles.infoIcon} />
+          <Text style={styles.infoLabel}>Full Name:</Text>
+          <Text style={styles.infoValue}>{user?.full_name || '-'}</Text>
         </View>
-        <Text style={[styles.email, { color: colors.secondary }]}>{user?.email}</Text>
-      </View>
-
+        <View style={styles.infoRow}>
+          <Ionicons name="mail-outline" size={22} color={colors.primary} style={styles.infoIcon} />
+          <Text style={styles.infoLabel}>Email:</Text>
+          <Text style={styles.infoValue}>{user?.username}</Text>
+        </View>
+        <View style={styles.infoRow}>
+          <Ionicons name="call-outline" size={22} color={colors.primary} style={styles.infoIcon} />
+          <Text style={styles.infoLabel}>Phone:</Text>
+          <Text style={styles.infoValue}>{user?.phone || '-'}</Text>
+        </View>
+        {user?.created_at && (
+          <View style={styles.infoRow}>
+            <Ionicons name="calendar-outline" size={22} color={colors.primary} style={styles.infoIcon} />
+            <Text style={styles.infoLabel}>Joined:</Text>
+            <Text style={styles.infoValue}>{new Date(user.created_at).toLocaleDateString()}</Text>
+          </View>
+        )}
+      </LinearGradient>
+      <View style={styles.sectionDivider} />
       <View style={styles.section}>
         <Text style={[styles.sectionTitle, { color: colors.text }]}>Profile Information</Text>
 
@@ -415,6 +469,90 @@ const styles = StyleSheet.create({
     margin: 16,
     marginTop: 0,
     padding: 16,
+  },
+  profileCard: {
+    margin: 20,
+    marginTop: 32,
+    borderRadius: 20,
+    padding: 24,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.08,
+    shadowRadius: 12,
+    elevation: 4,
+    backgroundColor: 'transparent',
+  },
+  profilePicButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    alignSelf: 'center',
+    backgroundColor: '#007AFF',
+    borderRadius: 24,
+    paddingHorizontal: 20,
+    paddingVertical: 10,
+    marginBottom: 18,
+    marginTop: 4,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.10,
+    shadowRadius: 6,
+    elevation: 2,
+  },
+  profilePicButtonText: {
+    color: '#fff',
+    fontWeight: 'bold',
+    fontSize: 16,
+  },
+  infoRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginBottom: 14,
+  },
+  infoIcon: {
+    marginRight: 10,
+  },
+  infoLabel: {
+    fontWeight: '600',
+    color: '#888',
+    fontSize: 15,
+    marginRight: 6,
+    minWidth: 70,
+  },
+  infoValue: {
+    color: '#222',
+    fontSize: 16,
+    fontWeight: '500',
+    flex: 1,
+    flexWrap: 'wrap',
+  },
+  sectionDivider: {
+    height: 1,
+    backgroundColor: '#E0E0E0',
+    marginVertical: 18,
+    marginHorizontal: 24,
+    borderRadius: 1,
+  },
+  profileImage: {
+    width: 90,
+    height: 90,
+    borderRadius: 45,
+    alignSelf: 'center',
+    marginBottom: 12,
+    backgroundColor: '#f0f0f0',
+    borderWidth: 2,
+    borderColor: '#e0e0e0',
+  },
+  profileImagePlaceholder: {
+    width: 90,
+    height: 90,
+    borderRadius: 45,
+    backgroundColor: '#f0f0f0',
+    alignItems: 'center',
+    justifyContent: 'center',
+    alignSelf: 'center',
+    marginBottom: 12,
+    borderWidth: 2,
+    borderColor: '#e0e0e0',
   },
 });
 

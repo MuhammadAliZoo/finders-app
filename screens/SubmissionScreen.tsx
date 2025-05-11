@@ -12,6 +12,9 @@ import {
   ActivityIndicator,
   Alert,
   Platform,
+  Modal,
+  Pressable,
+  FlatList,
 } from 'react-native';
 import type {
   ViewProps,
@@ -77,6 +80,15 @@ const SubmissionScreen = () => {
   const [uploadProgress, setUploadProgress] = useState<Record<string, number>>({});
   const [isUploadingImage, setIsUploadingImage] = useState<boolean>(false);
   const [imageUrl, setImageUrl] = useState<string | null>(null);
+  const [descInputHeight, setDescInputHeight] = useState<number>(100);
+  const [categoryModalVisible, setCategoryModalVisible] = useState(false);
+  const categoryOptions = [
+    { label: 'Electronics', value: 'electronics' },
+    { label: 'Accessories', value: 'accessories' },
+    { label: 'Jewelry', value: 'jewelry' },
+    { label: 'Vehicle', value: 'vehicle' },
+    { label: 'Other', value: 'other' },
+  ];
 
   // Dynamic styles that depend on theme
   const dynamicStyles: {
@@ -110,7 +122,17 @@ const SubmissionScreen = () => {
 
   const uploadImageToStorage = async (uri: string): Promise<string> => {
     if (!user) throw new Error('You must be logged in');
-    return await uploadImage(uri, user.id);
+    // Upload to Supabase Storage bucket 'item-images'
+    const fileName = `item-images/${user.id}_${Date.now()}.jpg`;
+    const response = await fetch(uri);
+    const blob = await response.blob();
+    const { error: uploadError } = await supabase.storage.from('item-images').upload(fileName, blob, { upsert: true });
+    if (uploadError) throw uploadError;
+    // Get public URL
+    const { data: publicUrlData } = supabase.storage.from('item-images').getPublicUrl(fileName);
+    const publicUrl = publicUrlData?.publicUrl;
+    if (!publicUrl) throw new Error('Failed to get public URL');
+    return publicUrl;
   };
 
   const handleAddImage = async () => {
@@ -181,20 +203,37 @@ const SubmissionScreen = () => {
         user_id: user?.id,
         created_at: new Date().toISOString(),
         status: type === 'found' ? 'pending' : 'searching',
+        type: type,
       };
 
       if (type === 'found') {
         // Insert into items table for found items
         const { error: itemError } = await supabase
           .from('items')
-          .insert([{ ...baseData, type: 'found' }]);
+          .insert([{ 
+            ...baseData,
+            type: 'found',
+            ...(isRareItem && {
+              rarity,
+              condition,
+              finderReward: parseFloat(finderReward),
+            })
+          }]);
         
         if (itemError) throw itemError;
       } else {
         // Insert into requests table for lost items
         const { error: requestError } = await supabase
           .from('requests')
-          .insert([{ ...baseData, type: 'lost' }]);
+          .insert([{ 
+            ...baseData,
+            type: 'lost',
+            ...(isRareItem && {
+              rarity,
+              condition,
+              finderReward: parseFloat(finderReward),
+            })
+          }]);
         
         if (requestError) throw requestError;
       }
@@ -284,7 +323,7 @@ const SubmissionScreen = () => {
           {isRareItem
             ? 'Rare Item Submission'
             : type === 'found'
-              ? 'Report Found Item'
+              ? 'Report Lost Item'
               : 'Report Lost Item'}
         </RNText>
         <RNText style={[styles.headerSubtitle, { color: colors.secondary }]}>
@@ -334,22 +373,67 @@ const SubmissionScreen = () => {
 
         <RNView style={styles.inputGroup}>
           <RNText style={[styles.inputLabel, { color: colors.text }]}>Category</RNText>
-          <RNView style={[styles.inputWrapper, { backgroundColor: colors.background }]}>
+          <Pressable
+            style={[styles.inputWrapper, { backgroundColor: colors.background }]}
+            onPress={() => setCategoryModalVisible(true)}
+          >
             <Ionicons
               name="folder-outline"
               size={20}
               color={colors.primary}
               style={styles.inputIcon}
             />
-            <RNTextInput
-              style={[styles.input, { backgroundColor: 'transparent', color: colors.text }]}
-              placeholder="Select or type a category"
-              placeholderTextColor={colors.secondary}
-              value={category}
-              onChangeText={setCategory}
-            />
+            <RNText
+              style={{ color: category ? colors.text : colors.secondary, fontSize: 14, flex: 1 }}
+            >
+              {category
+                ? categoryOptions.find(opt => opt.value === category)?.label
+                : 'Select a category'}
+            </RNText>
             <Ionicons name="chevron-down" size={20} color={colors.secondary} />
-          </RNView>
+          </Pressable>
+          <Modal
+            visible={categoryModalVisible}
+            transparent
+            animationType="fade"
+            onRequestClose={() => setCategoryModalVisible(false)}
+          >
+            <Pressable
+              style={{ flex: 1, backgroundColor: 'rgba(0,0,0,0.2)' }}
+              onPress={() => setCategoryModalVisible(false)}
+            >
+              <View style={{
+                position: 'absolute',
+                top: '40%',
+                left: 24,
+                right: 24,
+                backgroundColor: colors.card,
+                borderRadius: 12,
+                padding: 16,
+                shadowColor: '#000',
+                shadowOffset: { width: 0, height: 2 },
+                shadowOpacity: 0.15,
+                shadowRadius: 8,
+                elevation: 8,
+              }}>
+                <FlatList
+                  data={categoryOptions}
+                  keyExtractor={item => item.value}
+                  renderItem={({ item }) => (
+                    <Pressable
+                      style={{ paddingVertical: 14, paddingHorizontal: 8 }}
+                      onPress={() => {
+                        setCategory(item.value);
+                        setCategoryModalVisible(false);
+                      }}
+                    >
+                      <RNText style={{ color: colors.text, fontSize: 16 }}>{item.label}</RNText>
+                    </Pressable>
+                  )}
+                />
+              </View>
+            </Pressable>
+          </Modal>
         </RNView>
 
         {/* Rare Item Fields */}
@@ -456,13 +540,13 @@ const SubmissionScreen = () => {
         )}
 
         <RNView style={styles.inputGroup}>
-          <RNText style={[styles.inputLabel, { color: colors.text }]}>Description</RNText>
-          <RNView style={[styles.inputWrapper, { backgroundColor: colors.background }]}>
+          <RNText style={[styles.inputLabel, { color: colors.text, marginBottom: 8 }]}>Description</RNText>
+          <RNView style={[styles.inputWrapper, styles.inputWrapperColumn, { backgroundColor: colors.background, height: undefined, minHeight: 100, alignItems: 'stretch' }]}> 
             <RNTextInput
               style={[
                 styles.input,
                 styles.textArea,
-                { backgroundColor: 'transparent', color: colors.text },
+                { backgroundColor: 'transparent', color: colors.text, minHeight: 100, height: descInputHeight, maxHeight: 200 },
               ]}
               placeholder="Provide a detailed description of the item..."
               placeholderTextColor={colors.secondary}
@@ -471,6 +555,8 @@ const SubmissionScreen = () => {
               textAlignVertical="top"
               value={description}
               onChangeText={setDescription}
+              onContentSizeChange={e => setDescInputHeight(Math.max(100, e.nativeEvent.contentSize.height))}
+              scrollEnabled={true}
             />
           </RNView>
         </RNView>
@@ -727,6 +813,12 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     height: 40,
     paddingHorizontal: 12,
+  },
+  inputWrapperColumn: {
+    flexDirection: 'column',
+    alignItems: 'stretch',
+    height: undefined,
+    minHeight: 100,
   },
   removeImageButton: {
     alignItems: 'center',
