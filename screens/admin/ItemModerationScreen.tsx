@@ -46,7 +46,7 @@ const ItemModerationScreen = () => {
   }
 
   return (
-    <View style={[styles.container, { backgroundColor: colors.background }]}> 
+    <View style={[styles.container, { backgroundColor: colors.background }]}>
       <Text style={[styles.text, { color: colors.text }]}>Item: {itemDetails.title}</Text>
       <Text style={{ color: colors.text }}>Status: {itemDetails.status}</Text>
       <Text style={{ color: colors.text }}>Content: {itemDetails.content}</Text>

@@ -44,10 +44,18 @@ const AdminLoginScreen = () => {
     setLoading(true);
 
     try {
-      await adminSignIn(email, password, adminCode);
+      console.log('Admin login attempt...');
+      const data = await adminSignIn(email, password, adminCode);
+      console.log('Admin login success, data:', data);
+      if (data.session?.access_token) {
+        console.log('Supabase JWT (from AdminLoginScreen):', data.session.access_token);
+      } else {
+        console.log('No access_token found in data.session:', data.session);
+      }
       // Navigation will be handled by the AuthContext and AppNavigator
     } catch (err: any) {
       setError(err.message || 'Failed to login. Please try again.');
+      console.log('Admin login error:', err);
     } finally {
       setLoading(false);
     }

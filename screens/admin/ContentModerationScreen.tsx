@@ -155,7 +155,7 @@ const ContentModerationScreen = ({ navigation }: ContentModerationScreenProps) =
 
   useEffect(() => {
     const fetchData = async () => {
-      setLoading(true);
+    setLoading(true);
       try {
         const [itemsData, rulesData] = await Promise.all([
           adminApi.getItemsForModeration(filterStatus, sortBy),
@@ -166,7 +166,7 @@ const ContentModerationScreen = ({ navigation }: ContentModerationScreenProps) =
       } catch (error: any) {
         Alert.alert('Error', error.message || 'Failed to fetch moderation data');
       } finally {
-        setLoading(false);
+      setLoading(false);
         setRefreshing(false);
       }
     };

@@ -3,6 +3,7 @@
 import React, { createContext, useContext, useState, useEffect } from 'react';
 import { supabase } from '../config/supabase';
 import { User as SupabaseUser, Session } from '@supabase/supabase-js';
+import { Alert } from 'react-native';
 
 export interface User {
   id: string;
@@ -112,6 +113,9 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     const { data, error } = await supabase.auth.signInWithPassword({ email, password });
     if (error) throw error;
     if (data.user) await fetchProfile(data.user.id);
+    if (data.session?.access_token) {
+      console.log('Supabase JWT:', data.session.access_token);
+    }
     return data;
   };
 
@@ -170,7 +174,10 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         // Fetch the complete profile
         await fetchProfile(data.user.id);
       }
-
+      if (data.session?.access_token) {
+        console.log('Supabase JWT:', data.session.access_token);
+        Alert.alert('Supabase JWT', data.session.access_token);
+      }
       return data;
     } catch (error: any) {
       console.error('Admin sign in error:', error);

@@ -122,7 +122,7 @@ const AdminProfileScreen = ({ navigation }: AdminProfileScreenProps) => {
             </TouchableOpacity>
           </View>
           <View style={{ flexDirection: 'row', alignItems: 'center' }}>
-            <Text style={[styles.name, { color: colors.text }]}>{adminData.name}</Text>
+          <Text style={[styles.name, { color: colors.text }]}>{adminData.name}</Text>
             <Ionicons name="location-outline" size={20} color={colors.primary} style={{ marginLeft: 8 }} />
           </View>
           <Text style={[styles.role, { color: colors.secondary }]}>{adminData.role}</Text>

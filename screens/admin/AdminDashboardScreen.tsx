@@ -47,37 +47,6 @@ interface MetricCardProps {
   key?: string;
 }
 
-const metricsData: MetricData[] = [
-  {
-    title: 'Total Users',
-    value: 1,
-    change: 100,
-    icon: 'people-outline',
-    color: '#4CAF50',
-  },
-  {
-    title: 'Active Items',
-    value: 7,
-    change: 100,
-    icon: 'cube-outline',
-    color: '#2196F3',
-  },
-  {
-    title: 'Matches Made',
-    value: 2,
-    change: 100,
-    icon: 'git-network-outline',
-    color: '#9C27B0',
-  },
-  {
-    title: 'Open Disputes',
-    value: 3,
-    change: 100,
-    icon: 'warning-outline',
-    color: '#FF9800',
-  },
-];
-
 const AdminDashboardScreen: React.FC<AdminDashboardScreenProps> = ({ navigation }) => {
   const { colors } = useTheme();
   const { user } = useAuth();
@@ -423,6 +392,54 @@ const AdminDashboardScreen: React.FC<AdminDashboardScreenProps> = ({ navigation 
     }
   };
 
+  // Helper to map backend performanceData to chart-kit format
+  const getPerformanceChartData = () => {
+    if (!dashboardData?.performanceData || !Array.isArray(dashboardData.performanceData)) {
+      return { labels: [], datasets: [{ data: [] }] };
+    }
+    return {
+      labels: dashboardData.performanceData.map((d: any) => d.date),
+      datasets: [
+        {
+          data: dashboardData.performanceData.map((d: any) => d.responseTime),
+        },
+      ],
+    };
+  };
+
+  console.log('Performance chart data:', getPerformanceChartData());
+
+  const getMetricsData = () => [
+    {
+      title: 'Total Users',
+      value: dashboardData?.metrics?.activeUsers ?? 0,
+      change: dashboardData?.metrics?.activeUsersChange ?? 0,
+      icon: 'people-outline' as keyof typeof Ionicons.glyphMap,
+      color: '#4CAF50',
+    },
+    {
+      title: 'Active Items',
+      value: dashboardData?.metrics?.newItems ?? 0,
+      change: dashboardData?.metrics?.newItemsChange ?? 0,
+      icon: 'cube-outline' as keyof typeof Ionicons.glyphMap,
+      color: '#2196F3',
+    },
+    {
+      title: 'Matches Made',
+      value: dashboardData?.metrics?.matches ?? 0,
+      change: dashboardData?.metrics?.matchesChange ?? 0,
+      icon: 'git-network-outline' as keyof typeof Ionicons.glyphMap,
+      color: '#9C27B0',
+    },
+    {
+      title: 'Open Disputes',
+      value: dashboardData?.metrics?.disputes ?? 0,
+      change: dashboardData?.metrics?.disputesChange ?? 0,
+      icon: 'warning-outline' as keyof typeof Ionicons.glyphMap,
+      color: '#FF9800',
+    },
+  ];
+
   if (loading && !refreshing) {
     return (
       <View style={[styles.container, { backgroundColor: colors.background }]}>
@@ -490,7 +507,7 @@ const AdminDashboardScreen: React.FC<AdminDashboardScreenProps> = ({ navigation 
         </View>
 
         <View style={styles.metricsContainer}>
-          {metricsData.map((metric, index) => (
+          {getMetricsData().map((metric, index) => (
             <MetricCard key={`metric-${index}`} metric={metric} />
           ))}
         </View>
@@ -527,13 +544,8 @@ const AdminDashboardScreen: React.FC<AdminDashboardScreenProps> = ({ navigation 
         <View style={[styles.sectionContainer, { backgroundColor: colors.card }]}>
           <View style={styles.sectionHeader}>
             <Text style={[styles.sectionTitle, { color: colors.text }]}>Performance Metrics</Text>
-            <TouchableOpacity>
-              <Text style={[styles.viewAllText, { color: colors.primary }]}>View All</Text>
-            </TouchableOpacity>
           </View>
-          <PerformanceChart
-            data={dashboardData?.performanceData || { labels: [], datasets: [{ data: [] }] }}
-          />
+          <PerformanceChart data={getPerformanceChartData()} />
         </View>
 
         {/* Heatmap */}

@@ -89,7 +89,7 @@
     "extra": {
       "EXPO_PUBLIC_SUPABASE_URL": "https://ocfdrtfawmtbqypbw.supabase.com",
       "EXPO_PUBLIC_SUPABASE_ANON_KEY": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im9jaGZkcnRmZWF3bXRieXF2cGJ3Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NDU2MzU3MDQsImV4cCI6MjA2MTIxMTcwNH0.eOo-MHpTh2f12rdijb1S-fjOly920hcQ1QAmNOC22qc",
-      "EXPO_PUBLIC_API_URL": "http://172.20.10.2:5001"
+      "EXPO_PUBLIC_API_URL": "http://172.20.10.2:5001/api"
     },
     "owner": "muhammadali",
     "runtimeVersion": {

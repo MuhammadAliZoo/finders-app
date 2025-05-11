@@ -69,61 +69,70 @@ export const getDashboardData = asyncHandler(async (req, res) => {
 
 // Helper function to get metrics
 const getMetrics = async startDate => {
-  const activeUsers = await User.countDocuments({
-    updatedAt: { $gte: startDate },
-  });
+  // Fetch users from Supabase for current period
+  const { data: users, error } = await supabaseClient.from('users').select('created_at');
+  if (error) {
+    throw new Error('Failed to fetch users from Supabase: ' + error.message);
+  }
+  const activeUsers = users.length;
 
+  // Calculate previous period for users
   const previousStartDate = new Date(startDate);
   previousStartDate.setDate(
-    previousStartDate.getDate() - (startDate.getDate() - new Date().getDate()),
+    previousStartDate.getDate() - (startDate.getDate() - new Date().getDate())
   );
 
-  const previousActiveUsers = await User.countDocuments({
-    updatedAt: { $gte: previousStartDate, $lt: startDate },
-  });
+  // Fetch users from Supabase for previous period
+  const { data: prevUsers, error: prevError } = await supabaseClient
+    .from('users')
+    .select('created_at')
+    .lt('created_at', startDate.toISOString());
+  if (prevError) {
+    throw new Error('Failed to fetch previous users from Supabase: ' + prevError.message);
+  }
+  const previousActiveUsers = prevUsers.length;
 
   const activeUsersChange =
     previousActiveUsers === 0
-      ? 100
+      ? (activeUsers > 0 ? 100 : 0)
       : Math.round(((activeUsers - previousActiveUsers) / previousActiveUsers) * 100);
 
+  // Active Items (newItems)
   const newItems = await Item.countDocuments({
     createdAt: { $gte: startDate },
   });
-
   const previousNewItems = await Item.countDocuments({
     createdAt: { $gte: previousStartDate, $lt: startDate },
   });
-
   const newItemsChange =
     previousNewItems === 0
-      ? 100
+      ? (newItems > 0 ? 100 : 0)
       : Math.round(((newItems - previousNewItems) / previousNewItems) * 100);
 
+  // Matches Made
   const matches = await Item.countDocuments({
     status: 'matched',
     moderatedAt: { $gte: startDate },
   });
-
   const previousMatches = await Item.countDocuments({
     status: 'matched',
     moderatedAt: { $gte: previousStartDate, $lt: startDate },
   });
-
   const matchesChange =
-    previousMatches === 0 ? 100 : Math.round(((matches - previousMatches) / previousMatches) * 100);
+    previousMatches === 0
+      ? (matches > 0 ? 100 : 0)
+      : Math.round(((matches - previousMatches) / previousMatches) * 100);
 
+  // Open Disputes
   const disputes = await Dispute.countDocuments({
     createdAt: { $gte: startDate },
   });
-
   const previousDisputes = await Dispute.countDocuments({
     createdAt: { $gte: previousStartDate, $lt: startDate },
   });
-
   const disputesChange =
     previousDisputes === 0
-      ? 0
+      ? (disputes > 0 ? 100 : 0)
       : Math.round(((disputes - previousDisputes) / previousDisputes) * 100);
 
   return {

@@ -205,7 +205,7 @@ export const HomeScreen = () => {
 
   // Handle see all press
   const handleSeeAll = useCallback(() => {
-    navigation.navigate('SearchResults', { searchQuery: '' });
+    navigation.navigate('AllTrendingItems', { items: trendingItems });
   }, [navigation]);
 
   // Handle search submit
@@ -277,16 +277,50 @@ export const HomeScreen = () => {
 
         <View style={styles.content}>
           {/* Search Bar */}
-          <View style={styles.searchContainer}>
+          <View style={[styles.searchContainer, {
+            backgroundColor: colors.card,
+            borderRadius: 24,
+            flexDirection: 'row',
+            alignItems: 'center',
+            paddingHorizontal: 12,
+            paddingVertical: 4,
+            shadowColor: '#000',
+            shadowOpacity: 0.06,
+            shadowRadius: 8,
+            shadowOffset: { width: 0, height: 2 },
+            marginBottom: 24,
+          }]}> 
+            <Ionicons name="search" size={22} color={colors.secondary} style={{ marginRight: 8 }} />
             <TextInput
-              style={[styles.searchInput, { backgroundColor: colors.card }]}
+              style={{
+                flex: 1,
+                fontSize: 16,
+                color: colors.text,
+                backgroundColor: 'transparent',
+                paddingVertical: 10,
+                paddingHorizontal: 0,
+              }}
               placeholder="Search for items..."
               value={searchQuery}
               onChangeText={handleSearchChange}
-              placeholderTextColor={colors.text}
+              placeholderTextColor={colors.secondary}
+              returnKeyType="search"
+              onSubmitEditing={handleSearchSubmit}
             />
-            <TouchableOpacity style={styles.cameraButton} onPress={handleCameraPress}>
-              <Ionicons name="camera" size={24} color={colors.text} />
+            <TouchableOpacity 
+              style={{
+                backgroundColor: colors.primary,
+                borderRadius: 20,
+                padding: 8,
+                marginLeft: 8,
+                alignItems: 'center',
+                justifyContent: 'center',
+                height: 40,
+                width: 40,
+              }} 
+              onPress={handleCameraPress}
+            >
+              <Ionicons name="camera" size={22} color="#fff" />
             </TouchableOpacity>
           </View>
 
@@ -331,7 +365,10 @@ export const HomeScreen = () => {
           {/* Trending Items Section */}
           <View style={styles.section}>
             <View style={styles.sectionHeader}>
-              <Text style={[styles.sectionTitle, { color: colors.text }]}>Trending Lost Items</Text>
+              <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
+                <Ionicons name="flame" size={22} color={colors.primary} style={{ marginRight: 4 }} />
+                <Text style={[styles.sectionTitle, { color: colors.text }]}>Hot Lost Items</Text>
+              </View>
               <TouchableOpacity style={styles.seeAllButton} onPress={handleSeeAll}>
                 <Text style={[styles.seeAllText, { color: colors.primary }]}>See All</Text>
                 <Ionicons name="chevron-forward" size={16} color={colors.primary} />

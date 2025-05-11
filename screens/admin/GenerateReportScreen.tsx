@@ -155,7 +155,7 @@ const GenerateReportScreen = () => {
         {loading ? (
           <ActivityIndicator color="#fff" />
         ) : (
-          <Text style={styles.generateButtonText}>Generate Report</Text>
+        <Text style={styles.generateButtonText}>Generate Report</Text>
         )}
       </TouchableOpacity>
       <View style={{ flexDirection: 'row', justifyContent: 'center', marginBottom: 24 }}>
