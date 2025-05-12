@@ -10,6 +10,7 @@ import {
   TextInput,
   Image,
   Animated,
+  ActivityIndicator,
 } from 'react-native';
 import { useNavigation, useRoute } from '@react-navigation/native';
 import { Ionicons } from '@expo/vector-icons';
@@ -17,6 +18,9 @@ import { useTheme } from '../context/ThemeContext';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { MainStackParamList } from '../navigation/types';
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
+import { supabase } from '../config/supabase';
+import * as ImagePicker from 'expo-image-picker';
+import * as FileSystem from 'expo-file-system';
 
 type TimelineEvent = {
   id: string;
@@ -25,58 +29,6 @@ type TimelineEvent = {
   time: string;
   completed: boolean;
   current?: boolean;
-};
-
-// Mock data
-const claimDetails = {
-  id: '1',
-  itemTitle: 'Gold Watch',
-  itemImage: 'https://via.placeholder.com/300',
-  status: 'Verification',
-  progress: 40,
-  finder: {
-    name: 'Michael Rodriguez',
-    image: 'https://via.placeholder.com/100',
-    rating: 4.8,
-  },
-  timeline: [
-    {
-      id: 't1',
-      event: 'Claim Submitted',
-      date: 'June 16, 2023',
-      time: '10:30 AM',
-      completed: true,
-    },
-    {
-      id: 't2',
-      event: 'Verification in Progress',
-      date: 'June 16, 2023',
-      time: '11:45 AM',
-      completed: true,
-      current: true,
-    },
-    {
-      id: 't3',
-      event: 'Proof Review',
-      date: 'Pending',
-      time: '',
-      completed: false,
-    },
-    {
-      id: 't4',
-      event: 'Claim Approved',
-      date: 'Pending',
-      time: '',
-      completed: false,
-    },
-    {
-      id: 't5',
-      event: 'Item Handover',
-      date: 'Pending',
-      time: '',
-      completed: false,
-    },
-  ] as TimelineEvent[],
 };
 
 type TimelineItemProps = {
@@ -175,14 +127,67 @@ type ClaimTrackingScreenNavigationProp = NativeStackNavigationProp<
   'ClaimTracking'
 >;
 
+// Add Claim type for claim state
+interface Claim {
+  id: string;
+  item: any;
+  status: string;
+  progress: number;
+  timeline: any[];
+  finder: any;
+}
+
 const ClaimTrackingScreen = () => {
   const navigation = useNavigation<ClaimTrackingScreenNavigationProp>();
   const route = useRoute();
   const { colors } = useTheme();
+  const claimId = (route as any).params?.claimId as string | undefined;
+  const [claim, setClaim] = useState<Claim | null>(null);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
   const [message, setMessage] = useState('');
   const [proofDescription, setProofDescription] = useState('');
   const [proofImages, setProofImages] = useState<Array<{ uri: string }>>([]);
   const [fadeAnim] = useState(new Animated.Value(0));
+  const [uploading, setUploading] = useState(false);
+  const [uploadError, setUploadError] = useState<string | null>(null);
+
+  useEffect(() => {
+    const fetchClaim = async () => {
+      setLoading(true);
+      setError(null);
+      try {
+        if (!claimId) {
+          setError('No claim ID provided');
+          setLoading(false);
+          return;
+        }
+        const { data, error } = await supabase
+          .from('claims')
+          .select(`*, item:items(*), requester:profiles!requester_id(*), finder:profiles!finder_id(*)`)
+          .eq('id', claimId)
+          .single();
+        if (error) throw error;
+        if (!data) {
+          setError('No claim found for this ID');
+          setLoading(false);
+          return;
+        }
+        setClaim(data);
+      } catch (err) {
+        console.error('Error fetching claim:', err);
+        setError('Failed to fetch claim details');
+      } finally {
+        setLoading(false);
+      }
+    };
+    if (claimId) fetchClaim();
+  }, [claimId]);
+
+  // Add logging for the claim state
+  useEffect(() => {
+    console.log('Current claim state:', { claim, loading, error });
+  }, [claim, loading, error]);
 
   useEffect(() => {
     navigation.setOptions({
@@ -206,9 +211,49 @@ const ClaimTrackingScreen = () => {
     }).start();
   }, []);
 
-  const handleAddProofImage = () => {
-    // In a real app, this would open the camera or image picker
-    setProofImages([...proofImages, { uri: 'https://via.placeholder.com/300' }]);
+  // Helper to upload image to Supabase bucket and update claim
+  const uploadProofImage = async (localUri: string) => {
+    if (!claimId) return;
+    setUploading(true);
+    setUploadError(null);
+    try {
+      // Get file info
+      const fileName = `proof_${claimId}_${Date.now()}.jpg`;
+      const fileData = await FileSystem.readAsStringAsync(localUri, { encoding: FileSystem.EncodingType.Base64 });
+      const fileBuffer = Buffer.from(fileData, 'base64');
+      // Upload to Supabase Storage
+      const { data: uploadData, error: uploadError } = await supabase.storage
+        .from('item_images')
+        .upload(fileName, fileBuffer, { contentType: 'image/jpeg', upsert: true });
+      if (uploadError) throw uploadError;
+      // Get public URL
+      const { data: publicUrlData } = supabase.storage.from('item_images').getPublicUrl(fileName);
+      const publicUrl = publicUrlData?.publicUrl;
+      if (!publicUrl) throw new Error('Failed to get public URL');
+      // Update claim with proof_image
+      const { error: updateError } = await supabase
+        .from('claims')
+        .update({ proof_image: publicUrl })
+        .eq('id', claimId);
+      if (updateError) throw updateError;
+      // Set proofImages state to the new image
+      setProofImages([{ uri: publicUrl }]);
+    } catch (err: any) {
+      setUploadError('Failed to upload image. Please try again.');
+      console.error('Error uploading proof image:', err);
+    } finally {
+      setUploading(false);
+    }
+  };
+
+  // Handler for picking and uploading proof image
+  const handleAddProofImage = async () => {
+    // Pick image from device
+    const result = await ImagePicker.launchImageLibraryAsync({ mediaTypes: ImagePicker.MediaTypeOptions.Images, quality: 0.7 });
+    if (!result.canceled && result.assets && result.assets.length > 0) {
+      const localUri = result.assets[0].uri;
+      await uploadProofImage(localUri);
+    }
   };
 
   const handleSendMessage = () => {
@@ -223,103 +268,119 @@ const ClaimTrackingScreen = () => {
     alert('Proof submitted successfully!');
   };
 
+  if (loading) {
+    return <View style={[styles.container, { backgroundColor: colors.background }]}><ActivityIndicator size="large" color={colors.primary} /></View>;
+  }
+  if (error || !claim) {
+    return <View style={[styles.container, { backgroundColor: colors.background }]}><Text style={[styles.errorText, { color: colors.text }]}>{error || 'Claim not found'}</Text></View>;
+  }
+
   return (
-    <View style={[styles.container, { backgroundColor: colors.background }]}>
+    <View style={[styles.container, { backgroundColor: colors.background, paddingTop: 8 }]}>
       <Animated.View style={[{ flex: 1 }, { opacity: fadeAnim }]}>
-        <ScrollView style={styles.scrollView} showsVerticalScrollIndicator={false}>
-          {/* Header */}
-          <View style={styles.header}>
-            <Text style={[styles.headerTitle, { color: colors.text }]} numberOfLines={1}>
-              Claim Tracking
-            </Text>
-            <View style={styles.headerSubtitleContainer}>
-              <Text style={[styles.headerSubtitle, { color: colors.primary }]} numberOfLines={2}>
-                Track the status of your claim for{' '}
-                <Text style={{ fontWeight: '600' }}>{claimDetails.itemTitle}</Text>
+        <ScrollView style={styles.scrollView} showsVerticalScrollIndicator={false} contentContainerStyle={{ paddingBottom: 32 }}>
+          {/* Header with gradient overlay */}
+          <View style={{
+            padding: 0,
+            marginBottom: 0,
+            borderBottomLeftRadius: 32,
+            borderBottomRightRadius: 32,
+            overflow: 'hidden',
+            backgroundColor: colors.primary,
+            elevation: 2,
+            shadowColor: colors.primary,
+            shadowOffset: { width: 0, height: 4 },
+            shadowOpacity: 0.12,
+            shadowRadius: 12,
+          }}>
+            <View style={{ padding: 24, alignItems: 'center', flexDirection: 'row', justifyContent: 'center' }}>
+              <Ionicons name="shield-checkmark" size={32} color="#fff" style={{ marginRight: 12 }} />
+              <Text style={{ color: '#fff', fontSize: 26, fontWeight: 'bold', flex: 1 }}>Claim Tracking</Text>
+            </View>
+            <View style={{ backgroundColor: 'rgba(255,255,255,0.08)', padding: 12, alignItems: 'center' }}>
+              <Text style={{ color: '#fff', fontSize: 16, fontWeight: '500', textAlign: 'center' }}>
+                Track the status of your claim for <Text style={{ fontWeight: '700' }}>{claim.item.title}</Text>
               </Text>
             </View>
           </View>
 
           {/* Item Card */}
-          <View style={[styles.itemCard, { backgroundColor: colors.card }]}>
-            <Image source={{ uri: claimDetails.itemImage }} style={styles.itemImage} />
+          <View style={[styles.itemCard, { backgroundColor: colors.card, borderRadius: 20, marginTop: -32, marginHorizontal: 16, elevation: 6, shadowColor: colors.primary, shadowOpacity: 0.08 }]}>
+            <Image source={{ uri: claim.item.image }} style={[styles.itemImage, { borderRadius: 16, margin: 8 }]} />
             <View style={styles.itemDetails}>
-              <Text style={[styles.itemTitle, { color: colors.text }]} numberOfLines={1}>
-                {claimDetails.itemTitle}
+              <Text style={[styles.itemTitle, { color: colors.text, fontSize: 20, fontWeight: '700', marginBottom: 4 }]} numberOfLines={1}>
+                {claim.item.title}
               </Text>
-              <View style={styles.statusContainer}>
-                <Text style={[styles.statusLabel, { color: colors.secondary }]}>Status:</Text>
-                <View style={[styles.statusBadge, { backgroundColor: colors.primary }]}>
-                  <Text style={styles.statusText} numberOfLines={1}>
-                    {claimDetails.status}
-                  </Text>
+              <View style={{ flexDirection: 'row', alignItems: 'center', marginBottom: 6 }}>
+                <Ionicons name="information-circle-outline" size={18} color={colors.primary} style={{ marginRight: 4 }} />
+                <Text style={[styles.statusLabel, { color: colors.secondary, fontWeight: '600' }]}>Status:</Text>
+                <View style={[styles.statusBadge, { backgroundColor: colors.primary, marginLeft: 6, paddingHorizontal: 10, paddingVertical: 4, borderRadius: 8 }]}>
+                  <Text style={styles.statusText} numberOfLines={1}>{claim.status}</Text>
                 </View>
               </View>
             </View>
           </View>
 
           {/* Progress Tracker */}
-          <View style={[styles.progressSection, { backgroundColor: colors.card }]}>
-            <View style={styles.progressHeader}>
-              <Text style={[styles.progressTitle, { color: colors.text }]} numberOfLines={1}>
-                Claim Progress
-              </Text>
-              <Text style={[styles.progressPercentage, { color: colors.primary }]}>
-                {claimDetails.progress}%
-              </Text>
+          <View style={[styles.progressSection, { backgroundColor: colors.card, borderRadius: 18, marginHorizontal: 16, marginTop: 18, elevation: 2 }]}>
+            <View style={{ flexDirection: 'row', alignItems: 'center', marginBottom: 10 }}>
+              <Ionicons name="trending-up" size={20} color={colors.primary} style={{ marginRight: 8 }} />
+              <Text style={[styles.progressTitle, { color: colors.text, fontSize: 17, fontWeight: 'bold' }]}>Claim Progress</Text>
+              <Text style={[styles.progressPercentage, { color: colors.primary, marginLeft: 'auto', fontWeight: 'bold', fontSize: 16 }]}>{claim.progress}%</Text>
             </View>
-            <View style={[styles.progressBarContainer, { backgroundColor: colors.border }]}>
-              <View
-                style={[
-                  styles.progressBar,
-                  {
-                    width: `${claimDetails.progress}%`,
-                    backgroundColor: colors.primary,
-                  },
-                ]}
-              />
+            <View style={[styles.progressBarContainer, { backgroundColor: colors.border, height: 10, borderRadius: 6 }]}>
+              <View style={{
+                width: `${claim.progress}%`,
+                backgroundColor: colors.primary,
+                height: 10,
+                borderRadius: 6,
+                shadowColor: colors.primary,
+                shadowOpacity: 0.15,
+                shadowRadius: 4,
+              }} />
             </View>
-            <Text style={[styles.progressEstimate, { color: colors.secondary }]} numberOfLines={1}>
-              Estimated completion: 2-3 days
-            </Text>
+            <Text style={[styles.progressEstimate, { color: colors.secondary, marginTop: 6, fontSize: 13 }]}>Estimated completion: 2-3 days</Text>
           </View>
 
-          {/* Timeline */}
-          <View style={styles.timelineSection}>
-            <Text style={[styles.sectionTitle, { color: colors.text }]} numberOfLines={1}>
-              Timeline
-            </Text>
+          {/* Timeline Section */}
+          <View style={[styles.timelineSection, { backgroundColor: colors.card, borderRadius: 18, marginHorizontal: 16, marginTop: 18, elevation: 2, paddingBottom: 12 }]}>
+            <View style={{ flexDirection: 'row', alignItems: 'center', marginBottom: 8 }}>
+              <Ionicons name="time-outline" size={20} color={colors.primary} style={{ marginRight: 8 }} />
+              <Text style={[styles.sectionTitle, { color: colors.text, fontSize: 17, fontWeight: 'bold' }]}>Timeline</Text>
+            </View>
             <View style={styles.timeline}>
-              {claimDetails.timeline.map((event, index) => (
-                <TimelineItem
-                  key={event.id}
-                  event={event}
-                  index={index}
-                  total={claimDetails.timeline.length}
-                  colors={colors}
-                />
-              ))}
+              {Array.isArray(claim.timeline) && claim.timeline.length > 0 ? (
+                claim.timeline.map((event, index) => (
+                  <TimelineItem
+                    key={event.id}
+                    event={event}
+                    index={index}
+                    total={claim.timeline.length}
+                    colors={colors}
+                  />
+                ))
+              ) : (
+                <Text style={{ color: colors.text, opacity: 0.7, marginTop: 8 }}>No timeline events yet.</Text>
+              )}
             </View>
           </View>
 
-          {/* Proof Submission */}
-          <View style={[styles.proofSection, { backgroundColor: colors.card }]}>
-            <Text style={[styles.sectionTitle, { color: colors.text }]} numberOfLines={1}>
-              Submit Proof of Ownership
-            </Text>
-            <Text style={[styles.proofDescription, { color: colors.secondary }]} numberOfLines={2}>
+          {/* Proof Submission Section */}
+          <View style={[styles.proofSection, { backgroundColor: colors.card, borderRadius: 18, marginHorizontal: 16, marginTop: 18, elevation: 2 }]}>
+            <View style={{ flexDirection: 'row', alignItems: 'center', marginBottom: 8 }}>
+              <Ionicons name="image-outline" size={20} color={colors.primary} style={{ marginRight: 8 }} />
+              <Text style={[styles.sectionTitle, { color: colors.text, fontSize: 17, fontWeight: 'bold' }]}>Submit Proof of Ownership</Text>
+            </View>
+            <Text style={[styles.proofDescription, { color: colors.secondary, fontSize: 14, marginBottom: 12 }]} numberOfLines={2}>
               Please provide evidence that you are the rightful owner of this item.
             </Text>
-
             <View style={styles.inputGroup}>
-              <Text style={[styles.inputLabel, { color: colors.text }]} numberOfLines={1}>
-                Description
-              </Text>
+              <Text style={[styles.inputLabel, { color: colors.text, fontWeight: '600' }]} numberOfLines={1}>Description</Text>
               <TextInput
                 style={[
                   styles.input,
                   styles.textArea,
-                  { backgroundColor: colors.background, color: colors.text },
+                  { backgroundColor: colors.background, color: colors.text, borderWidth: 1, borderColor: colors.border, fontSize: 15 },
                 ]}
                 placeholder="Describe unique features or provide details only the owner would know..."
                 placeholderTextColor="#888888"
@@ -330,15 +391,11 @@ const ClaimTrackingScreen = () => {
                 onChangeText={setProofDescription}
               />
             </View>
-
             <View style={styles.inputGroup}>
-              <Text style={[styles.inputLabel, { color: colors.text }]} numberOfLines={1}>
-                Upload Images
-              </Text>
-              <Text style={[styles.inputSubLabel, { color: colors.secondary }]} numberOfLines={2}>
+              <Text style={[styles.inputLabel, { color: colors.text, fontWeight: '600' }]} numberOfLines={1}>Upload Images</Text>
+              <Text style={[styles.inputSubLabel, { color: colors.secondary, fontSize: 13 }]} numberOfLines={2}>
                 Upload receipts, photos with the item, or other proof of ownership.
               </Text>
-
               <ScrollView
                 horizontal
                 showsHorizontalScrollIndicator={false}
@@ -350,82 +407,86 @@ const ClaimTrackingScreen = () => {
                     key={index}
                     image={image}
                     index={index}
-                    onRemove={() => setProofImages(proofImages.filter((_, i) => i !== index))}
+                    onRemove={() => setProofImages([])}
                     colors={colors}
                   />
                 ))}
-
                 <TouchableOpacity
-                  style={[styles.addImageButton, { borderColor: colors.primary }]}
+                  style={[styles.addImageButton, { borderColor: colors.primary, backgroundColor: uploading ? '#f3f3f3' : 'transparent' }]}
                   onPress={handleAddProofImage}
+                  disabled={uploading}
                 >
                   <Ionicons name="camera-outline" size={32} color={colors.primary} />
                   <Text style={[styles.addImageText, { color: colors.primary }]} numberOfLines={1}>
-                    Add Photo
+                    {uploading ? 'Uploading...' : 'Add Photo'}
                   </Text>
                 </TouchableOpacity>
               </ScrollView>
+              {uploadError && <Text style={{ color: 'red', marginTop: 8 }}>{uploadError}</Text>}
             </View>
-
             <TouchableOpacity
-              style={[styles.submitButton, { backgroundColor: colors.primary }]}
+              style={[
+                styles.submitButton,
+                { backgroundColor: colors.primary, marginTop: 10, borderRadius: 10, elevation: 2 },
+              ]}
               onPress={handleSubmitProof}
             >
-              <Text style={styles.submitButtonText} numberOfLines={1}>
-                Submit Proof
-              </Text>
+              <Ionicons name="cloud-upload-outline" size={18} color="#fff" style={{ marginRight: 6 }} />
+              <Text style={styles.submitButtonText} numberOfLines={1}>Submit Proof</Text>
             </TouchableOpacity>
           </View>
 
-          {/* Chat with Finder */}
-          <View style={{ padding: 16 }}>
+          {/* Chat with Finder Section */}
+          <View style={{ padding: 16, marginTop: 8 }}>
             <TouchableOpacity
               style={{
                 backgroundColor: colors.primary,
-                borderRadius: 10,
-                paddingVertical: 14,
+                borderRadius: 12,
+                paddingVertical: 16,
                 alignItems: 'center',
                 justifyContent: 'center',
                 shadowColor: colors.primary,
                 shadowOffset: { width: 0, height: 4 },
-                shadowOpacity: 0.2,
+                shadowOpacity: 0.18,
                 shadowRadius: 8,
                 elevation: 6,
                 flexDirection: 'row',
                 marginBottom: 8,
               }}
               onPress={() => navigation.navigate('Chat', {
-                conversationId: `claim-${claimDetails.id}`,
-                otherUser: claimDetails.finder,
-                item: { id: claimDetails.id, title: claimDetails.itemTitle },
+                conversationId: `claim-${claim.id}`,
+                otherUser: claim.finder,
+                item: { id: claim.id, title: claim.item.title },
               })}
             >
-              <Ionicons name="chatbubble-ellipses" size={22} color="#fff" style={{ marginRight: 6 }} />
+              <Ionicons name="chatbubble-ellipses" size={22} color="#fff" style={{ marginRight: 8 }} />
               <Text style={{ color: '#fff', fontSize: 16, fontWeight: 'bold' }}>Chat with Finder</Text>
             </TouchableOpacity>
           </View>
+
+          {/* Dispute Claim Button Section */}
+          <View style={{ padding: 16, marginTop: 0 }}>
+            <TouchableOpacity
+              style={{
+                backgroundColor: '#EF4444',
+                borderRadius: 12,
+                paddingVertical: 16,
+                alignItems: 'center',
+                justifyContent: 'center',
+                shadowColor: '#EF4444',
+                shadowOffset: { width: 0, height: 4 },
+                shadowOpacity: 0.18,
+                shadowRadius: 8,
+                elevation: 6,
+                flexDirection: 'row',
+              }}
+              onPress={() => alert('Dispute feature coming soon!')}
+            >
+              <Ionicons name="alert-circle" size={22} color="#fff" style={{ marginRight: 8 }} />
+              <Text style={{ color: '#fff', fontSize: 16, fontWeight: 'bold' }}>Dispute Claim</Text>
+            </TouchableOpacity>
+          </View>
         </ScrollView>
-        {/* Dispute Claim Button */}
-        <View style={{ padding: 16 }}>
-          <TouchableOpacity
-            style={{
-              backgroundColor: '#EF4444',
-              borderRadius: 10,
-              paddingVertical: 14,
-              alignItems: 'center',
-              justifyContent: 'center',
-              shadowColor: '#EF4444',
-              shadowOffset: { width: 0, height: 4 },
-              shadowOpacity: 0.2,
-              shadowRadius: 8,
-              elevation: 6,
-            }}
-            onPress={() => alert('Dispute feature coming soon!')}
-          >
-            <Ionicons name="alert-circle" size={22} color="#fff" style={{ marginRight: 6 }} />
-            <Text style={{ color: '#fff', fontSize: 16, fontWeight: 'bold' }}>Dispute Claim</Text>
-          </TouchableOpacity>
-        </View>
       </Animated.View>
     </View>
   );
@@ -764,6 +825,12 @@ const styles = StyleSheet.create({
   },
   timelineSection: {
     padding: 16,
+  },
+  errorText: {
+    fontSize: 16,
+    fontWeight: 'bold',
+    margin: 16,
+    textAlign: 'center',
   },
 });
 

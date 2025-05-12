@@ -22,6 +22,8 @@ import AIRecommendation from '../../components/admin/AIRecommendation';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { RootStackParamList } from '../../navigation/types';
 import AdminHeader from '../../components/admin/AdminHeader';
+import { supabase } from '../../config/supabase';
+import { notificationService } from '../../services/notificationService';
 
 type DisputeStatus = 'all' | 'open' | 'in_progress' | 'escalated' | 'resolved';
 type SortBy = 'date' | 'priority' | 'response_time';
@@ -70,38 +72,20 @@ const DisputeResolutionScreen = ({ navigation }: DisputeResolutionScreenProps) =
   const [aiRecommendation, setAiRecommendation] = useState<AIRecommendationData | null>(null);
   const [loadingRecommendation, setLoadingRecommendation] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [actionLoading, setActionLoading] = useState(false);
 
   const fetchDisputes = async () => {
     try {
       setError(null);
-      const response = await adminApi.getDisputes(filterStatus, sortBy);
-      
-      // Transform the response data to match our Dispute interface
-      const transformedDisputes = response.map((dispute: any) => ({
-        id: dispute._id,
-        status: dispute.status,
-        createdAt: dispute.createdAt,
-        itemTitle: dispute.item?.title || 'Unknown Item',
-        requesterName: dispute.requester?.name || 'Unknown Requester',
-        finderName: dispute.finder?.name || 'Unknown Finder',
-        priority: dispute.priority,
-        description: dispute.reason,
-        timeline: dispute.timeline.map((event: any) => ({
-          id: event._id,
-          type: event.action.toLowerCase().includes('status') ? 'status_change' 
-            : event.action.toLowerCase().includes('message') ? 'message'
-            : event.action.toLowerCase().includes('resolved') ? 'resolution'
-            : 'action',
-          timestamp: event.timestamp,
-          actor: event.performedBy?.name || 'System',
-          action: event.action,
-          details: event.notes || ''
-        }))
-      }));
-
-      setDisputes(transformedDisputes);
+      setLoading(true);
+      const { data, error } = await supabase
+        .from('disputes')
+        .select(`*, claim:claims(*, item:items(*), requester:profiles!requester_id(*), finder:profiles!finder_id(*))`)
+        .order('created_at', { ascending: false });
+      if (error) throw error;
+      // Transform data to match Dispute interface if needed
+      setDisputes(data || []);
     } catch (err) {
-      console.error('Error fetching disputes:', err);
       setError('Failed to fetch disputes. Please try again.');
     } finally {
       setLoading(false);
@@ -163,6 +147,68 @@ const DisputeResolutionScreen = ({ navigation }: DisputeResolutionScreenProps) =
   const initiateCall = (dispute: Dispute) => {
     // Implement call functionality
     console.log('Initiating call for dispute:', dispute.id);
+  };
+
+  const handleResolveDispute = async (dispute: any) => {
+    setActionLoading(true);
+    try {
+      // Update claim status to 'approved' and item status to 'claimed'
+      const claimId = dispute.claim?.id;
+      const itemId = dispute.claim?.item?.id;
+      const itemTitle = dispute.claim?.item?.title;
+      const requesterId = dispute.claim?.requester_id;
+      const finderId = dispute.claim?.finder_id;
+
+      if (claimId && itemId) {
+        await supabase.from('claims').update({ status: 'approved', updated_at: new Date().toISOString() }).eq('id', claimId);
+        await supabase.from('items').update({ status: 'claimed' }).eq('id', itemId);
+        
+        // Send notifications
+        await Promise.all([
+          notificationService.notifyClaimStatusChange(claimId, 'approved', itemTitle, requesterId),
+          notificationService.notifyDisputeResolved(dispute.id, itemTitle, 'approved', requesterId),
+          notificationService.notifyDisputeResolved(dispute.id, itemTitle, 'approved', finderId),
+        ]);
+      }
+      // Update dispute status
+      await supabase.from('disputes').update({ status: 'resolved', updated_at: new Date().toISOString() }).eq('id', dispute.id);
+      fetchDisputes();
+    } catch (err) {
+      setError('Failed to resolve dispute.');
+    } finally {
+      setActionLoading(false);
+    }
+  };
+
+  const handleRejectDispute = async (dispute: any) => {
+    setActionLoading(true);
+    try {
+      // Update claim status to 'rejected' and item status to 'available'
+      const claimId = dispute.claim?.id;
+      const itemId = dispute.claim?.item?.id;
+      const itemTitle = dispute.claim?.item?.title;
+      const requesterId = dispute.claim?.requester_id;
+      const finderId = dispute.claim?.finder_id;
+
+      if (claimId && itemId) {
+        await supabase.from('claims').update({ status: 'rejected', updated_at: new Date().toISOString() }).eq('id', claimId);
+        await supabase.from('items').update({ status: 'available' }).eq('id', itemId);
+        
+        // Send notifications
+        await Promise.all([
+          notificationService.notifyClaimStatusChange(claimId, 'rejected', itemTitle, requesterId),
+          notificationService.notifyDisputeResolved(dispute.id, itemTitle, 'rejected', requesterId),
+          notificationService.notifyDisputeResolved(dispute.id, itemTitle, 'rejected', finderId),
+        ]);
+      }
+      // Update dispute status
+      await supabase.from('disputes').update({ status: 'rejected', updated_at: new Date().toISOString() }).eq('id', dispute.id);
+      fetchDisputes();
+    } catch (err) {
+      setError('Failed to reject dispute.');
+    } finally {
+      setActionLoading(false);
+    }
   };
 
   const renderItem = ({ item }: { item: Dispute }) => (
@@ -375,25 +421,35 @@ const DisputeResolutionScreen = ({ navigation }: DisputeResolutionScreenProps) =
               <TouchableOpacity
                 style={[styles.actionButton, { backgroundColor: colors.primary + '20' }]}
                 onPress={() => initiateCall(selectedDispute)}
+                disabled={actionLoading}
               >
                 <Ionicons name="call" size={20} color={colors.primary} />
-                <Text style={[styles.actionButtonText, { color: colors.primary }]}>
-                  Call Parties
-                </Text>
+                <Text style={[styles.actionButtonText, { color: colors.primary }]}>Call Parties</Text>
               </TouchableOpacity>
 
               <TouchableOpacity
                 style={[styles.actionButton, { backgroundColor: colors.warning + '20' }]}
+                disabled={actionLoading}
               >
                 <Ionicons name="chatbubbles" size={20} color={colors.warning} />
                 <Text style={[styles.actionButtonText, { color: colors.warning }]}>Group Chat</Text>
               </TouchableOpacity>
 
               <TouchableOpacity
-                style={[styles.actionButton, { backgroundColor: colors.primary + '20' }]}
+                style={[styles.actionButton, { backgroundColor: colors.primary }]}
+                onPress={() => handleResolveDispute(selectedDispute)}
+                disabled={actionLoading}
               >
-                <Ionicons name="checkmark-circle" size={20} color={colors.primary} />
-                <Text style={[styles.actionButtonText, { color: colors.primary }]}>Resolve</Text>
+                <Ionicons name="checkmark-circle" size={20} color="#fff" />
+                <Text style={[styles.actionButtonText, { color: '#fff' }]}>{actionLoading ? 'Resolving...' : 'Resolve'}</Text>
+              </TouchableOpacity>
+              <TouchableOpacity
+                style={[styles.actionButton, { backgroundColor: colors.error }]}
+                onPress={() => handleRejectDispute(selectedDispute)}
+                disabled={actionLoading}
+              >
+                <Ionicons name="close-circle" size={20} color="#fff" />
+                <Text style={[styles.actionButtonText, { color: '#fff' }]}>{actionLoading ? 'Rejecting...' : 'Reject'}</Text>
               </TouchableOpacity>
             </View>
           </View>

@@ -17,7 +17,7 @@ import { useTheme } from '../context/ThemeContext';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { MainStackParamList } from '../navigation/types';
 import { supabase } from '../config/supabase';
-import { useUser } from '@supabase/auth-helpers-react';
+import { useAuth } from '../context/AuthContext';
 import { formatDistanceToNow, isAfter, differenceInHours } from 'date-fns';
 import { User } from '@supabase/supabase-js';
 
@@ -50,11 +50,16 @@ type NotificationSection = {
 const NotificationScreen = () => {
   const navigation = useNavigation<NativeStackNavigationProp<MainStackParamList>>();
   const { colors } = useTheme();
-  const user = useUser();
+  const { user } = useAuth();
   const [notifications, setNotifications] = useState<Notification[]>([]);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
   const [error, setError] = useState<string | null>(null);
+
+  // Debug log for user
+  console.log('NotificationScreen user:', user);
+  console.log('NotificationScreen loading:', loading, 'error:', error);
+  console.log('NotificationScreen notifications:', notifications);
 
   const formatNotification = (notification: any): Notification => {
     const now = new Date();
@@ -114,6 +119,7 @@ const NotificationScreen = () => {
   }, [notifications]);
 
   const fetchNotifications = useCallback(async () => {
+    console.log('fetchNotifications called, user:', user);
     if (!user?.id) {
       setLoading(false);
       return;
@@ -124,7 +130,7 @@ const NotificationScreen = () => {
       const { data, error: fetchError } = await supabase
         .from('notifications')
         .select('*')
-        .eq('user_id', user.id)
+        .filter('user_id', 'eq', user.id)
         .or(`expire_at.gt.${now},expire_at.is.null`)
         .order('created_at', { ascending: false })
         .limit(50);
@@ -438,6 +444,7 @@ const NotificationScreen = () => {
     </TouchableOpacity>
   );
 
+  // Fallback UI if loading is false and no notifications and no error
   if (loading) {
     return (
       <View style={[styles.container, { backgroundColor: colors.background }]}>
@@ -460,6 +467,14 @@ const NotificationScreen = () => {
     );
   }
 
+  if (!user) {
+    return (
+      <View style={[styles.container, { backgroundColor: colors.background }]}> 
+        <Text style={{ color: colors.text, margin: 20 }}>Please log in to view notifications.</Text>
+      </View>
+    );
+  }
+
   return (
     <View style={[styles.container, { backgroundColor: colors.background }]}>
       <View style={[styles.header, { backgroundColor: colors.background }]}>
@@ -469,7 +484,10 @@ const NotificationScreen = () => {
         {notifications.some(n => !n.read) && (
           <TouchableOpacity
             style={styles.markAllReadButton}
-            onPress={markAllAsRead}
+            onPress={async () => {
+              await markAllAsRead();
+              setNotifications(prev => prev.map(n => ({ ...n, read: true })));
+            }}
           >
             <Text style={[styles.markAllRead, { color: colors.primary }]}>Mark all read</Text>
           </TouchableOpacity>

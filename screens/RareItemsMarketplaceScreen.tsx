@@ -18,6 +18,7 @@ import { MainStackParamList } from '../navigation/types';
 import { Item } from '../types/item';
 import { debounce } from 'lodash';
 import { supabase } from '../config/supabase';
+import { useItemVisibility } from '../hooks/useItemVisibility';
 
 type Props = NativeStackScreenProps<MainStackParamList, 'RareItemsMarketplace'>;
 
@@ -40,14 +41,11 @@ const CATEGORIES = [
 
 export const RareItemsMarketplaceScreen: React.FC<Props> = ({ navigation, route }) => {
   const { colors } = useTheme();
-  const { items } = route.params;
+  const { items: localItems, loading, error, refetch } = useItemVisibility(true);
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedSort, setSelectedSort] = useState('recent');
   const [selectedCategory, setSelectedCategory] = useState('all');
   const [isLoading, setIsLoading] = useState(false);
-  const [localItems, setLocalItems] = useState<Item[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
 
   const debouncedSearch = useCallback(
     debounce((query: string) => {
@@ -61,45 +59,6 @@ export const RareItemsMarketplaceScreen: React.FC<Props> = ({ navigation, route 
     setIsLoading(true);
     debouncedSearch(text);
   };
-
-  useEffect(() => {
-    const fetchItems = async () => {
-      setLoading(true);
-      setError(null);
-      try {
-        // Fetch rare items from both requests and items tables
-        const [{ data: rareRequests, error: reqError }, { data: rareFoundItems, error: foundError }] = await Promise.all([
-          supabase
-            .from('requests')
-            .select('*')
-            .eq('isRareItem', true)
-            .order('created_at', { ascending: false }),
-          supabase
-            .from('items')
-            .select('*')
-            .eq('isRareItem', true)
-            .order('created_at', { ascending: false })
-        ]);
-        
-        if (reqError) throw reqError;
-        if (foundError) throw foundError;
-
-        // Merge and sort by created_at descending
-        const merged = [...(rareRequests || []), ...(rareFoundItems || [])].sort((a, b) => {
-          const aTime = new Date(a.created_at).getTime();
-          const bTime = new Date(b.created_at).getTime();
-          return bTime - aTime;
-        });
-
-        setLocalItems(merged);
-      } catch (err: any) {
-        setError(err.message || 'Failed to fetch items');
-      } finally {
-        setLoading(false);
-      }
-    };
-    fetchItems();
-  }, []);
 
   const filteredItems = localItems
     .filter((item: Item) => {
@@ -155,7 +114,9 @@ export const RareItemsMarketplaceScreen: React.FC<Props> = ({ navigation, route 
           <View style={styles.itemLocation}>
             <Ionicons name="location-outline" size={14} color={colors.secondary} />
             <Text style={[styles.locationText, { color: colors.secondary }]}>
-              {item.location
+              {item.location &&
+                typeof item.location.latitude === 'number' &&
+                typeof item.location.longitude === 'number'
                 ? `${item.location.latitude.toFixed(2)}, ${item.location.longitude.toFixed(2)}`
                 : 'Location not specified'}
             </Text>
@@ -163,7 +124,7 @@ export const RareItemsMarketplaceScreen: React.FC<Props> = ({ navigation, route 
           <View style={styles.rewardContainer}>
             <Ionicons name="gift-outline" size={14} color={colors.primary} />
             <Text style={[styles.rewardText, { color: colors.primary }]}>
-              ${item.price.toLocaleString()} Reward
+              {typeof item.price === 'number' ? `$${item.price.toLocaleString()} Reward` : 'N/A'}
             </Text>
           </View>
         </View>

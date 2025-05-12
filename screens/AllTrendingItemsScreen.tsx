@@ -18,6 +18,7 @@ import { useTheme } from '../context/ThemeContext';
 import { MainStackParamList } from '../navigation/types';
 import { Item } from '../types/item';
 import { supabase } from '../config/supabase';
+import { useItemVisibility } from '../hooks/useItemVisibility';
 
 type AllTrendingItemsScreenProps = {
   navigation: NativeStackNavigationProp<MainStackParamList>;
@@ -109,50 +110,8 @@ export const AllTrendingItemsScreen: React.FC<AllTrendingItemsScreenProps> = ({
   route,
 }) => {
   const { colors } = useTheme();
-  const [items, setItems] = useState<Item[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
+  const { items, loading, error, refetch } = useItemVisibility(false);
   const [search, setSearch] = useState('');
-
-  useEffect(() => {
-    const fetchItems = async () => {
-      setLoading(true);
-      setError(null);
-      try {
-        // Fetch both found and lost items
-        const [{ data: foundItems, error: foundError }, { data: lostItems, error: lostError }] = await Promise.all([
-          supabase
-            .from('items')
-            .select('*')
-            .eq('isRareItem', false) // Only non-rare items
-            .order('created_at', { ascending: false }),
-          supabase
-            .from('requests')
-            .select('*')
-            .eq('isRareItem', false) // Only non-rare items
-            .eq('status', 'searching')
-            .order('created_at', { ascending: false })
-        ]);
-
-        if (foundError) throw foundError;
-        if (lostError) throw lostError;
-
-        // Merge and sort by created_at
-        const merged = [...(foundItems || []), ...(lostItems || [])].sort((a, b) => {
-          const aTime = new Date(a.created_at).getTime();
-          const bTime = new Date(b.created_at).getTime();
-          return bTime - aTime;
-        });
-
-        setItems(merged);
-      } catch (err: any) {
-        setError(err.message || 'Failed to fetch items');
-      } finally {
-        setLoading(false);
-      }
-    };
-    fetchItems();
-  }, []);
 
   // Filter and group items by category
   const filteredItems = items.filter(item =>
@@ -182,7 +141,9 @@ export const AllTrendingItemsScreen: React.FC<AllTrendingItemsScreenProps> = ({
           <View style={styles.itemLocation}>
             <Ionicons name="location-outline" size={14} color={colors.secondary} />
             <Text style={[styles.itemLocationText, { color: colors.secondary }]} numberOfLines={1}>
-              {item.location ? `${item.location.latitude.toFixed(2)}, ${item.location.longitude.toFixed(2)}` : 'Location not specified'}
+              {item.location && typeof item.location.latitude === 'number' && typeof item.location.longitude === 'number'
+                ? `${item.location.latitude.toFixed(2)}, ${item.location.longitude.toFixed(2)}`
+                : 'Location not specified'}
             </Text>
           </View>
           <Text style={{ color: colors.secondary, fontSize: 12 }}>{new Date(item.timestamp).toLocaleDateString()}</Text>

@@ -115,13 +115,14 @@ const ProfileScreen = () => {
           style: 'destructive',
           onPress: async () => {
             try {
+              // 1. Sign out from Supabase
               const { error } = await supabase.auth.signOut();
               if (error) throw error;
-              
-              // Clear any local storage or state if needed
-              await signOut(); // This is from useAuth context
-              
-              // Navigate to the Auth stack
+
+              // 2. Clear local state
+              await signOut(); // or logout()
+
+              // 3. Navigate to Auth/Login screen
               navigation.navigate('Auth');
             } catch (error: any) {
               Alert.alert('Error', error.message || 'Failed to sign out');

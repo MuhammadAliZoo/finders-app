@@ -123,14 +123,14 @@ const SubmissionScreen = () => {
 
   const uploadImageToStorage = async (uri: string): Promise<string> => {
     if (!user) throw new Error('You must be logged in');
-    // Upload to Supabase Storage bucket 'item-images'
-    const fileName = `item-images/${user.id}_${Date.now()}.jpg`;
+    // Upload to Supabase Storage bucket 'finders-app'
+    const fileName = `finders-app/${user.id}_${Date.now()}.jpg`;
     const response = await fetch(uri);
     const blob = await response.blob();
-    const { error: uploadError } = await supabase.storage.from('item-images').upload(fileName, blob, { upsert: true });
+    const { error: uploadError } = await supabase.storage.from('finders-app').upload(fileName, blob, { upsert: true });
     if (uploadError) throw uploadError;
     // Get public URL
-    const { data: publicUrlData } = supabase.storage.from('item-images').getPublicUrl(fileName);
+    const { data: publicUrlData } = supabase.storage.from('finders-app').getPublicUrl(fileName);
     const publicUrl = publicUrlData?.publicUrl;
     if (!publicUrl) throw new Error('Failed to get public URL');
     return publicUrl;
@@ -180,12 +180,15 @@ const SubmissionScreen = () => {
         throw new Error('Please fill in all required fields');
       }
 
-      // Upload all images to Supabase Storage
+      // Upload all images to Supabase Storage (finders-app bucket)
       const uploadedImages: string[] = [];
       for (const img of images) {
-        const url = await uploadImageToStorage(img);
+        const url = await uploadImageToStorage(img); // This stores in 'finders-app' bucket
         uploadedImages.push(url);
       }
+
+      // Use the first image as the main image_url
+      const image_url = uploadedImages.length > 0 ? uploadedImages[0] : null;
 
       const baseData = {
         title,
@@ -193,7 +196,8 @@ const SubmissionScreen = () => {
         category,
         location,
         date: new Date(date),
-        images: uploadedImages,
+        images: uploadedImages, // For lost items, this will be stored in the requests table
+        image_url, // For found items, this will be stored in the items table
         tags: suggestedTags,
         isRareItem,
         priority,
@@ -204,7 +208,7 @@ const SubmissionScreen = () => {
         }),
         user_id: user?.id,
         created_at: new Date().toISOString(),
-        status: type === 'found' ? 'pending' : 'searching',
+        status: type === 'found' ? 'available' : 'searching',
         type: type,
       };
 
@@ -225,11 +229,13 @@ const SubmissionScreen = () => {
         if (itemError) throw itemError;
       } else {
         // Insert into requests table for lost items
+        // Ensure images column gets the uploaded image URLs
         const { error: requestError } = await supabase
           .from('requests')
           .insert([{ 
             ...baseData,
             type: 'lost',
+            images: uploadedImages, // Explicitly set images column
             ...(isRareItem && {
               rarity,
               condition,

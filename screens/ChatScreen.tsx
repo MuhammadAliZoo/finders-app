@@ -229,6 +229,17 @@ export const ChatScreen: React.FC<Props> = ({ route, navigation }) => {
           <Ionicons name="send" size={24} color={newMessage.trim() ? '#FFFFFF' : colors.text} />
         </TouchableOpacity>
       </View>
+
+      {/* Dispute Claim Button */}
+      <View style={styles.disputeButtonContainer}>
+        <TouchableOpacity
+          style={styles.disputeButton}
+          onPress={() => alert('Dispute feature coming soon!')}
+        >
+          <Ionicons name="alert-circle" size={22} color="#fff" style={{ marginRight: 6 }} />
+          <Text style={styles.disputeButtonText}>Dispute Claim</Text>
+        </TouchableOpacity>
+      </View>
     </KeyboardAvoidingView>
   );
 };
@@ -318,6 +329,27 @@ const styles = StyleSheet.create({
     height: 40,
     justifyContent: 'center',
     width: 40,
+  },
+  disputeButtonContainer: {
+    padding: 16,
+    backgroundColor: 'transparent',
+  },
+  disputeButton: {
+    alignItems: 'center',
+    backgroundColor: '#EF4444',
+    borderRadius: 12,
+    flexDirection: 'row',
+    justifyContent: 'center',
+    padding: 16,
+    shadowColor: '#EF4444',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.12,
+    shadowRadius: 6,
+  },
+  disputeButtonText: {
+    color: '#fff',
+    fontSize: 16,
+    fontWeight: 'bold',
   },
 });
 
