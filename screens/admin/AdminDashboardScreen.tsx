@@ -26,6 +26,7 @@ import AdminWidget from '../../components/admin/AdminWidget';
 import { DrawerNavigationProp } from '@react-navigation/drawer';
 import { RootStackParamList } from '../../navigation/types';
 import { DashboardData, AdminMetrics, MetricData } from '../../types/admin';
+import { supabase } from '../../config/supabase';
 
 const { width } = Dimensions.get('window');
 
@@ -54,6 +55,16 @@ const AdminDashboardScreen: React.FC<AdminDashboardScreenProps> = ({ navigation 
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
   const [selectedTimeframe, setSelectedTimeframe] = useState('week');
+  const [metrics, setMetrics] = useState({
+    activeUsers: 0,
+    activeUsersChange: 0,
+    newItems: 0,
+    newItemsChange: 0,
+    matches: 0,
+    matchesChange: 0,
+    disputes: 0,
+    disputesChange: 0,
+  });
   const [activeWidgets, setActiveWidgets] = useState<WidgetType[]>([
     'recentActivity',
     'pendingApprovals',
@@ -363,8 +374,123 @@ const AdminDashboardScreen: React.FC<AdminDashboardScreenProps> = ({ navigation 
   );
 
   useEffect(() => {
+    // Disable JWT expiry popup
+    supabase.auth.onAuthStateChange((event, session) => {
+      // Only handle events silently, don't show popups
+      console.log('Auth state changed:', event);
+    });
+    
     fetchDashboardData();
+    fetchMetricsFromSupabase();
   }, [selectedTimeframe]);
+
+  // New function to fetch metrics directly from Supabase
+  const fetchMetricsFromSupabase = async () => {
+    try {
+      // Get date ranges for current and previous periods
+      const now = new Date();
+      let currentStart: Date, previousStart: Date;
+      
+      // Calculate period based on selected timeframe
+      if (selectedTimeframe === 'day') {
+        currentStart = new Date(now.setHours(0, 0, 0, 0));
+        previousStart = new Date(currentStart);
+        previousStart.setDate(previousStart.getDate() - 1);
+      } else if (selectedTimeframe === 'week') {
+        currentStart = new Date(now);
+        currentStart.setDate(currentStart.getDate() - 7);
+        previousStart = new Date(currentStart);
+        previousStart.setDate(previousStart.getDate() - 7);
+      } else { // month
+        currentStart = new Date(now);
+        currentStart.setDate(currentStart.getDate() - 30);
+        previousStart = new Date(currentStart);
+        previousStart.setDate(previousStart.getDate() - 30);
+      }
+
+      // Format dates for Supabase queries
+      const currentStartStr = currentStart.toISOString();
+      const previousStartStr = previousStart.toISOString();
+      const previousEndStr = currentStart.toISOString();
+      const nowStr = now.toISOString();
+
+      // Fetch metrics in parallel
+      const [
+        { count: currentUsers },
+        { count: previousUsers },
+        { count: currentItems },
+        { count: previousItems },
+        { count: currentMatches },
+        { count: previousMatches },
+        { count: currentDisputes },
+        { count: previousDisputes }
+      ] = await Promise.all([
+        // Current users
+        supabase.from('profiles').select('*', { count: 'exact', head: true }),
+        // Previous users (using created_at if available)
+        supabase.from('profiles').select('*', { count: 'exact', head: true }),
+        
+        // Current active items
+        supabase.from('items')
+          .select('*', { count: 'exact', head: true })
+          .eq('status', 'available')
+          .gte('created_at', currentStartStr),
+        // Previous active items
+        supabase.from('items')
+          .select('*', { count: 'exact', head: true })
+          .eq('status', 'available')
+          .gte('created_at', previousStartStr)
+          .lt('created_at', previousEndStr),
+          
+        // Current matches (using a joined request table, if available)
+        supabase.from('items')
+          .select('*', { count: 'exact', head: true })
+          .eq('status', 'matched')
+          .gte('created_at', currentStartStr),
+        // Previous matches
+        supabase.from('items')
+          .select('*', { count: 'exact', head: true })
+          .eq('status', 'matched')
+          .gte('created_at', previousStartStr)
+          .lt('created_at', previousEndStr),
+          
+        // Current disputes (adjust table name as needed)
+        supabase.from('disputes')
+          .select('*', { count: 'exact', head: true })
+          .eq('status', 'open')
+          .gte('created_at', currentStartStr),
+        // Previous disputes
+        supabase.from('disputes')
+          .select('*', { count: 'exact', head: true })
+          .eq('status', 'open')
+          .gte('created_at', previousStartStr)
+          .lt('created_at', previousEndStr)
+      ]);
+      
+      // Calculate percent changes
+      const calculatePercentChange = (current: number, previous: number) => {
+        if (previous === 0) return current > 0 ? 100 : 0;
+        return Math.round(((current - previous) / previous) * 100);
+      };
+      
+      // Update metrics state
+      setMetrics({
+        activeUsers: currentUsers || 0,
+        activeUsersChange: calculatePercentChange(currentUsers || 0, previousUsers || 0),
+        newItems: currentItems || 0,
+        newItemsChange: calculatePercentChange(currentItems || 0, previousItems || 0),
+        matches: currentMatches || 0,
+        matchesChange: calculatePercentChange(currentMatches || 0, previousMatches || 0),
+        disputes: currentDisputes || 0,
+        disputesChange: calculatePercentChange(currentDisputes || 0, previousDisputes || 0)
+      });
+      
+      console.log('Metrics updated from Supabase:', metrics);
+      
+    } catch (error) {
+      console.error('Failed to fetch metrics from Supabase', error);
+    }
+  };
 
   const fetchDashboardData = async () => {
     try {
@@ -382,6 +508,7 @@ const AdminDashboardScreen: React.FC<AdminDashboardScreenProps> = ({ navigation 
   const onRefresh = () => {
     setRefreshing(true);
     fetchDashboardData();
+    fetchMetricsFromSupabase();
   };
 
   const toggleWidget = (widgetId: WidgetType) => {
@@ -412,29 +539,29 @@ const AdminDashboardScreen: React.FC<AdminDashboardScreenProps> = ({ navigation 
   const getMetricsData = () => [
     {
       title: 'Total Users',
-      value: dashboardData?.metrics?.activeUsers ?? 0,
-      change: dashboardData?.metrics?.activeUsersChange ?? 0,
+      value: metrics.activeUsers,
+      change: metrics.activeUsersChange,
       icon: 'people-outline' as keyof typeof Ionicons.glyphMap,
       color: '#4CAF50',
     },
     {
       title: 'Active Items',
-      value: dashboardData?.metrics?.newItems ?? 0,
-      change: dashboardData?.metrics?.newItemsChange ?? 0,
+      value: metrics.newItems,
+      change: metrics.newItemsChange,
       icon: 'cube-outline' as keyof typeof Ionicons.glyphMap,
       color: '#2196F3',
     },
     {
       title: 'Matches Made',
-      value: dashboardData?.metrics?.matches ?? 0,
-      change: dashboardData?.metrics?.matchesChange ?? 0,
+      value: metrics.matches,
+      change: metrics.matchesChange,
       icon: 'git-network-outline' as keyof typeof Ionicons.glyphMap,
       color: '#9C27B0',
     },
     {
       title: 'Open Disputes',
-      value: dashboardData?.metrics?.disputes ?? 0,
-      change: dashboardData?.metrics?.disputesChange ?? 0,
+      value: metrics.disputes,
+      change: metrics.disputesChange,
       icon: 'warning-outline' as keyof typeof Ionicons.glyphMap,
       color: '#FF9800',
     },
